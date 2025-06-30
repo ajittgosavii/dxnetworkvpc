@@ -3838,50 +3838,50 @@ class EnhancedAWSMigrationManager:
         }
     
     async def ai_enhanced_aws_sizing(self, on_prem_config: Dict) -> Dict:
-    """AI-enhanced AWS sizing with real-time pricing and EC2 support"""
+        """AI-enhanced AWS sizing with real-time pricing and EC2 support"""
     
-    # Get real-time pricing
-    pricing_data = await self.aws_api.get_real_time_pricing()
-    
-    # Get AI workload analysis
-    ai_analysis = await self.ai_manager.analyze_migration_workload(
-        on_prem_config, 
-        on_prem_config.get('performance_data', {})
-    )
-    
-    # Use the enhanced sizing function
-    if on_prem_config['database_engine'].startswith('rds_'):
-        sizing_result = calculate_rds_sizing(on_prem_config, self.aws_api)
-        deployment_type = 'rds'
-    elif on_prem_config['database_engine'].startswith('ec2_'):
-        sizing_result = calculate_ec2_sizing_with_instance_type(on_prem_config, self.aws_api)
-        deployment_type = 'ec2'
-    else:
-        sizing_result = calculate_general_ec2_sizing(on_prem_config, self.aws_api)
-        deployment_type = 'ec2'
-    
-    # Enhanced reader/writer configuration
-    reader_writer_config = await self._ai_calculate_reader_writer_config(
-        on_prem_config, ai_analysis
-    )
-    
-    # AI-powered deployment recommendation
-    rds_sizing = calculate_rds_sizing(on_prem_config, self.aws_api) if deployment_type != 'rds' else sizing_result
-    ec2_sizing = calculate_ec2_sizing_with_instance_type(on_prem_config, self.aws_api) if deployment_type != 'ec2' else sizing_result
-    
-    deployment_recommendation = await self._ai_recommend_deployment_type(
-        on_prem_config, ai_analysis, rds_sizing, ec2_sizing
-    )
-    
-    return {
-        'rds_recommendations': rds_sizing,
-        'ec2_recommendations': ec2_sizing,
-        'reader_writer_config': reader_writer_config,
-        'deployment_recommendation': deployment_recommendation,
-        'ai_analysis': ai_analysis,
-        'pricing_data': pricing_data,
-        'selected_sizing': sizing_result
-    }
+        # Get real-time pricing
+        pricing_data = await self.aws_api.get_real_time_pricing()
+        
+        # Get AI workload analysis
+        ai_analysis = await self.ai_manager.analyze_migration_workload(
+            on_prem_config, 
+            on_prem_config.get('performance_data', {})
+        )
+        
+        # Use the enhanced sizing function
+        if on_prem_config['database_engine'].startswith('rds_'):
+            sizing_result = calculate_rds_sizing(on_prem_config, self.aws_api)
+            deployment_type = 'rds'
+        elif on_prem_config['database_engine'].startswith('ec2_'):
+            sizing_result = calculate_ec2_sizing_with_instance_type(on_prem_config, self.aws_api)
+            deployment_type = 'ec2'
+        else:
+            sizing_result = calculate_general_ec2_sizing(on_prem_config, self.aws_api)
+            deployment_type = 'ec2'
+        
+        # Enhanced reader/writer configuration
+        reader_writer_config = await self._ai_calculate_reader_writer_config(
+            on_prem_config, ai_analysis
+        )
+        
+        # AI-powered deployment recommendation
+        rds_sizing = calculate_rds_sizing(on_prem_config, self.aws_api) if deployment_type != 'rds' else sizing_result
+        ec2_sizing = calculate_ec2_sizing_with_instance_type(on_prem_config, self.aws_api) if deployment_type != 'ec2' else sizing_result
+        
+        deployment_recommendation = await self._ai_recommend_deployment_type(
+            on_prem_config, ai_analysis, rds_sizing, ec2_sizing
+        )
+        
+        return {
+            'rds_recommendations': rds_sizing,
+            'ec2_recommendations': ec2_sizing,
+            'reader_writer_config': reader_writer_config,
+            'deployment_recommendation': deployment_recommendation,
+            'ai_analysis': ai_analysis,
+            'pricing_data': pricing_data,
+            'selected_sizing': sizing_result
+        }
     
     async def _ai_calculate_rds_sizing(self, config: Dict, pricing_data: Dict, ai_analysis: Dict) -> Dict:
         """AI-enhanced RDS sizing calculation"""
