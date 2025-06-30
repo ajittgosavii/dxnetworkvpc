@@ -2607,7 +2607,381 @@ async def comprehensive_ai_migration_analysis(self, config: Dict) -> Dict:
             'platform_optimization': 1.02 if platform_type == 'physical' and 'windows' in os_type else 1.05 if platform_type == 'physical' else 1.0
         }
 
-
+class EnhancedNetworkIntelligenceManager:
+    """Enhanced network intelligence manager with AI-powered path optimization"""
+    
+    def __init__(self):
+        # Network path configurations for different environments and destinations
+        self.network_paths = {
+            # Non-production paths to S3
+            'nonprod_sj_linux_nas_s3': {
+                'name': 'Non-Prod: San Jose Linux NAS to AWS S3',
+                'environment': 'non-production',
+                'segments': [
+                    {
+                        'name': 'San Jose Linux NAS to Jump Server',
+                        'connection_type': 'internal_lan',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 2,
+                        'reliability': 0.999,
+                        'cost_factor': 0.0
+                    },
+                    {
+                        'name': 'San Jose to AWS S3 (DX)',
+                        'connection_type': 'direct_connect',
+                        'base_bandwidth_mbps': 2000,  # DX bottleneck
+                        'base_latency_ms': 15,
+                        'reliability': 0.998,
+                        'cost_factor': 2.0
+                    }
+                ]
+            },
+            # Non-production paths to FSx Windows
+            'nonprod_sj_linux_nas_fsx_windows': {
+                'name': 'Non-Prod: San Jose Linux NAS to AWS FSx Windows',
+                'environment': 'non-production',
+                'segments': [
+                    {
+                        'name': 'San Jose Linux NAS to Jump Server',
+                        'connection_type': 'internal_lan',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 2,
+                        'reliability': 0.999,
+                        'cost_factor': 0.0
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Windows (DX)',
+                        'connection_type': 'direct_connect',
+                        'base_bandwidth_mbps': 2000,  # DX bottleneck
+                        'base_latency_ms': 13,  # Slightly better for FSx
+                        'reliability': 0.998,
+                        'cost_factor': 2.2
+                    }
+                ]
+            },
+            # Non-production paths to FSx Lustre
+            'nonprod_sj_linux_nas_fsx_lustre': {
+                'name': 'Non-Prod: San Jose Linux NAS to AWS FSx Lustre',
+                'environment': 'non-production',
+                'segments': [
+                    {
+                        'name': 'San Jose Linux NAS to Jump Server',
+                        'connection_type': 'internal_lan',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 2,
+                        'reliability': 0.999,
+                        'cost_factor': 0.0
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Lustre (DX)',
+                        'connection_type': 'direct_connect',
+                        'base_bandwidth_mbps': 2000,  # DX bottleneck
+                        'base_latency_ms': 10,  # Much better for Lustre
+                        'reliability': 0.998,
+                        'cost_factor': 2.5
+                    }
+                ]
+            },
+            # Windows paths (similar structure)
+            'nonprod_sj_windows_share_s3': {
+                'name': 'Non-Prod: San Jose Windows Share to AWS S3',
+                'environment': 'non-production',
+                'segments': [
+                    {
+                        'name': 'San Jose Windows Share to Jump Server',
+                        'connection_type': 'internal_lan',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 3,  # Slightly higher for Windows
+                        'reliability': 0.998,
+                        'cost_factor': 0.0
+                    },
+                    {
+                        'name': 'San Jose to AWS S3 (DX)',
+                        'connection_type': 'direct_connect',
+                        'base_bandwidth_mbps': 2000,
+                        'base_latency_ms': 15,
+                        'reliability': 0.998,
+                        'cost_factor': 2.0
+                    }
+                ]
+            },
+            # Production paths (higher bandwidth, multi-hop)
+            'prod_sa_linux_nas_s3': {
+                'name': 'Production: San Antonio Linux NAS to AWS S3',
+                'environment': 'production',
+                'segments': [
+                    {
+                        'name': 'San Antonio Linux NAS to Jump Server',
+                        'connection_type': 'internal_lan',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 1,
+                        'reliability': 0.999,
+                        'cost_factor': 0.0
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'connection_type': 'private_line',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 12,
+                        'reliability': 0.9995,
+                        'cost_factor': 3.0
+                    },
+                    {
+                        'name': 'San Jose to AWS S3 (DX)',
+                        'connection_type': 'direct_connect',
+                        'base_bandwidth_mbps': 10000,  # No bottleneck for prod
+                        'base_latency_ms': 8,
+                        'reliability': 0.9999,
+                        'cost_factor': 4.0
+                    }
+                ]
+            },
+            # Production FSx paths
+            'prod_sa_linux_nas_fsx_windows': {
+                'name': 'Production: San Antonio Linux NAS to AWS FSx Windows',
+                'environment': 'production',
+                'segments': [
+                    {
+                        'name': 'San Antonio Linux NAS to Jump Server',
+                        'connection_type': 'internal_lan',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 1,
+                        'reliability': 0.999,
+                        'cost_factor': 0.0
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'connection_type': 'private_line',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 12,
+                        'reliability': 0.9995,
+                        'cost_factor': 3.0
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Windows (DX)',
+                        'connection_type': 'direct_connect',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 7,  # Better for FSx
+                        'reliability': 0.9999,
+                        'cost_factor': 4.2
+                    }
+                ]
+            },
+            'prod_sa_linux_nas_fsx_lustre': {
+                'name': 'Production: San Antonio Linux NAS to AWS FSx Lustre',
+                'environment': 'production',
+                'segments': [
+                    {
+                        'name': 'San Antonio Linux NAS to Jump Server',
+                        'connection_type': 'internal_lan',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 1,
+                        'reliability': 0.999,
+                        'cost_factor': 0.0
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'connection_type': 'private_line',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 12,
+                        'reliability': 0.9995,
+                        'cost_factor': 3.0
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Lustre (DX)',
+                        'connection_type': 'direct_connect',
+                        'base_bandwidth_mbps': 10000,
+                        'base_latency_ms': 5,  # Much better for Lustre
+                        'reliability': 0.9999,
+                        'cost_factor': 4.5
+                    }
+                ]
+            }
+        }
+    
+    def calculate_ai_enhanced_path_performance(self, network_path_key: str) -> Dict:
+        """Calculate AI-enhanced network path performance"""
+        
+        # Get the network path configuration
+        path_config = self.network_paths.get(network_path_key)
+        
+        if not path_config:
+            # Fallback to a default path
+            path_config = self.network_paths['nonprod_sj_linux_nas_s3']
+        
+        # Extract destination storage from path key
+        destination_storage = 'S3'
+        if 'fsx_windows' in network_path_key:
+            destination_storage = 'FSx_Windows'
+        elif 'fsx_lustre' in network_path_key:
+            destination_storage = 'FSx_Lustre'
+        
+        # Calculate segment performance
+        processed_segments = []
+        total_latency = 0
+        total_reliability = 1.0
+        total_cost_factor = 0
+        min_bandwidth = float('inf')
+        
+        for segment in path_config['segments']:
+            # Apply efficiency factors
+            efficiency_factor = self._get_segment_efficiency(segment['connection_type'])
+            
+            effective_bandwidth = segment['base_bandwidth_mbps'] * efficiency_factor
+            effective_latency = segment['base_latency_ms'] / efficiency_factor
+            
+            # Apply destination-specific optimizations
+            if 'AWS' in segment['name']:
+                if destination_storage == 'FSx_Windows':
+                    effective_latency *= 0.9  # 10% latency improvement
+                elif destination_storage == 'FSx_Lustre':
+                    effective_latency *= 0.7  # 30% latency improvement
+            
+            processed_segment = {
+                'name': segment['name'],
+                'connection_type': segment['connection_type'],
+                'effective_bandwidth_mbps': effective_bandwidth,
+                'effective_latency_ms': effective_latency,
+                'reliability': segment['reliability'],
+                'cost_factor': segment['cost_factor'],
+                'ai_optimization_potential': self._calculate_segment_optimization_potential(segment)
+            }
+            
+            processed_segments.append(processed_segment)
+            
+            # Accumulate totals
+            total_latency += effective_latency
+            total_reliability *= segment['reliability']
+            total_cost_factor += segment['cost_factor']
+            min_bandwidth = min(min_bandwidth, effective_bandwidth)
+        
+        # Calculate overall quality scores
+        network_quality_score = self._calculate_network_quality_score(
+            min_bandwidth, total_latency, total_reliability
+        )
+        
+        # AI enhancement based on destination storage
+        ai_enhancement_bonus = {
+            'S3': 0,
+            'FSx_Windows': 5,
+            'FSx_Lustre': 15
+        }.get(destination_storage, 0)
+        
+        ai_enhanced_quality_score = min(100, network_quality_score + ai_enhancement_bonus)
+        
+        # Generate AI insights
+        ai_insights = self._generate_ai_insights(
+            path_config, processed_segments, destination_storage
+        )
+        
+        return {
+            'path_name': path_config['name'],
+            'destination_storage': destination_storage,
+            'environment': path_config['environment'],
+            'segments': processed_segments,
+            'network_quality_score': network_quality_score,
+            'ai_enhanced_quality_score': ai_enhanced_quality_score,
+            'effective_bandwidth_mbps': min_bandwidth,
+            'total_latency_ms': total_latency,
+            'total_reliability': total_reliability,
+            'total_cost_factor': total_cost_factor,
+            'storage_performance_bonus': ai_enhancement_bonus,
+            'ai_optimization_potential': 15,  # Default optimization potential
+            'ai_insights': ai_insights
+        }
+    
+    def _get_segment_efficiency(self, connection_type: str) -> float:
+        """Get efficiency factor for different connection types"""
+        efficiencies = {
+            'internal_lan': 0.95,
+            'private_line': 0.92,
+            'direct_connect': 0.90,
+            'vpn': 0.85,
+            'internet': 0.75
+        }
+        return efficiencies.get(connection_type, 0.85)
+    
+    def _calculate_segment_optimization_potential(self, segment: Dict) -> float:
+        """Calculate optimization potential for a segment"""
+        base_potential = 10  # Base 10% optimization potential
+        
+        if segment['connection_type'] == 'internal_lan':
+            return 5  # Less optimization potential for internal networks
+        elif segment['connection_type'] == 'direct_connect':
+            return 15  # More potential for DX optimization
+        elif segment['connection_type'] == 'private_line':
+            return 12  # Moderate potential for private lines
+        
+        return base_potential
+    
+    def _calculate_network_quality_score(self, bandwidth_mbps: float, 
+                                       latency_ms: float, reliability: float) -> float:
+        """Calculate overall network quality score"""
+        
+        # Bandwidth score (0-40 points)
+        bandwidth_score = min(40, (bandwidth_mbps / 10000) * 40)
+        
+        # Latency score (0-30 points, lower is better)
+        latency_score = max(0, 30 - (latency_ms / 50) * 30)
+        
+        # Reliability score (0-30 points)
+        reliability_score = (reliability - 0.95) / 0.05 * 30 if reliability > 0.95 else 0
+        
+        return bandwidth_score + latency_score + reliability_score
+    
+    def _generate_ai_insights(self, path_config: Dict, segments: List[Dict], 
+                            destination_storage: str) -> Dict:
+        """Generate AI insights for network path"""
+        
+        environment = path_config['environment']
+        
+        # Identify performance bottlenecks
+        bottlenecks = []
+        min_bandwidth = min(s['effective_bandwidth_mbps'] for s in segments)
+        bottleneck_segment = next(s for s in segments if s['effective_bandwidth_mbps'] == min_bandwidth)
+        
+        if min_bandwidth < 5000:
+            bottlenecks.append(f"Bandwidth bottleneck: {bottleneck_segment['name']}")
+        
+        high_latency_segments = [s for s in segments if s['effective_latency_ms'] > 10]
+        for segment in high_latency_segments:
+            bottlenecks.append(f"High latency: {segment['name']}")
+        
+        # Optimization opportunities
+        optimization_opportunities = [
+            f"Network path optimization for {destination_storage}",
+            f"{environment.title()} environment best practices"
+        ]
+        
+        if destination_storage == 'FSx_Lustre':
+            optimization_opportunities.append("Lustre parallel I/O optimization")
+        elif destination_storage == 'FSx_Windows':
+            optimization_opportunities.append("SMB protocol optimization")
+        
+        # Recommended improvements
+        recommended_improvements = [
+            f"Optimize {environment} network configuration",
+            f"Implement {destination_storage}-specific tuning"
+        ]
+        
+        if environment == 'non-production' and min_bandwidth < 5000:
+            recommended_improvements.append("Consider upgrading non-production DX connection")
+        
+        # Risk factors
+        risk_factors = []
+        low_reliability_segments = [s for s in segments if s['reliability'] < 0.999]
+        for segment in low_reliability_segments:
+            risk_factors.append(f"Reliability concern: {segment['name']}")
+        
+        if not risk_factors:
+            risk_factors.append("No significant network risks identified")
+        
+        return {
+            'performance_bottlenecks': bottlenecks if bottlenecks else ["No significant bottlenecks"],
+            'optimization_opportunities': optimization_opportunities,
+            'recommended_improvements': recommended_improvements,
+            'risk_factors': risk_factors
+        }
 
 class EnhancedAgentSizingManager:
     """Enhanced agent sizing with scalable agent count and AI recommendations"""
