@@ -3838,44 +3838,50 @@ class EnhancedAWSMigrationManager:
         }
     
     async def ai_enhanced_aws_sizing(self, on_prem_config: Dict) -> Dict:
-        """AI-enhanced AWS sizing with real-time pricing"""
-        
-        # Get real-time pricing
-        pricing_data = await self.aws_api.get_real_time_pricing()
-        
-        # Get AI workload analysis
-        ai_analysis = await self.ai_manager.analyze_migration_workload(
-            on_prem_config, 
-            on_prem_config.get('performance_data', {})
-        )
-        
-        # Enhanced sizing logic with AI insights
-        rds_recommendations = await self._ai_calculate_rds_sizing(
-            on_prem_config, pricing_data, ai_analysis
-        )
-        
-        ec2_recommendations = await self._ai_calculate_ec2_sizing(
-            on_prem_config, pricing_data, ai_analysis
-        )
-        
-        # AI-enhanced reader/writer configuration
-        reader_writer_config = await self._ai_calculate_reader_writer_config(
-            on_prem_config, ai_analysis
-        )
-        
-        # AI-powered deployment recommendation
-        deployment_recommendation = await self._ai_recommend_deployment_type(
-            on_prem_config, ai_analysis, rds_recommendations, ec2_recommendations
-        )
-        
-        return {
-            'rds_recommendations': rds_recommendations,
-            'ec2_recommendations': ec2_recommendations,
-            'reader_writer_config': reader_writer_config,
-            'deployment_recommendation': deployment_recommendation,
-            'ai_analysis': ai_analysis,
-            'pricing_data': pricing_data
-        }
+    """AI-enhanced AWS sizing with real-time pricing and EC2 support"""
+    
+    # Get real-time pricing
+    pricing_data = await self.aws_api.get_real_time_pricing()
+    
+    # Get AI workload analysis
+    ai_analysis = await self.ai_manager.analyze_migration_workload(
+        on_prem_config, 
+        on_prem_config.get('performance_data', {})
+    )
+    
+    # Use the enhanced sizing function
+    if on_prem_config['database_engine'].startswith('rds_'):
+        sizing_result = calculate_rds_sizing(on_prem_config, self.aws_api)
+        deployment_type = 'rds'
+    elif on_prem_config['database_engine'].startswith('ec2_'):
+        sizing_result = calculate_ec2_sizing_with_instance_type(on_prem_config, self.aws_api)
+        deployment_type = 'ec2'
+    else:
+        sizing_result = calculate_general_ec2_sizing(on_prem_config, self.aws_api)
+        deployment_type = 'ec2'
+    
+    # Enhanced reader/writer configuration
+    reader_writer_config = await self._ai_calculate_reader_writer_config(
+        on_prem_config, ai_analysis
+    )
+    
+    # AI-powered deployment recommendation
+    rds_sizing = calculate_rds_sizing(on_prem_config, self.aws_api) if deployment_type != 'rds' else sizing_result
+    ec2_sizing = calculate_ec2_sizing_with_instance_type(on_prem_config, self.aws_api) if deployment_type != 'ec2' else sizing_result
+    
+    deployment_recommendation = await self._ai_recommend_deployment_type(
+        on_prem_config, ai_analysis, rds_sizing, ec2_sizing
+    )
+    
+    return {
+        'rds_recommendations': rds_sizing,
+        'ec2_recommendations': ec2_sizing,
+        'reader_writer_config': reader_writer_config,
+        'deployment_recommendation': deployment_recommendation,
+        'ai_analysis': ai_analysis,
+        'pricing_data': pricing_data,
+        'selected_sizing': sizing_result
+    }
     
     async def _ai_calculate_rds_sizing(self, config: Dict, pricing_data: Dict, ai_analysis: Dict) -> Dict:
         """AI-enhanced RDS sizing calculation"""
@@ -4957,7 +4963,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         else:
             return 'dms'
     
-    def _get_network_path_key(self, config: Dict) -> str:
+def _get_network_path_key(self, config: Dict) -> str:
         """Get network path key with corrected FSx routing"""
         
         # Validate required config keys
@@ -5009,7 +5015,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         return f"nonprod_sj_{os_type}_{'nas' if os_type == 'linux' else 'share'}_s3"
     
     
-    async def _generate_corrected_fsx_destination_comparisons(self, config: Dict) -> Dict:
+async def _generate_corrected_fsx_destination_comparisons(self, config: Dict) -> Dict:
         """Generate FSx comparisons with corrected architecture understanding"""
 
         comparisons = {}
@@ -5149,7 +5155,7 @@ def _determine_migration_method(self, config: Dict) -> str:
             }
         
         return comparisons
-    def _calculate_destination_performance_rating(self, dest_type: str, network_perf: Dict, agent_config: Dict) -> str:
+def _calculate_destination_performance_rating(self, dest_type: str, network_perf: Dict, agent_config: Dict) -> str:
         """Calculate performance rating for destination type"""
         
         throughput = agent_config.get('total_max_throughput_mbps', 0)
@@ -5182,7 +5188,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         else:
             return "Poor"
     
-    def _calculate_destination_cost_rating(self, dest_type: str, estimated_cost: float) -> str:
+def _calculate_destination_cost_rating(self, dest_type: str, estimated_cost: float) -> str:
         """Calculate cost rating for destination type"""
         
         if dest_type == 'S3':
@@ -5194,7 +5200,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         else:
             return "Unknown"
     
-    def _calculate_destination_complexity_rating(self, dest_type: str, config: Dict) -> str:
+def _calculate_destination_complexity_rating(self, dest_type: str, config: Dict) -> str:
         """Calculate complexity rating for destination type"""
         
         base_complexity = 1
@@ -5225,7 +5231,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         else:
             return "High"
     
-    def _get_destination_recommendations(self, dest_type: str, config: Dict, network_perf: Dict) -> List[str]:
+def _get_destination_recommendations(self, dest_type: str, config: Dict, network_perf: Dict) -> List[str]:
         """Get recommendations for specific destination type"""
         
         recommendations = []
@@ -5267,7 +5273,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         
         return recommendations[:4]  # Limit to top 4 recommendations
     
-    async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
+async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
         """Enhanced migration agent analysis with scaling support and destination storage"""
         
         num_agents = config.get('number_of_agents', 1)
@@ -5327,7 +5333,7 @@ def _determine_migration_method(self, config: Dict) -> str:
             'monthly_cost': agent_config['total_monthly_cost']
         }
     
-    async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float, 
+async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float, 
                                                      onprem_performance: Dict, agent_analysis: Dict) -> float:
         """AI-enhanced migration time calculation with agent scaling and destination storage"""
         
@@ -5377,7 +5383,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         
         return base_time_hours * complexity_factor
     
-    async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizing: Dict, 
+async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizing: Dict, 
                                                      agent_analysis: Dict, network_perf: Dict) -> Dict:
         """AI-enhanced cost calculation with agent scaling costs and FSx storage costs"""
         
@@ -5489,7 +5495,7 @@ def _determine_migration_method(self, config: Dict) -> str:
             }
         }
     
-    def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
+def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
         """Calculate monthly cost for destination storage"""
         
         database_size_gb = config['database_size_gb']
@@ -5508,7 +5514,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         
         return database_size_gb * storage_multiplier * base_cost_per_gb
     
-    async def _get_ai_agent_optimization_with_scaling(self, agent_config: Dict, network_perf: Dict, 
+async def _get_ai_agent_optimization_with_scaling(self, agent_config: Dict, network_perf: Dict, 
                                                     config: Dict, num_agents: int) -> Dict:
         """Get AI-powered agent optimization recommendations with scaling and destination storage considerations"""
         
@@ -5558,7 +5564,7 @@ def _determine_migration_method(self, config: Dict) -> str:
             'destination_storage_impact': f"{destination_storage} provides {agent_config.get('storage_performance_multiplier', 1.0):.1f}x performance multiplier"
         }
     
-    async def _generate_ai_overall_assessment_with_agents(self, config: Dict, onprem_performance: Dict, 
+async def _generate_ai_overall_assessment_with_agents(self, config: Dict, onprem_performance: Dict, 
                                                         aws_sizing: Dict, migration_time: float, 
                                                         agent_analysis: Dict) -> Dict:
         """Generate AI-powered overall migration assessment with agent scaling and destination storage considerations"""
@@ -5670,7 +5676,7 @@ def _determine_migration_method(self, config: Dict) -> str:
             'timeline_recommendation': self._get_timeline_recommendation_with_agents(migration_time, ai_complexity, num_agents, destination_storage)
         }
     
-    def _get_next_steps_with_agents(self, readiness_score: float, ai_complexity: int, 
+def _get_next_steps_with_agents(self, readiness_score: float, ai_complexity: int, 
                                   agent_analysis: Dict, destination_storage: str) -> List[str]:
         """Get recommended next steps with agent scaling and destination storage considerations"""
         
@@ -5710,7 +5716,7 @@ def _determine_migration_method(self, config: Dict) -> str:
         
         return steps[:6]
     
-    def _get_timeline_recommendation_with_agents(self, migration_time: float, ai_complexity: int, 
+def _get_timeline_recommendation_with_agents(self, migration_time: float, ai_complexity: int, 
                                                num_agents: int, destination_storage: str) -> Dict:
         """Get AI-recommended timeline with agent scaling and destination storage considerations"""
         
@@ -6754,7 +6760,7 @@ def render_enhanced_sidebar_controls():
     # Add this after the Target Database selection in render_enhanced_sidebar_controls()
 
 # NEW: Migration Approach Selection
-    if database_engine.startswith('rds_') or destination_storage_type == 'S3':
+if database_engine.startswith('rds_') or destination_storage_type == 'S3':
         st.sidebar.subheader("🔄 Migration Approach (Enhanced)")
         migration_approach = st.sidebar.selectbox(
             "Migration Method",
@@ -6798,112 +6804,112 @@ def render_enhanced_sidebar_controls():
                 
                 **Best For:** Mixed workload migrations
                 """)
-    else:
+else:
         migration_approach = "auto"
     
     
     # Show deployment type indicator with enhanced logic
-    if database_engine.startswith('rds_'):
+if database_engine.startswith('rds_'):
         deployment_type = "🟢 Managed Service (RDS/DocumentDB)"
         engine_name = database_engine.replace('rds_', '').upper()
         management_complexity = "Low"
-    else:
+else:
         deployment_type = "🟡 Self-Managed (EC2)"
         engine_name = database_engine.replace('ec2_', '').upper()
         management_complexity = "High"
     
-    st.sidebar.info(f"**Deployment:** {deployment_type}")
-    st.sidebar.info(f"**Instance:** {engine_name}")
-    st.sidebar.info(f"**Management:** {management_complexity}")
+        st.sidebar.info(f"**Deployment:** {deployment_type}")
+        st.sidebar.info(f"**Instance:** {engine_name}")
+        st.sidebar.info(f"**Management:** {management_complexity}")
     
     # Show migration type with enhanced logic (FIXED - using variables instead of config)
-    target_db_type = database_engine.split('_')[1] if '_' in database_engine else database_engine
-    
-    # Check if source and target database engines match
-    is_homogeneous = source_database_engine == target_db_type or (
-        source_database_engine == 'mongodb' and 'mongodb' in database_engine
-    )
-    
-    migration_type_indicator = "🟢 Homogeneous" if is_homogeneous else "🟡 Heterogeneous"
-    st.sidebar.info(f"**Migration Type:** {migration_type_indicator}")
-    
-    # Enhanced migration complexity assessment
-    complexity_factors = []
-    base_complexity = 1
-    
-    # Database engine complexity
-    if not is_homogeneous:
-        complexity_factors.append("Different database engines")
-        base_complexity += 2
-    
-    # Deployment complexity
-    if database_engine.startswith('ec2_'):
-        complexity_factors.append("Self-managed deployment")
-        base_complexity += 1
-    
-    # Instance type complexity
-    if 'x1e' in database_engine:
-        complexity_factors.append("High-memory instance configuration")
-        base_complexity += 0.5
-    elif 'i3' in database_engine:
-        complexity_factors.append("Storage-optimized instance setup")
-        base_complexity += 0.5
-    
-    migration_complexity = min(10, base_complexity)
-    
-    with st.sidebar.expander("📊 Migration Complexity Analysis"):
-        st.write(f"**Complexity Score:** {migration_complexity:.1f}/10")
-        st.write(f"**Factors:**")
-        for factor in complexity_factors:
-            st.write(f"• {factor}")
-        if not complexity_factors:
-            st.write("• Standard migration complexity")
-    
-    # Enhanced instance recommendations based on selection
-    if database_engine.startswith('ec2_'):
-        with st.sidebar.expander("💡 EC2 Instance Insights"):
-            instance_type = database_engine.replace('ec2_', '')
-            
-            instance_recommendations = {
-                't3_medium': {
-                    'best_for': 'Development/testing environments',
-                    'workload': 'Light to moderate workloads',
-                    'cost_efficiency': 'Excellent',
-                    'performance': 'Burstable - good for variable workloads'
-                },
-                't3_large': {
-                    'best_for': 'Small production databases',
-                    'workload': 'Moderate workloads with burst capability',
-                    'cost_efficiency': 'Very Good',
-                    'performance': 'Burstable - handles traffic spikes well'
-                },
-                'c5_large': {
-                    'best_for': 'CPU-intensive database operations',
-                    'workload': 'High-frequency transactions',
-                    'cost_efficiency': 'Good',
-                    'performance': 'Consistent high CPU performance'
-                },
-                'r6i_large': {
-                    'best_for': 'Memory-intensive databases',
-                    'workload': 'Large datasets, caching',
-                    'cost_efficiency': 'Good',
-                    'performance': 'Excellent for memory-bound workloads'
-                },
-                'x1e_xlarge': {
-                    'best_for': 'Very large in-memory databases',
-                    'workload': 'Analytics, big data processing',
-                    'cost_efficiency': 'Specialized use case',
-                    'performance': 'Exceptional memory capacity'
-                },
-                'i3_large': {
-                    'best_for': 'High I/O database applications',
-                    'workload': 'Database workloads requiring high IOPS',
-                    'cost_efficiency': 'Good for storage-intensive apps',
-                    'performance': 'Very high storage performance'
+        target_db_type = database_engine.split('_')[1] if '_' in database_engine else database_engine
+        
+        # Check if source and target database engines match
+        is_homogeneous = source_database_engine == target_db_type or (
+            source_database_engine == 'mongodb' and 'mongodb' in database_engine
+        )
+        
+        migration_type_indicator = "🟢 Homogeneous" if is_homogeneous else "🟡 Heterogeneous"
+        st.sidebar.info(f"**Migration Type:** {migration_type_indicator}")
+        
+        # Enhanced migration complexity assessment
+        complexity_factors = []
+        base_complexity = 1
+        
+        # Database engine complexity
+        if not is_homogeneous:
+            complexity_factors.append("Different database engines")
+            base_complexity += 2
+        
+        # Deployment complexity
+        if database_engine.startswith('ec2_'):
+            complexity_factors.append("Self-managed deployment")
+            base_complexity += 1
+        
+        # Instance type complexity
+        if 'x1e' in database_engine:
+            complexity_factors.append("High-memory instance configuration")
+            base_complexity += 0.5
+        elif 'i3' in database_engine:
+            complexity_factors.append("Storage-optimized instance setup")
+            base_complexity += 0.5
+        
+        migration_complexity = min(10, base_complexity)
+        
+        with st.sidebar.expander("📊 Migration Complexity Analysis"):
+            st.write(f"**Complexity Score:** {migration_complexity:.1f}/10")
+            st.write(f"**Factors:**")
+            for factor in complexity_factors:
+                st.write(f"• {factor}")
+            if not complexity_factors:
+                st.write("• Standard migration complexity")
+        
+        # Enhanced instance recommendations based on selection
+        if database_engine.startswith('ec2_'):
+            with st.sidebar.expander("💡 EC2 Instance Insights"):
+                instance_type = database_engine.replace('ec2_', '')
+                
+                instance_recommendations = {
+                    't3_medium': {
+                        'best_for': 'Development/testing environments',
+                        'workload': 'Light to moderate workloads',
+                        'cost_efficiency': 'Excellent',
+                        'performance': 'Burstable - good for variable workloads'
+                    },
+                    't3_large': {
+                        'best_for': 'Small production databases',
+                        'workload': 'Moderate workloads with burst capability',
+                        'cost_efficiency': 'Very Good',
+                        'performance': 'Burstable - handles traffic spikes well'
+                    },
+                    'c5_large': {
+                        'best_for': 'CPU-intensive database operations',
+                        'workload': 'High-frequency transactions',
+                        'cost_efficiency': 'Good',
+                        'performance': 'Consistent high CPU performance'
+                    },
+                    'r6i_large': {
+                        'best_for': 'Memory-intensive databases',
+                        'workload': 'Large datasets, caching',
+                        'cost_efficiency': 'Good',
+                        'performance': 'Excellent for memory-bound workloads'
+                    },
+                    'x1e_xlarge': {
+                        'best_for': 'Very large in-memory databases',
+                        'workload': 'Analytics, big data processing',
+                        'cost_efficiency': 'Specialized use case',
+                        'performance': 'Exceptional memory capacity'
+                    },
+                    'i3_large': {
+                        'best_for': 'High I/O database applications',
+                        'workload': 'Database workloads requiring high IOPS',
+                        'cost_efficiency': 'Good for storage-intensive apps',
+                        'performance': 'Very high storage performance'
+                    }
                 }
-            }
-            
-            # Find matching recommendation
+                
+                # Find matching recommendation
             rec = None
             for key, value in instance_recommendations.items():
                 if key in instance_type:
@@ -6920,527 +6926,610 @@ def render_enhanced_sidebar_controls():
                 st.write("**Performance:** Depends on specific instance specifications")
     
     # Continue with the rest of the original function...
-    database_size_gb = st.sidebar.number_input("Database Size (GB)", 
+        database_size_gb = st.sidebar.number_input("Database Size (GB)", 
                                               min_value=100, max_value=100000, value=1000, step=100,
                                               help="AI calculates migration time and resource requirements")
     
     # Migration Parameters
-    downtime_tolerance_minutes = st.sidebar.number_input("Max Downtime (minutes)", 
+        downtime_tolerance_minutes = st.sidebar.number_input("Max Downtime (minutes)", 
                                                         min_value=1, max_value=480, value=60,
                                                         help="AI optimizes migration strategy for downtime window")
-    performance_requirements = st.sidebar.selectbox("Performance Requirement", ["standard", "high"],
+        performance_requirements = st.sidebar.selectbox("Performance Requirement", ["standard", "high"],
                                                    help="AI adjusts AWS sizing recommendations")
     
     # NEW: Destination Storage Selection
-    st.sidebar.subheader("🗄️ Destination Storage (Enhanced Analysis)")
-    destination_storage_type = st.sidebar.selectbox(
-        "AWS Destination Storage",
-        ["S3", "FSx_Windows", "FSx_Lustre"],
-        format_func=lambda x: {
-            'S3': '☁️ Amazon S3 (Standard)',
-            'FSx_Windows': '🪟 Amazon FSx for Windows File Server',
-            'FSx_Lustre': '⚡ Amazon FSx for Lustre (High Performance)'
-        }[x],
-        help="AI analyzes performance, cost, and complexity for each destination type"
-    )
-    
-    # Show destination storage insights
-    with st.sidebar.expander("🎯 Storage Destination Insights"):
-        if destination_storage_type == "S3":
-            st.markdown("""
-            **S3 Advantages:**
-            • Cost-effective and scalable
-            • Simple migration integration
-            • Excellent durability (99.999999999%)
-            
-            **Best For:** General-purpose storage, cost optimization
-            """)
-        elif destination_storage_type == "FSx_Windows":
-            st.markdown("""
-            **FSx Windows Advantages:**
-            • Native Windows file system features
-            • Better performance than S3
-            • Active Directory integration
-            
-            **Best For:** Windows-based applications, file shares
-            """)
-        elif destination_storage_type == "FSx_Lustre":
-            st.markdown("""
-            **FSx Lustre Advantages:**
-            • Extremely high performance (sub-ms latency)
-            • Parallel processing optimized
-            • Perfect for HPC and analytics
-            
-            **Best For:** High-performance computing, ML workloads
-            """)
+        st.sidebar.subheader("🗄️ Destination Storage (Enhanced Analysis)")
+        destination_storage_type = st.sidebar.selectbox(
+            "AWS Destination Storage",
+            ["S3", "FSx_Windows", "FSx_Lustre"],
+            format_func=lambda x: {
+                'S3': '☁️ Amazon S3 (Standard)',
+                'FSx_Windows': '🪟 Amazon FSx for Windows File Server',
+                'FSx_Lustre': '⚡ Amazon FSx for Lustre (High Performance)'
+            }[x],
+            help="AI analyzes performance, cost, and complexity for each destination type"
+        )
+        
+        # Show destination storage insights
+        with st.sidebar.expander("🎯 Storage Destination Insights"):
+            if destination_storage_type == "S3":
+                st.markdown("""
+                **S3 Advantages:**
+                • Cost-effective and scalable
+                • Simple migration integration
+                • Excellent durability (99.999999999%)
+                
+                **Best For:** General-purpose storage, cost optimization
+                """)
+            elif destination_storage_type == "FSx_Windows":
+                st.markdown("""
+                **FSx Windows Advantages:**
+                • Native Windows file system features
+                • Better performance than S3
+                • Active Directory integration
+                
+                **Best For:** Windows-based applications, file shares
+                """)
+            elif destination_storage_type == "FSx_Lustre":
+                st.markdown("""
+                **FSx Lustre Advantages:**
+                • Extremely high performance (sub-ms latency)
+                • Parallel processing optimized
+                • Perfect for HPC and analytics
+                
+                **Best For:** High-performance computing, ML workloads
+                """)
     
     # Environment
-    environment = st.sidebar.selectbox("Environment", ["non-production", "production"],
-                                     help="AI adjusts reliability and performance requirements")
-    
-    # Enhanced Agent Sizing Section with AI recommendations
-    st.sidebar.subheader("🤖 Migration Agent Configuration (AI-Optimized)")
-    
-    # Determine migration type for tool selection
-    primary_tool = "DataSync" if is_homogeneous else "DMS"
-    
-    st.sidebar.success(f"**Primary Tool:** AWS {primary_tool}")
-    
-    # Agent Count Configuration
-    st.sidebar.markdown("**📊 Agent Scaling Configuration:**")
-    
-    number_of_agents = st.sidebar.number_input(
-        "Number of Migration Agents",
-        min_value=1,
-        max_value=10,
-        value=2,
-        step=1,
-        help="Configure the number of agents for parallel migration processing"
-    )
-    
-    # Show agent scaling insights
-    if number_of_agents == 1:
-        st.sidebar.info("💡 Single agent - simple but may limit throughput")
-    elif number_of_agents <= 3:
-        st.sidebar.success("✅ Optimal range for most workloads")
-    elif number_of_agents <= 5:
-        st.sidebar.warning("⚠️ High agent count - ensure proper coordination")
-    else:
-        st.sidebar.error("🔴 Very high agent count - diminishing returns likely")
-    
-    if is_homogeneous:
-        datasync_agent_size = st.sidebar.selectbox(
-            "DataSync Agent Size",
-            ["small", "medium", "large", "xlarge"],
-            index=1,
+        environment = st.sidebar.selectbox("Environment", ["non-production", "production"],
+                                        help="AI adjusts reliability and performance requirements")
+        
+        # Enhanced Agent Sizing Section with AI recommendations
+        st.sidebar.subheader("🤖 Migration Agent Configuration (AI-Optimized)")
+        
+        # Determine migration type for tool selection
+        primary_tool = "DataSync" if is_homogeneous else "DMS"
+        
+        st.sidebar.success(f"**Primary Tool:** AWS {primary_tool}")
+        
+        # Agent Count Configuration
+        st.sidebar.markdown("**📊 Agent Scaling Configuration:**")
+        
+        number_of_agents = st.sidebar.number_input(
+            "Number of Migration Agents",
+            min_value=1,
+            max_value=10,
+            value=2,
+            step=1,
+            help="Configure the number of agents for parallel migration processing"
+        )
+        
+        # Show agent scaling insights
+        if number_of_agents == 1:
+            st.sidebar.info("💡 Single agent - simple but may limit throughput")
+        elif number_of_agents <= 3:
+            st.sidebar.success("✅ Optimal range for most workloads")
+        elif number_of_agents <= 5:
+            st.sidebar.warning("⚠️ High agent count - ensure proper coordination")
+        else:
+            st.sidebar.error("🔴 Very high agent count - diminishing returns likely")
+        
+        if is_homogeneous:
+            datasync_agent_size = st.sidebar.selectbox(
+                "DataSync Agent Size",
+                ["small", "medium", "large", "xlarge"],
+                index=1,
+                format_func=lambda x: {
+                    'small': '📦 Small (t3.medium) - 250 Mbps/agent',
+                    'medium': '📦 Medium (c5.large) - 500 Mbps/agent',
+                    'large': '📦 Large (c5.xlarge) - 1000 Mbps/agent',
+                    'xlarge': '📦 XLarge (c5.2xlarge) - 2000 Mbps/agent'
+                }[x],
+                help=f"AI recommends optimal agent size for {number_of_agents} agents"
+            )
+            dms_agent_size = None
+        else:
+            dms_agent_size = st.sidebar.selectbox(
+                "DMS Instance Size",
+                ["small", "medium", "large", "xlarge", "xxlarge"],
+                index=1,
+                format_func=lambda x: {
+                    'small': '🔄 Small (t3.medium) - 200 Mbps/agent',
+                    'medium': '🔄 Medium (c5.large) - 400 Mbps/agent',
+                    'large': '🔄 Large (c5.xlarge) - 800 Mbps/agent',
+                    'xlarge': '🔄 XLarge (c5.2xlarge) - 1500 Mbps/agent',
+                    'xxlarge': '🔄 XXLarge (c5.4xlarge) - 2500 Mbps/agent'
+                }[x],
+                help=f"AI recommends optimal instance size for {number_of_agents} agents"
+            )
+            datasync_agent_size = None
+        
+        # Show estimated throughput with current configuration including destination storage impact
+        agent_manager = EnhancedAgentSizingManager()
+        if is_homogeneous:
+            test_config = agent_manager.calculate_agent_configuration('datasync', datasync_agent_size, number_of_agents, destination_storage_type)
+        else:
+            test_config = agent_manager.calculate_agent_configuration('dms', dms_agent_size, number_of_agents, destination_storage_type)
+        
+        st.sidebar.markdown(f"""
+        <div class="agent-scaling-card">
+            <h4>🚀 Current Configuration Impact</h4>
+            <p><strong>Total Throughput:</strong> {test_config['total_max_throughput_mbps']:,.0f} Mbps</p>
+            <p><strong>Scaling Efficiency:</strong> {test_config['scaling_efficiency']*100:.1f}%</p>
+            <p><strong>Storage Multiplier:</strong> {test_config['storage_performance_multiplier']:.1f}x</p>
+            <p><strong>Monthly Cost:</strong> ${test_config['total_monthly_cost']:,.0f}</p>
+            <p><strong>Config Rating:</strong> {test_config['optimal_configuration']['efficiency_score']:.0f}/100</p>
+            <p><strong>Destination:</strong> {destination_storage_type}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # AI Configuration Section
+        st.sidebar.subheader("🧠 AI Configuration")
+        
+        enable_ai_analysis = st.sidebar.checkbox("Enable AI Analysis", value=True,
+                                            help="Use Anthropic AI for intelligent recommendations")
+        
+        if enable_ai_analysis:
+            ai_analysis_depth = st.sidebar.selectbox(
+                "AI Analysis Depth",
+                ["standard", "comprehensive"],
+                help="Comprehensive analysis provides more detailed AI insights"
+            )
+        else:
+            ai_analysis_depth = "standard"
+        
+        # Real-time AWS Pricing
+        use_realtime_pricing = st.sidebar.checkbox("Real-time AWS Pricing", value=True,
+                                                help="Fetch current AWS pricing via API")
+        
+        if st.sidebar.button("🔄 Refresh AI Analysis", type="primary"):
+            st.rerun()
+        
+        return {
+            'operating_system': operating_system,
+            'server_type': server_type,
+            'ram_gb': ram_gb,
+            'cpu_cores': cpu_cores,
+            'cpu_ghz': cpu_ghz,
+            'nic_type': nic_type,
+            'nic_speed': nic_speed,
+            'source_database_engine': source_database_engine,
+            'database_engine': database_engine,
+            'database_size_gb': database_size_gb,
+            'downtime_tolerance_minutes': downtime_tolerance_minutes,
+            'performance_requirements': performance_requirements,
+            'destination_storage_type': destination_storage_type,
+            'environment': environment,
+            'datasync_agent_size': datasync_agent_size,
+            'dms_agent_size': dms_agent_size,
+            'number_of_agents': number_of_agents,
+            'enable_ai_analysis': enable_ai_analysis,
+            'ai_analysis_depth': ai_analysis_depth,
+            'use_realtime_pricing': use_realtime_pricing,
+            'current_storage_gb': current_storage_gb,
+            'peak_iops': peak_iops,
+            'max_throughput_mbps': max_throughput_mbps,
+            'anticipated_max_memory_gb': anticipated_max_memory_gb,
+            'anticipated_max_cpu_cores': anticipated_max_cpu_cores,
+            'deployment_type': 'managed' if database_engine.startswith('rds_') else 'self_managed',
+            'instance_type': database_engine if database_engine.startswith('ec2_') else None,
+            'migration_complexity_score': migration_complexity,
+            'is_homogeneous': is_homogeneous
+        }
+        
+        # Render API status
+        render_api_status_sidebar()
+        
+        st.sidebar.markdown("---")
+        
+        # Operating System Selection with AI insights
+        st.sidebar.subheader("💻 Operating System (AI-Enhanced)")
+        operating_system = st.sidebar.selectbox(
+            "OS Selection",
+            ["windows_server_2019", "windows_server_2022", "rhel_8", "rhel_9", "ubuntu_20_04", "ubuntu_22_04"],
+            index=3,
             format_func=lambda x: {
-                'small': '📦 Small (t3.medium) - 250 Mbps/agent',
-                'medium': '📦 Medium (c5.large) - 500 Mbps/agent',
-                'large': '📦 Large (c5.xlarge) - 1000 Mbps/agent',
-                'xlarge': '📦 XLarge (c5.2xlarge) - 2000 Mbps/agent'
+                'windows_server_2019': '🔵 Windows Server 2019',
+                'windows_server_2022': '🔵 Windows Server 2022 (Latest)',
+                'rhel_8': '🔴 Red Hat Enterprise Linux 8',
+                'rhel_9': '🔴 Red Hat Enterprise Linux 9 (Latest)',
+                'ubuntu_20_04': '🟠 Ubuntu Server 20.04 LTS',
+                'ubuntu_22_04': '🟠 Ubuntu Server 22.04 LTS (Latest)'
             }[x],
-            help=f"AI recommends optimal agent size for {number_of_agents} agents"
+            help="AI analyzes OS performance characteristics and migration impact"
         )
-        dms_agent_size = None
-    else:
-        dms_agent_size = st.sidebar.selectbox(
-            "DMS Instance Size",
-            ["small", "medium", "large", "xlarge", "xxlarge"],
-            index=1,
+        
+        # Show AI OS insights
+        os_manager = OSPerformanceManager()
+        os_config = os_manager.operating_systems[operating_system]
+        
+        with st.sidebar.expander("🤖 AI OS Insights"):
+            st.markdown(f"**Strengths:** {', '.join(os_config['ai_insights']['strengths'][:2])}")
+            st.markdown(f"**Key Consideration:** {os_config['ai_insights']['weaknesses'][0]}")
+        
+        # Platform Configuration
+        st.sidebar.subheader("🖥️ Server Platform")
+        server_type = st.sidebar.selectbox(
+            "Platform Type",
+            ["physical", "vmware"],
+            format_func=lambda x: "🏢 Physical Server" if x == "physical" else "☁️ VMware Virtual Machine",
+            help="Physical vs Virtual performance analysis with AI optimization"
+        )
+        
+        # Hardware Configuration with AI recommendations
+        st.sidebar.subheader("⚙️ Hardware Configuration")
+        ram_gb = st.sidebar.selectbox("RAM (GB)", [8, 16, 32, 64, 128, 256, 512], index=2, 
+                                    help="AI calculates optimal memory for database workload")
+        cpu_cores = st.sidebar.selectbox("CPU Cores", [2, 4, 8, 16, 24, 32, 48, 64], index=2,
+                                    help="AI analyzes CPU requirements for migration performance")
+        cpu_ghz = st.sidebar.selectbox("CPU GHz", [2.0, 2.4, 2.8, 3.2, 3.6, 4.0], index=3)
+        
+        # Enhanced Performance Metrics
+        st.sidebar.subheader("📊 Current Performance Metrics")
+        current_storage_gb = st.sidebar.number_input("Current Storage (GB)", 
+                                                    min_value=100, max_value=500000, value=2000, step=100,
+                                                    help="Current storage capacity in use")
+        peak_iops = st.sidebar.number_input("Peak IOPS", 
+                                        min_value=100, max_value=1000000, value=10000, step=500,
+                                        help="Maximum IOPS observed during peak usage")
+        max_throughput_mbps = st.sidebar.number_input("Max Throughput (MB/s)", 
+                                                    min_value=10, max_value=10000, value=500, step=50,
+                                                    help="Maximum storage throughput observed")
+        anticipated_max_memory_gb = st.sidebar.number_input("Anticipated Max Memory (GB)", 
+                                                        min_value=4, max_value=1024, value=64, step=8,
+                                                        help="Maximum memory usage anticipated for workload")
+        anticipated_max_cpu_cores = st.sidebar.number_input("Anticipated Max CPU Cores", 
+                                                        min_value=1, max_value=128, value=16, step=2,
+                                                        help="Maximum CPU cores anticipated for workload")
+        
+        # Network Interface with AI insights
+        nic_type = st.sidebar.selectbox(
+            "NIC Type",
+            ["gigabit_copper", "gigabit_fiber", "10g_copper", "10g_fiber", "25g_fiber", "40g_fiber"],
+            index=3,
             format_func=lambda x: {
-                'small': '🔄 Small (t3.medium) - 200 Mbps/agent',
-                'medium': '🔄 Medium (c5.large) - 400 Mbps/agent',
-                'large': '🔄 Large (c5.xlarge) - 800 Mbps/agent',
-                'xlarge': '🔄 XLarge (c5.2xlarge) - 1500 Mbps/agent',
-                'xxlarge': '🔄 XXLarge (c5.4xlarge) - 2500 Mbps/agent'
+                'gigabit_copper': '🔶 1Gbps Copper',
+                'gigabit_fiber': '🟡 1Gbps Fiber',
+                '10g_copper': '🔵 10Gbps Copper',
+                '10g_fiber': '🟢 10Gbps Fiber',
+                '25g_fiber': '🟣 25Gbps Fiber',
+                '40g_fiber': '🔴 40Gbps Fiber'
             }[x],
-            help=f"AI recommends optimal instance size for {number_of_agents} agents"
+            help="AI analyzes network impact on migration throughput"
         )
-        datasync_agent_size = None
-    
-    # Show estimated throughput with current configuration including destination storage impact
-    agent_manager = EnhancedAgentSizingManager()
-    if is_homogeneous:
-        test_config = agent_manager.calculate_agent_configuration('datasync', datasync_agent_size, number_of_agents, destination_storage_type)
-    else:
-        test_config = agent_manager.calculate_agent_configuration('dms', dms_agent_size, number_of_agents, destination_storage_type)
-    
-    st.sidebar.markdown(f"""
-    <div class="agent-scaling-card">
-        <h4>🚀 Current Configuration Impact</h4>
-        <p><strong>Total Throughput:</strong> {test_config['total_max_throughput_mbps']:,.0f} Mbps</p>
-        <p><strong>Scaling Efficiency:</strong> {test_config['scaling_efficiency']*100:.1f}%</p>
-        <p><strong>Storage Multiplier:</strong> {test_config['storage_performance_multiplier']:.1f}x</p>
-        <p><strong>Monthly Cost:</strong> ${test_config['total_monthly_cost']:,.0f}</p>
-        <p><strong>Config Rating:</strong> {test_config['optimal_configuration']['efficiency_score']:.0f}/100</p>
-        <p><strong>Destination:</strong> {destination_storage_type}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # AI Configuration Section
-    st.sidebar.subheader("🧠 AI Configuration")
-    
-    enable_ai_analysis = st.sidebar.checkbox("Enable AI Analysis", value=True,
-                                           help="Use Anthropic AI for intelligent recommendations")
-    
-    if enable_ai_analysis:
-        ai_analysis_depth = st.sidebar.selectbox(
-            "AI Analysis Depth",
-            ["standard", "comprehensive"],
-            help="Comprehensive analysis provides more detailed AI insights"
-        )
-    else:
-        ai_analysis_depth = "standard"
-    
-    # Real-time AWS Pricing
-    use_realtime_pricing = st.sidebar.checkbox("Real-time AWS Pricing", value=True,
-                                             help="Fetch current AWS pricing via API")
-    
-    if st.sidebar.button("🔄 Refresh AI Analysis", type="primary"):
-        st.rerun()
-    
-    return {
-        'operating_system': operating_system,
-        'server_type': server_type,
-        'ram_gb': ram_gb,
-        'cpu_cores': cpu_cores,
-        'cpu_ghz': cpu_ghz,
-        'nic_type': nic_type,
-        'nic_speed': nic_speed,
-        'source_database_engine': source_database_engine,
-        'database_engine': database_engine,
-        'database_size_gb': database_size_gb,
-        'downtime_tolerance_minutes': downtime_tolerance_minutes,
-        'performance_requirements': performance_requirements,
-        'destination_storage_type': destination_storage_type,
-        'environment': environment,
-        'datasync_agent_size': datasync_agent_size,
-        'dms_agent_size': dms_agent_size,
-        'number_of_agents': number_of_agents,
-        'enable_ai_analysis': enable_ai_analysis,
-        'ai_analysis_depth': ai_analysis_depth,
-        'use_realtime_pricing': use_realtime_pricing,
-        'current_storage_gb': current_storage_gb,
-        'peak_iops': peak_iops,
-        'max_throughput_mbps': max_throughput_mbps,
-        'anticipated_max_memory_gb': anticipated_max_memory_gb,
-        'anticipated_max_cpu_cores': anticipated_max_cpu_cores,
-        'deployment_type': 'managed' if database_engine.startswith('rds_') else 'self_managed',
-        'instance_type': database_engine if database_engine.startswith('ec2_') else None,
-        'migration_complexity_score': migration_complexity,
-        'is_homogeneous': is_homogeneous
-    }
-    
-    # Render API status
-    render_api_status_sidebar()
-    
-    st.sidebar.markdown("---")
-    
-    # Operating System Selection with AI insights
-    st.sidebar.subheader("💻 Operating System (AI-Enhanced)")
-    operating_system = st.sidebar.selectbox(
-        "OS Selection",
-        ["windows_server_2019", "windows_server_2022", "rhel_8", "rhel_9", "ubuntu_20_04", "ubuntu_22_04"],
-        index=3,
-        format_func=lambda x: {
-            'windows_server_2019': '🔵 Windows Server 2019',
-            'windows_server_2022': '🔵 Windows Server 2022 (Latest)',
-            'rhel_8': '🔴 Red Hat Enterprise Linux 8',
-            'rhel_9': '🔴 Red Hat Enterprise Linux 9 (Latest)',
-            'ubuntu_20_04': '🟠 Ubuntu Server 20.04 LTS',
-            'ubuntu_22_04': '🟠 Ubuntu Server 22.04 LTS (Latest)'
-        }[x],
-        help="AI analyzes OS performance characteristics and migration impact"
-    )
-    
-    # Show AI OS insights
-    os_manager = OSPerformanceManager()
-    os_config = os_manager.operating_systems[operating_system]
-    
-    with st.sidebar.expander("🤖 AI OS Insights"):
-        st.markdown(f"**Strengths:** {', '.join(os_config['ai_insights']['strengths'][:2])}")
-        st.markdown(f"**Key Consideration:** {os_config['ai_insights']['weaknesses'][0]}")
-    
-    # Platform Configuration
-    st.sidebar.subheader("🖥️ Server Platform")
-    server_type = st.sidebar.selectbox(
-        "Platform Type",
-        ["physical", "vmware"],
-        format_func=lambda x: "🏢 Physical Server" if x == "physical" else "☁️ VMware Virtual Machine",
-        help="Physical vs Virtual performance analysis with AI optimization"
-    )
-    
-    # Hardware Configuration with AI recommendations
-    st.sidebar.subheader("⚙️ Hardware Configuration")
-    ram_gb = st.sidebar.selectbox("RAM (GB)", [8, 16, 32, 64, 128, 256, 512], index=2, 
-                                 help="AI calculates optimal memory for database workload")
-    cpu_cores = st.sidebar.selectbox("CPU Cores", [2, 4, 8, 16, 24, 32, 48, 64], index=2,
-                                   help="AI analyzes CPU requirements for migration performance")
-    cpu_ghz = st.sidebar.selectbox("CPU GHz", [2.0, 2.4, 2.8, 3.2, 3.6, 4.0], index=3)
-    
-    # Enhanced Performance Metrics
-    st.sidebar.subheader("📊 Current Performance Metrics")
-    current_storage_gb = st.sidebar.number_input("Current Storage (GB)", 
-                                                min_value=100, max_value=500000, value=2000, step=100,
-                                                help="Current storage capacity in use")
-    peak_iops = st.sidebar.number_input("Peak IOPS", 
-                                       min_value=100, max_value=1000000, value=10000, step=500,
-                                       help="Maximum IOPS observed during peak usage")
-    max_throughput_mbps = st.sidebar.number_input("Max Throughput (MB/s)", 
-                                                 min_value=10, max_value=10000, value=500, step=50,
-                                                 help="Maximum storage throughput observed")
-    anticipated_max_memory_gb = st.sidebar.number_input("Anticipated Max Memory (GB)", 
-                                                       min_value=4, max_value=1024, value=64, step=8,
-                                                       help="Maximum memory usage anticipated for workload")
-    anticipated_max_cpu_cores = st.sidebar.number_input("Anticipated Max CPU Cores", 
-                                                       min_value=1, max_value=128, value=16, step=2,
-                                                       help="Maximum CPU cores anticipated for workload")
-    
-    # Network Interface with AI insights
-    nic_type = st.sidebar.selectbox(
-        "NIC Type",
-        ["gigabit_copper", "gigabit_fiber", "10g_copper", "10g_fiber", "25g_fiber", "40g_fiber"],
-        index=3,
-        format_func=lambda x: {
-            'gigabit_copper': '🔶 1Gbps Copper',
-            'gigabit_fiber': '🟡 1Gbps Fiber',
-            '10g_copper': '🔵 10Gbps Copper',
-            '10g_fiber': '🟢 10Gbps Fiber',
-            '25g_fiber': '🟣 25Gbps Fiber',
-            '40g_fiber': '🔴 40Gbps Fiber'
-        }[x],
-        help="AI analyzes network impact on migration throughput"
-    )
-    
-    nic_speeds = {
-        'gigabit_copper': 1000, 'gigabit_fiber': 1000,
-        '10g_copper': 10000, '10g_fiber': 10000, 
-        '25g_fiber': 25000, '40g_fiber': 40000
-    }
-    nic_speed = nic_speeds[nic_type]
-    
-    # Migration Configuration with AI analysis
-    st.sidebar.subheader("🔄 Migration Setup (AI-Optimized)")
-    
-    # Source and Target Databases
-    source_database_engine = st.sidebar.selectbox(
-        "Source Database",
-        ["mysql", "postgresql", "oracle", "sqlserver", "mongodb"],
-        format_func=lambda x: {
-            'mysql': '🐬 MySQL', 'postgresql': '🐘 PostgreSQL', 'oracle': '🏛️ Oracle',
-            'sqlserver': '🪟 SQL Server', 'mongodb': '🍃 MongoDB'
-        }[x],
-        help="AI determines migration complexity based on source engine"
-    )
-    
-    database_engine = st.sidebar.selectbox(
-        "Target Database (AWS)",
-        ["mysql", "postgresql", "oracle", "sqlserver", "mongodb"],
-        format_func=lambda x: {
-            'mysql': '☁️ RDS MySQL', 'postgresql': '☁️ RDS PostgreSQL', 'oracle': '☁️ RDS Oracle',
-            'sqlserver': '☁️ RDS SQL Server', 'mongodb': '☁️ DocumentDB'
-        }[x],
-        help="AI recommends optimal AWS database service"
-    )
-    
-    # Show migration type indicator
-    is_homogeneous = source_database_engine == database_engine
-    migration_type_indicator = "🟢 Homogeneous" if is_homogeneous else "🟡 Heterogeneous"
-    st.sidebar.info(f"**Migration Type:** {migration_type_indicator}")
-    
-    database_size_gb = st.sidebar.number_input("Database Size (GB)", 
-                                              min_value=100, max_value=100000, value=1000, step=100,
-                                              help="AI calculates migration time and resource requirements")
-    
-    # Migration Parameters
-    downtime_tolerance_minutes = st.sidebar.number_input("Max Downtime (minutes)", 
-                                                        min_value=1, max_value=480, value=60,
-                                                        help="AI optimizes migration strategy for downtime window")
-    performance_requirements = st.sidebar.selectbox("Performance Requirement", ["standard", "high"],
-                                                   help="AI adjusts AWS sizing recommendations")
-    
-    # NEW: Destination Storage Selection
-    st.sidebar.subheader("🗄️ Destination Storage (Enhanced Analysis)")
-    destination_storage_type = st.sidebar.selectbox(
-        "AWS Destination Storage",
-        ["S3", "FSx_Windows", "FSx_Lustre"],
-        format_func=lambda x: {
-            'S3': '☁️ Amazon S3 (Standard)',
-            'FSx_Windows': '🪟 Amazon FSx for Windows File Server',
-            'FSx_Lustre': '⚡ Amazon FSx for Lustre (High Performance)'
-        }[x],
-        help="AI analyzes performance, cost, and complexity for each destination type"
-    )
-    
-    # Show destination storage insights
-    with st.sidebar.expander("🎯 Storage Destination Insights"):
-        if destination_storage_type == "S3":
-            st.markdown("""
-            **S3 Advantages:**
-            • Cost-effective and scalable
-            • Simple migration integration
-            • Excellent durability (99.999999999%)
-            
-            **Best For:** General-purpose storage, cost optimization
-            """)
-        elif destination_storage_type == "FSx_Windows":
-            st.markdown("""
-            **FSx Windows Advantages:**
-            • Native Windows file system features
-            • Better performance than S3
-            • Active Directory integration
-            
-            **Best For:** Windows-based applications, file shares
-            """)
-        elif destination_storage_type == "FSx_Lustre":
-            st.markdown("""
-            **FSx Lustre Advantages:**
-            • Extremely high performance (sub-ms latency)
-            • Parallel processing optimized
-            • Perfect for HPC and analytics
-            
-            **Best For:** High-performance computing, ML workloads
-            """)
-    
-    # Environment
-    environment = st.sidebar.selectbox("Environment", ["non-production", "production"],
-                                     help="AI adjusts reliability and performance requirements")
-    
-    # Enhanced Agent Sizing Section with AI recommendations
-    st.sidebar.subheader("🤖 Migration Agent Configuration (AI-Optimized)")
-    
-    # Determine migration type for tool selection
-    primary_tool = "DataSync" if is_homogeneous else "DMS"
-    
-    st.sidebar.success(f"**Primary Tool:** AWS {primary_tool}")
-    
-    # Agent Count Configuration
-    st.sidebar.markdown("**📊 Agent Scaling Configuration:**")
-    
-    number_of_agents = st.sidebar.number_input(
-        "Number of Migration Agents",
-        min_value=1,
-        max_value=10,
-        value=2,
-        step=1,
-        help="Configure the number of agents for parallel migration processing"
-    )
-    
-    # Show agent scaling insights
-    if number_of_agents == 1:
-        st.sidebar.info("💡 Single agent - simple but may limit throughput")
-    elif number_of_agents <= 3:
-        st.sidebar.success("✅ Optimal range for most workloads")
-    elif number_of_agents <= 5:
-        st.sidebar.warning("⚠️ High agent count - ensure proper coordination")
-    else:
-        st.sidebar.error("🔴 Very high agent count - diminishing returns likely")
-    
-    if is_homogeneous:
-        datasync_agent_size = st.sidebar.selectbox(
-            "DataSync Agent Size",
-            ["small", "medium", "large", "xlarge"],
-            index=1,
+        
+        nic_speeds = {
+            'gigabit_copper': 1000, 'gigabit_fiber': 1000,
+            '10g_copper': 10000, '10g_fiber': 10000, 
+            '25g_fiber': 25000, '40g_fiber': 40000
+        }
+        nic_speed = nic_speeds[nic_type]
+        
+        # Migration Configuration with AI analysis
+        st.sidebar.subheader("🔄 Migration Setup (AI-Optimized)")
+        
+        # Source and Target Databases
+        source_database_engine = st.sidebar.selectbox(
+            "Source Database",
+            ["mysql", "postgresql", "oracle", "sqlserver", "mongodb"],
             format_func=lambda x: {
-                'small': '📦 Small (t3.medium) - 250 Mbps/agent',
-                'medium': '📦 Medium (c5.large) - 500 Mbps/agent',
-                'large': '📦 Large (c5.xlarge) - 1000 Mbps/agent',
-                'xlarge': '📦 XLarge (c5.2xlarge) - 2000 Mbps/agent'
+                'mysql': '🐬 MySQL', 'postgresql': '🐘 PostgreSQL', 'oracle': '🏛️ Oracle',
+                'sqlserver': '🪟 SQL Server', 'mongodb': '🍃 MongoDB'
             }[x],
-            help=f"AI recommends optimal agent size for {number_of_agents} agents"
+            help="AI determines migration complexity based on source engine"
         )
-        dms_agent_size = None
-    else:
-        dms_agent_size = st.sidebar.selectbox(
-            "DMS Instance Size",
-            ["small", "medium", "large", "xlarge", "xxlarge"],
-            index=1,
+        
+        database_engine = st.sidebar.selectbox(
+            "Target Database (AWS)",
+            ["mysql", "postgresql", "oracle", "sqlserver", "mongodb"],
             format_func=lambda x: {
-                'small': '🔄 Small (t3.medium) - 200 Mbps/agent',
-                'medium': '🔄 Medium (c5.large) - 400 Mbps/agent',
-                'large': '🔄 Large (c5.xlarge) - 800 Mbps/agent',
-                'xlarge': '🔄 XLarge (c5.2xlarge) - 1500 Mbps/agent',
-                'xxlarge': '🔄 XXLarge (c5.4xlarge) - 2500 Mbps/agent'
+                'mysql': '☁️ RDS MySQL', 'postgresql': '☁️ RDS PostgreSQL', 'oracle': '☁️ RDS Oracle',
+                'sqlserver': '☁️ RDS SQL Server', 'mongodb': '☁️ DocumentDB'
             }[x],
-            help=f"AI recommends optimal instance size for {number_of_agents} agents"
+            help="AI recommends optimal AWS database service"
         )
-        datasync_agent_size = None
-    
-    # Show estimated throughput with current configuration including destination storage impact
-    agent_manager = EnhancedAgentSizingManager()
-    if is_homogeneous:
-        test_config = agent_manager.calculate_agent_configuration('datasync', datasync_agent_size, number_of_agents, destination_storage_type)
-    else:
-        test_config = agent_manager.calculate_agent_configuration('dms', dms_agent_size, number_of_agents, destination_storage_type)
-    
-    st.sidebar.markdown(f"""
-    <div class="agent-scaling-card">
-        <h4>🚀 Current Configuration Impact</h4>
-        <p><strong>Total Throughput:</strong> {test_config['total_max_throughput_mbps']:,.0f} Mbps</p>
-        <p><strong>Scaling Efficiency:</strong> {test_config['scaling_efficiency']*100:.1f}%</p>
-        <p><strong>Storage Multiplier:</strong> {test_config['storage_performance_multiplier']:.1f}x</p>
-        <p><strong>Monthly Cost:</strong> ${test_config['total_monthly_cost']:,.0f}</p>
-        <p><strong>Config Rating:</strong> {test_config['optimal_configuration']['efficiency_score']:.0f}/100</p>
-        <p><strong>Destination:</strong> {destination_storage_type}</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # AI Configuration Section
-    st.sidebar.subheader("🧠 AI Configuration")
-    
-    enable_ai_analysis = st.sidebar.checkbox("Enable AI Analysis", value=True,
-                                           help="Use Anthropic AI for intelligent recommendations")
-    
-    if enable_ai_analysis:
-        ai_analysis_depth = st.sidebar.selectbox(
-            "AI Analysis Depth",
-            ["standard", "comprehensive"],
-            help="Comprehensive analysis provides more detailed AI insights"
+        
+        # Show migration type indicator
+        is_homogeneous = source_database_engine == database_engine
+        migration_type_indicator = "🟢 Homogeneous" if is_homogeneous else "🟡 Heterogeneous"
+        st.sidebar.info(f"**Migration Type:** {migration_type_indicator}")
+        
+        database_size_gb = st.sidebar.number_input("Database Size (GB)", 
+                                                min_value=100, max_value=100000, value=1000, step=100,
+                                                help="AI calculates migration time and resource requirements")
+        
+        # Migration Parameters
+        downtime_tolerance_minutes = st.sidebar.number_input("Max Downtime (minutes)", 
+                                                            min_value=1, max_value=480, value=60,
+                                                            help="AI optimizes migration strategy for downtime window")
+        performance_requirements = st.sidebar.selectbox("Performance Requirement", ["standard", "high"],
+                                                    help="AI adjusts AWS sizing recommendations")
+        
+        # NEW: Destination Storage Selection
+        st.sidebar.subheader("🗄️ Destination Storage (Enhanced Analysis)")
+        destination_storage_type = st.sidebar.selectbox(
+            "AWS Destination Storage",
+            ["S3", "FSx_Windows", "FSx_Lustre"],
+            format_func=lambda x: {
+                'S3': '☁️ Amazon S3 (Standard)',
+                'FSx_Windows': '🪟 Amazon FSx for Windows File Server',
+                'FSx_Lustre': '⚡ Amazon FSx for Lustre (High Performance)'
+            }[x],
+            help="AI analyzes performance, cost, and complexity for each destination type"
         )
-    else:
-        ai_analysis_depth = "standard"
-    
-    # Real-time AWS Pricing
-    use_realtime_pricing = st.sidebar.checkbox("Real-time AWS Pricing", value=True,
-                                             help="Fetch current AWS pricing via API")
-    
-    if st.sidebar.button("🔄 Refresh AI Analysis", type="primary"):
-        st.rerun()
-    
-    return {
-        'operating_system': operating_system,
-        'server_type': server_type,
-        'ram_gb': ram_gb,
-        'cpu_cores': cpu_cores,
-        'cpu_ghz': cpu_ghz,
-        'nic_type': nic_type,
-        'nic_speed': nic_speed,
-        'source_database_engine': source_database_engine,
-        'database_engine': database_engine,
-        'database_size_gb': database_size_gb,
-        'downtime_tolerance_minutes': downtime_tolerance_minutes,
-        'performance_requirements': performance_requirements,
-        'destination_storage_type': destination_storage_type,
-        'environment': environment,
-        'datasync_agent_size': datasync_agent_size,
-        'dms_agent_size': dms_agent_size,
-        'number_of_agents': number_of_agents,
-        'enable_ai_analysis': enable_ai_analysis,
-        'ai_analysis_depth': ai_analysis_depth,
-        'use_realtime_pricing': use_realtime_pricing,
-        'current_storage_gb': current_storage_gb,
-        'peak_iops': peak_iops,
-        'max_throughput_mbps': max_throughput_mbps,
-        'anticipated_max_memory_gb': anticipated_max_memory_gb,
-        'anticipated_max_cpu_cores': anticipated_max_cpu_cores
-    }
+        
+        # Show destination storage insights
+        with st.sidebar.expander("🎯 Storage Destination Insights"):
+            if destination_storage_type == "S3":
+                st.markdown("""
+                **S3 Advantages:**
+                • Cost-effective and scalable
+                • Simple migration integration
+                • Excellent durability (99.999999999%)
+                
+                **Best For:** General-purpose storage, cost optimization
+                """)
+            elif destination_storage_type == "FSx_Windows":
+                st.markdown("""
+                **FSx Windows Advantages:**
+                • Native Windows file system features
+                • Better performance than S3
+                • Active Directory integration
+                
+                **Best For:** Windows-based applications, file shares
+                """)
+            elif destination_storage_type == "FSx_Lustre":
+                st.markdown("""
+                **FSx Lustre Advantages:**
+                • Extremely high performance (sub-ms latency)
+                • Parallel processing optimized
+                • Perfect for HPC and analytics
+                
+                **Best For:** High-performance computing, ML workloads
+                """)
+        
+        # Environment
+        environment = st.sidebar.selectbox("Environment", ["non-production", "production"],
+                                        help="AI adjusts reliability and performance requirements")
+        
+        # Enhanced Agent Sizing Section with AI recommendations
+        st.sidebar.subheader("🤖 Migration Agent Configuration (AI-Optimized)")
+        
+        # Determine migration type for tool selection
+        primary_tool = "DataSync" if is_homogeneous else "DMS"
+        
+        st.sidebar.success(f"**Primary Tool:** AWS {primary_tool}")
+        
+        # Agent Count Configuration
+        st.sidebar.markdown("**📊 Agent Scaling Configuration:**")
+        
+        number_of_agents = st.sidebar.number_input(
+            "Number of Migration Agents",
+            min_value=1,
+            max_value=10,
+            value=2,
+            step=1,
+            help="Configure the number of agents for parallel migration processing"
+        )
+        
+        # Show agent scaling insights
+        if number_of_agents == 1:
+            st.sidebar.info("💡 Single agent - simple but may limit throughput")
+        elif number_of_agents <= 3:
+            st.sidebar.success("✅ Optimal range for most workloads")
+        elif number_of_agents <= 5:
+            st.sidebar.warning("⚠️ High agent count - ensure proper coordination")
+        else:
+            st.sidebar.error("🔴 Very high agent count - diminishing returns likely")
+        
+        if is_homogeneous:
+            datasync_agent_size = st.sidebar.selectbox(
+                "DataSync Agent Size",
+                ["small", "medium", "large", "xlarge"],
+                index=1,
+                format_func=lambda x: {
+                    'small': '📦 Small (t3.medium) - 250 Mbps/agent',
+                    'medium': '📦 Medium (c5.large) - 500 Mbps/agent',
+                    'large': '📦 Large (c5.xlarge) - 1000 Mbps/agent',
+                    'xlarge': '📦 XLarge (c5.2xlarge) - 2000 Mbps/agent'
+                }[x],
+                help=f"AI recommends optimal agent size for {number_of_agents} agents"
+            )
+            dms_agent_size = None
+        else:
+            dms_agent_size = st.sidebar.selectbox(
+                "DMS Instance Size",
+                ["small", "medium", "large", "xlarge", "xxlarge"],
+                index=1,
+                format_func=lambda x: {
+                    'small': '🔄 Small (t3.medium) - 200 Mbps/agent',
+                    'medium': '🔄 Medium (c5.large) - 400 Mbps/agent',
+                    'large': '🔄 Large (c5.xlarge) - 800 Mbps/agent',
+                    'xlarge': '🔄 XLarge (c5.2xlarge) - 1500 Mbps/agent',
+                    'xxlarge': '🔄 XXLarge (c5.4xlarge) - 2500 Mbps/agent'
+                }[x],
+                help=f"AI recommends optimal instance size for {number_of_agents} agents"
+            )
+            datasync_agent_size = None
+        
+        # Show estimated throughput with current configuration including destination storage impact
+        agent_manager = EnhancedAgentSizingManager()
+        if is_homogeneous:
+            test_config = agent_manager.calculate_agent_configuration('datasync', datasync_agent_size, number_of_agents, destination_storage_type)
+        else:
+            test_config = agent_manager.calculate_agent_configuration('dms', dms_agent_size, number_of_agents, destination_storage_type)
+        
+        st.sidebar.markdown(f"""
+        <div class="agent-scaling-card">
+            <h4>🚀 Current Configuration Impact</h4>
+            <p><strong>Total Throughput:</strong> {test_config['total_max_throughput_mbps']:,.0f} Mbps</p>
+            <p><strong>Scaling Efficiency:</strong> {test_config['scaling_efficiency']*100:.1f}%</p>
+            <p><strong>Storage Multiplier:</strong> {test_config['storage_performance_multiplier']:.1f}x</p>
+            <p><strong>Monthly Cost:</strong> ${test_config['total_monthly_cost']:,.0f}</p>
+            <p><strong>Config Rating:</strong> {test_config['optimal_configuration']['efficiency_score']:.0f}/100</p>
+            <p><strong>Destination:</strong> {destination_storage_type}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # AI Configuration Section
+        st.sidebar.subheader("🧠 AI Configuration")
+        
+        enable_ai_analysis = st.sidebar.checkbox("Enable AI Analysis", value=True,
+                                            help="Use Anthropic AI for intelligent recommendations")
+        
+        if enable_ai_analysis:
+            ai_analysis_depth = st.sidebar.selectbox(
+                "AI Analysis Depth",
+                ["standard", "comprehensive"],
+                help="Comprehensive analysis provides more detailed AI insights"
+            )
+        else:
+            ai_analysis_depth = "standard"
+        
+        # Real-time AWS Pricing
+        use_realtime_pricing = st.sidebar.checkbox("Real-time AWS Pricing", value=True,
+                                                help="Fetch current AWS pricing via API")
+        
+        if st.sidebar.button("🔄 Refresh AI Analysis", type="primary"):
+            st.rerun()
+        
+        return {
+            'operating_system': operating_system,
+            'server_type': server_type,
+            'ram_gb': ram_gb,
+            'cpu_cores': cpu_cores,
+            'cpu_ghz': cpu_ghz,
+            'nic_type': nic_type,
+            'nic_speed': nic_speed,
+            'source_database_engine': source_database_engine,
+            'database_engine': database_engine,
+            'database_size_gb': database_size_gb,
+            'downtime_tolerance_minutes': downtime_tolerance_minutes,
+            'performance_requirements': performance_requirements,
+            'destination_storage_type': destination_storage_type,
+            'environment': environment,
+            'datasync_agent_size': datasync_agent_size,
+            'dms_agent_size': dms_agent_size,
+            'number_of_agents': number_of_agents,
+            'enable_ai_analysis': enable_ai_analysis,
+            'ai_analysis_depth': ai_analysis_depth,
+            'use_realtime_pricing': use_realtime_pricing,
+            'current_storage_gb': current_storage_gb,
+            'peak_iops': peak_iops,
+            'max_throughput_mbps': max_throughput_mbps,
+            'anticipated_max_memory_gb': anticipated_max_memory_gb,
+            'anticipated_max_cpu_cores': anticipated_max_cpu_cores
+        }
 
-# Enhanced AWS sizing function to handle EC2 instance selections
-def enhanced_aws_sizing_with_ec2_support(config: Dict):
+def enhanced_aws_sizing_with_ec2_support(config: Dict, aws_api_manager=None, ai_manager=None):
     """Enhanced AWS sizing that properly handles both RDS and specific EC2 instance selections"""
     
     database_engine = config['database_engine']
     
     if database_engine.startswith('rds_'):
         # Use existing RDS sizing logic
-        return calculate_rds_sizing(config)
+        return calculate_rds_sizing(config, aws_api_manager)
     
     elif database_engine.startswith('ec2_'):
         # Enhanced EC2 sizing for specific instance types
-        return calculate_ec2_sizing_with_instance_type(config)
+        return calculate_ec2_sizing_with_instance_type(config, aws_api_manager)
     
     else:
         # Fallback to general EC2 sizing
-        return calculate_general_ec2_sizing(config)
+        return calculate_general_ec2_sizing(config, aws_api_manager)
 
 
-def calculate_ec2_sizing_with_instance_type(config: Dict):
+def calculate_rds_sizing(config: Dict, aws_api_manager=None) -> Dict:
+    """Calculate RDS sizing recommendations"""
+    
+    database_size_gb = config['database_size_gb']
+    performance_req = config.get('performance_requirements', 'standard')
+    environment = config.get('environment', 'non-production')
+    
+    # Determine instance size based on database size and requirements
+    if database_size_gb < 1000:
+        instance_type = 'db.t3.medium'
+        vcpu = 2
+        memory = 4
+        cost_per_hour = 0.068
+    elif database_size_gb < 5000:
+        instance_type = 'db.r6g.large'
+        vcpu = 2
+        memory = 16
+        cost_per_hour = 0.48
+    elif database_size_gb < 20000:
+        instance_type = 'db.r6g.xlarge'
+        vcpu = 4
+        memory = 32
+        cost_per_hour = 0.96
+    elif database_size_gb < 50000:
+        instance_type = 'db.r6g.2xlarge'
+        vcpu = 8
+        memory = 64
+        cost_per_hour = 1.92
+    else:
+        instance_type = 'db.r6g.4xlarge'
+        vcpu = 16
+        memory = 128
+        cost_per_hour = 3.84
+    
+    # Adjust for performance requirements
+    if performance_req == 'high':
+        # Scale up one size for high performance
+        instance_upgrades = {
+            'db.t3.medium': ('db.r6g.large', 2, 16, 0.48),
+            'db.r6g.large': ('db.r6g.xlarge', 4, 32, 0.96),
+            'db.r6g.xlarge': ('db.r6g.2xlarge', 8, 64, 1.92),
+            'db.r6g.2xlarge': ('db.r6g.4xlarge', 16, 128, 3.84),
+            'db.r6g.4xlarge': ('db.r6g.8xlarge', 32, 256, 7.68)
+        }
+        if instance_type in instance_upgrades:
+            instance_type, vcpu, memory, cost_per_hour = instance_upgrades[instance_type]
+    
+    # Storage sizing
+    storage_multiplier = 1.5
+    if performance_req == 'high':
+        storage_multiplier = 2.0
+    
+    storage_size = max(database_size_gb * storage_multiplier, 100)
+    storage_type = 'gp3' if database_size_gb < 10000 else 'io1'
+    storage_cost_per_gb = 0.08 if storage_type == 'gp3' else 0.125
+    
+    # Calculate costs
+    monthly_instance_cost = cost_per_hour * 24 * 30
+    monthly_storage_cost = storage_size * storage_cost_per_gb
+    
+    return {
+        'deployment_type': 'rds',
+        'primary_instance': instance_type,
+        'instance_specs': {
+            'vcpu': vcpu,
+            'memory': memory,
+            'cost_per_hour': cost_per_hour
+        },
+        'storage_type': storage_type,
+        'storage_size_gb': storage_size,
+        'monthly_instance_cost': monthly_instance_cost,
+        'monthly_storage_cost': monthly_storage_cost,
+        'total_monthly_cost': monthly_instance_cost + monthly_storage_cost,
+        'multi_az': environment == 'production',
+        'backup_retention_days': 30 if environment == 'production' else 7,
+        'management_complexity': 'low',
+        'scaling_capability': 'automatic',
+        'backup_strategy': 'automated_point_in_time_recovery',
+        'monitoring_setup': 'cloudwatch_enhanced_monitoring'
+    }
+
+
+def calculate_ec2_sizing_with_instance_type(config: Dict, aws_api_manager=None) -> Dict:
     """Calculate sizing for specific EC2 instance types"""
     
     selected_instance = config['database_engine']
     instance_type = selected_instance.replace('ec2_', '')
+    database_size_gb = config['database_size_gb']
+    performance_req = config.get('performance_requirements', 'standard')
     
-    # Define instance specifications
+    # Enhanced instance specifications with latest pricing
     ec2_specs = {
         't3.medium': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.0416, 'category': 'burstable'},
         't3.large': {'vcpu': 2, 'memory': 8, 'cost_per_hour': 0.0832, 'category': 'burstable'},
@@ -7474,22 +7563,44 @@ def calculate_ec2_sizing_with_instance_type(config: Dict):
     
     instance_spec = ec2_specs.get(instance_type, ec2_specs['t3.medium'])
     
-    # Calculate storage requirements
-    database_size_gb = config['database_size_gb']
-    storage_multiplier = 2.0  # Extra space for EC2 self-managed
+    # Calculate storage requirements with intelligence
+    storage_multiplier = 2.0  # Base multiplier for EC2 self-managed
+    
+    # Adjust multiplier based on instance category and performance requirements
+    if instance_spec['category'] == 'storage_optimized':
+        storage_multiplier = 1.8  # Less overhead needed
+    elif instance_spec['category'] == 'high_memory':
+        storage_multiplier = 2.5  # More space for memory dumps and temp files
+    
+    if performance_req == 'high':
+        storage_multiplier *= 1.3
+    
     storage_size_gb = max(database_size_gb * storage_multiplier, 100)
     
-    # Storage type recommendation based on instance category
+    # Intelligent storage type recommendation
     if instance_spec['category'] == 'storage_optimized':
-        storage_type = 'io2'
-    elif instance_spec['category'] in ['compute_optimized', 'high_memory']:
-        storage_type = 'gp3'
+        storage_type = 'io2'  # Take advantage of storage optimization
+    elif instance_spec['category'] in ['compute_optimized', 'high_memory'] or performance_req == 'high':
+        storage_type = 'gp3'  # Balanced performance
     else:
-        storage_type = 'gp3'
+        storage_type = 'gp3'  # Standard
+    
+    # Storage cost calculation
+    storage_costs = {
+        'gp3': 0.08,
+        'io1': 0.125,
+        'io2': 0.125
+    }
+    storage_cost_per_gb = storage_costs.get(storage_type, 0.08)
     
     # Calculate costs
     instance_cost = instance_spec['cost_per_hour'] * 24 * 30
-    storage_cost = storage_size_gb * 0.08  # GP3 pricing
+    storage_cost = storage_size_gb * storage_cost_per_gb
+    
+    # Additional EC2 costs (OS licensing, management tools)
+    os_licensing_cost = 0
+    if 'windows' in config.get('operating_system', '').lower():
+        os_licensing_cost = instance_spec['cost_per_hour'] * 0.3 * 24 * 30  # ~30% additional for Windows
     
     return {
         'deployment_type': 'ec2',
@@ -7499,15 +7610,61 @@ def calculate_ec2_sizing_with_instance_type(config: Dict):
         'storage_size_gb': storage_size_gb,
         'monthly_instance_cost': instance_cost,
         'monthly_storage_cost': storage_cost,
-        'total_monthly_cost': instance_cost + storage_cost,
+        'monthly_os_licensing_cost': os_licensing_cost,
+        'total_monthly_cost': instance_cost + storage_cost + os_licensing_cost,
         'instance_category': instance_spec['category'],
         'management_complexity': 'high',
         'scaling_capability': 'manual',
         'backup_strategy': 'custom_implementation_required',
         'monitoring_setup': 'cloudwatch_custom_metrics',
         'os_licensing_required': True,
-        'database_software_licensing': 'customer_managed'
+        'database_software_licensing': 'customer_managed',
+        'additional_considerations': {
+            'security_patching': 'customer_responsibility',
+            'high_availability': 'customer_configured',
+            'disaster_recovery': 'customer_implemented',
+            'performance_tuning': 'full_control_available'
+        }
     }
+
+
+def calculate_general_ec2_sizing(config: Dict, aws_api_manager=None) -> Dict:
+    """Fallback general EC2 sizing when specific instance not selected"""
+    
+    database_size_gb = config['database_size_gb']
+    performance_req = config.get('performance_requirements', 'standard')
+    cpu_cores = config.get('cpu_cores', 4)
+    ram_gb = config.get('ram_gb', 16)
+    
+    # Intelligent instance selection based on workload characteristics
+    if performance_req == 'high' and database_size_gb > 10000:
+        # Large, high-performance workload
+        if ram_gb >= 64:
+            recommended_instance = 'r6i.2xlarge'
+        else:
+            recommended_instance = 'r6i.xlarge'
+    elif database_size_gb > 5000:
+        # Medium to large workload
+        if cpu_cores >= 8:
+            recommended_instance = 'c5.2xlarge'
+        else:
+            recommended_instance = 'c5.xlarge'
+    elif database_size_gb > 1000:
+        # Small to medium workload
+        recommended_instance = 'm5.large'
+    else:
+        # Small workload
+        recommended_instance = 't3.large'
+    
+    # Create a temporary config for the specific instance
+    temp_config = config.copy()
+    temp_config['database_engine'] = f'ec2_{recommended_instance}'
+    
+    # Use the specific instance sizing logic
+    result = calculate_ec2_sizing_with_instance_type(temp_config, aws_api_manager)
+    result['recommendation_reason'] = f"Auto-selected based on {database_size_gb}GB database, {performance_req} performance, {cpu_cores} cores, {ram_gb}GB RAM"
+    
+    return result
 
 
 # Enhanced display function for the new options
