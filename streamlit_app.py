@@ -7404,6 +7404,7 @@ def render_agent_scaling_tab(analysis, config):
         )
     
     # FIND THIS SECTION in render_agent_scaling_tab() and REPLACE the throughput metric:
+ # REPLACE this section around line 2890:
     with col3:
         st.metric(
             "⚡ Actual Migration Throughput",  # Changed from "Total Throughput"
@@ -7427,7 +7428,7 @@ def render_agent_scaling_tab(analysis, config):
     
     # ADD THIS AFTER THE EXISTING 5-COLUMN METRICS SECTION in render_agent_scaling_tab()
 
-    # Enhanced DYNAMIC warning about bandwidth vs throughput
+        # ADD this after the existing metrics section:
     network_perf = analysis.get('network_performance', {})
     agent_analysis = analysis.get('agent_analysis', {})
 
@@ -7435,14 +7436,15 @@ def render_agent_scaling_tab(analysis, config):
     actual_throughput = agent_analysis.get('total_effective_throughput', 0)
 
     if network_bw > actual_throughput:
-        # Get ACTUAL user configuration values
-        nic_speed = config.get('nic_speed', 1000)
-        nic_type = config.get('nic_type', 'gigabit_fiber')
-        os_name = config.get('operating_system', 'Unknown').replace('_', ' ').title()
-        server_type = config.get('server_type', 'physical')
-        num_agents = config.get('number_of_agents', 1)
-        tool_name = analysis.get('primary_tool', 'DMS').upper()
+        st.warning(f"""
+        ⚠️ **Agent vs Network Capacity Explanation:**
+        • **Agent Theoretical Max:** {agent_analysis.get('total_max_throughput_mbps', 0):,.0f} Mbps (what agents could handle)
+        • **Network Infrastructure Limit:** {network_bw:,.0f} Mbps (your actual network path)
+        • **Final Migration Speed:** {actual_throughput:,.0f} Mbps (actual bottlenecked performance)
         
+        💡 **Your agents can handle more than your network can provide.** Plan migration times using the Final Migration Speed.
+        """)
+            
         # Calculate ACTUAL efficiency losses
         nic_efficiency = get_nic_efficiency(nic_type)
         os_efficiency = analysis.get('onprem_performance', {}).get('os_impact', {}).get('network_efficiency', 0.90)
