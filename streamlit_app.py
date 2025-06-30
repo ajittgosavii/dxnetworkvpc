@@ -3349,68 +3349,68 @@ class EnhancedAgentSizingManager:
             },
                     # Add this to the __init__ method of EnhancedAgentSizingManager class after the existing dms_agent_specs
 
-        self.s3_copy_agent_specs = {
-            'small': {
-                'name': 'Small S3 Copy Instance (t3.medium)',
-                'vcpu': 2,
-                'memory_gb': 4,
-                'max_throughput_mbps_per_agent': 800,  # Higher than DataSync due to direct S3 access
-                'max_concurrent_tasks_per_agent': 50,
-                'cost_per_hour_per_agent': 0.0416,
-                'recommended_for': 'Up to 5TB per agent, VPC endpoint optimized',
-                'ai_optimization_tips': [
-                    'Configure S3 VPC endpoint for optimal performance',
-                    'Use multipart uploads for large files',
-                    'Implement parallel transfers with aws s3 cp --recursive'
-                ]
-            },
-            'medium': {
-                'name': 'Medium S3 Copy Instance (c5.large)',
-                'vcpu': 2,
-                'memory_gb': 4,
-                'max_throughput_mbps_per_agent': 1200,
-                'max_concurrent_tasks_per_agent': 100,
-                'cost_per_hour_per_agent': 0.085,
-                'recommended_for': '5-20TB per agent, high-bandwidth VPC endpoint',
-                'ai_optimization_tips': [
-                    'Optimize S3 transfer acceleration if needed',
-                    'Configure optimal --cli-read-timeout and --cli-write-timeout',
-                    'Use S3 batch operations for large datasets'
-                ]
-            },
-            'large': {
-                'name': 'Large S3 Copy Instance (c5.xlarge)',
-                'vcpu': 4,
-                'memory_gb': 8,
-                'max_throughput_mbps_per_agent': 2000,
-                'max_concurrent_tasks_per_agent': 200,
-                'cost_per_hour_per_agent': 0.17,
-                'recommended_for': '20-100TB per agent, dedicated VPC endpoint',
-                'ai_optimization_tips': [
-                    'Enable S3 VPC endpoint policy optimization',
-                    'Use dedicated bandwidth allocation',
-                    'Implement intelligent retry strategies'
-                ]
-            },
-            'xlarge': {
-                'name': 'XLarge S3 Copy Instance (c5.2xlarge)',
-                'vcpu': 8,
-                'memory_gb': 16,
-                'max_throughput_mbps_per_agent': 3500,
-                'max_concurrent_tasks_per_agent': 400,
-                'cost_per_hour_per_agent': 0.34,
-                'recommended_for': '>100TB per agent, enterprise VPC endpoint',
-                'ai_optimization_tips': [
-                    'Configure multiple S3 VPC endpoints for load distribution',
-                    'Use advanced AWS CLI configuration tuning',
-                    'Implement compression and deduplication strategies'
-                ]
+            self.s3_copy_agent_specs = {
+                'small': {
+                    'name': 'Small S3 Copy Instance (t3.medium)',
+                    'vcpu': 2,
+                    'memory_gb': 4,
+                    'max_throughput_mbps_per_agent': 800,  # Higher than DataSync due to direct S3 access
+                    'max_concurrent_tasks_per_agent': 50,
+                    'cost_per_hour_per_agent': 0.0416,
+                    'recommended_for': 'Up to 5TB per agent, VPC endpoint optimized',
+                    'ai_optimization_tips': [
+                        'Configure S3 VPC endpoint for optimal performance',
+                        'Use multipart uploads for large files',
+                        'Implement parallel transfers with aws s3 cp --recursive'
+                    ]
+                },
+                'medium': {
+                    'name': 'Medium S3 Copy Instance (c5.large)',
+                    'vcpu': 2,
+                    'memory_gb': 4,
+                    'max_throughput_mbps_per_agent': 1200,
+                    'max_concurrent_tasks_per_agent': 100,
+                    'cost_per_hour_per_agent': 0.085,
+                    'recommended_for': '5-20TB per agent, high-bandwidth VPC endpoint',
+                    'ai_optimization_tips': [
+                        'Optimize S3 transfer acceleration if needed',
+                        'Configure optimal --cli-read-timeout and --cli-write-timeout',
+                        'Use S3 batch operations for large datasets'
+                    ]
+                },
+                'large': {
+                    'name': 'Large S3 Copy Instance (c5.xlarge)',
+                    'vcpu': 4,
+                    'memory_gb': 8,
+                    'max_throughput_mbps_per_agent': 2000,
+                    'max_concurrent_tasks_per_agent': 200,
+                    'cost_per_hour_per_agent': 0.17,
+                    'recommended_for': '20-100TB per agent, dedicated VPC endpoint',
+                    'ai_optimization_tips': [
+                        'Enable S3 VPC endpoint policy optimization',
+                        'Use dedicated bandwidth allocation',
+                        'Implement intelligent retry strategies'
+                    ]
+                },
+                'xlarge': {
+                    'name': 'XLarge S3 Copy Instance (c5.2xlarge)',
+                    'vcpu': 8,
+                    'memory_gb': 16,
+                    'max_throughput_mbps_per_agent': 3500,
+                    'max_concurrent_tasks_per_agent': 400,
+                    'cost_per_hour_per_agent': 0.34,
+                    'recommended_for': '>100TB per agent, enterprise VPC endpoint',
+                    'ai_optimization_tips': [
+                        'Configure multiple S3 VPC endpoints for load distribution',
+                        'Use advanced AWS CLI configuration tuning',
+                        'Implement compression and deduplication strategies'
+                    ]
+                }
             }
-        }
+                
+                
+            }
             
-            
-        }
-        
     
     def calculate_agent_configuration(self, agent_type: str, agent_size: str, number_of_agents: int, destination_storage: str = 'S3') -> Dict:
         """Calculate agent configuration with S3 copy support"""
