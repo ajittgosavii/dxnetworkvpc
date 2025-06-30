@@ -1205,6 +1205,32 @@ class AnthropicAIManager:
         
         return optimizations
     
+    
+    def _calculate_vpc_endpoint_cost(self, config: Dict) -> float:
+        """Calculate VPC endpoint costs"""
+    if not config.get('use_vpc_endpoint', False):
+        return 0.0
+    
+    endpoint_type = config.get('vpc_endpoint_type', 'Gateway')
+    
+    if endpoint_type == 'Interface':
+        # Interface endpoint pricing: $0.01/hour + $0.01/GB processed
+        base_cost = 0.01 * 24 * 30  # $7.20/month base
+        data_processing_gb = config.get('database_size_gb', 0) * 1.5  # Estimate
+        processing_cost = data_processing_gb * 0.01
+        return base_cost + processing_cost
+    else:
+        # Gateway endpoints are free
+            return 0.0
+        # In the agent configuration calculation
+    if config.get('use_vpc_endpoint', False):
+        if config.get('destination_storage_type') == 'S3':
+            vpc_performance_bonus = 1.3  # 30% boost for S3
+        else:
+            vpc_performance_bonus = 1.15  # 15% boost for other services
+        
+        total_throughput *= vpc_performance_bonus
+    
     def _generate_best_practices(self, config: Dict, complexity_score: int) -> List[str]:
         """Generate specific best practices"""
         practices = []
@@ -2383,6 +2409,8 @@ def render_enhanced_sidebar_controls():
     </div>
     """, unsafe_allow_html=True)
     
+    
+    
     # AI Configuration Section
     st.sidebar.subheader("🧠 AI Configuration")
     
@@ -2438,6 +2466,44 @@ def render_enhanced_sidebar_controls():
         'is_homogeneous': is_homogeneous
     }
 
+    # Add this after the destination storage selection section:
+
+    # VPC Endpoint Configuration
+    st.sidebar.subheader("🔗 VPC Endpoint Configuration")
+    use_vpc_endpoint = st.sidebar.checkbox(
+        "Enable VPC Endpoint",
+        value=True,
+        help="Use VPC endpoint for improved performance and reduced data transfer costs"
+    )
+
+    if use_vpc_endpoint:
+        vpc_endpoint_type = st.sidebar.selectbox(
+            "VPC Endpoint Type",
+            ["Gateway", "Interface"],
+            format_func=lambda x: {
+                'Gateway': '🌐 Gateway Endpoint (S3, DynamoDB)',
+                'Interface': '🔌 Interface Endpoint (Most AWS Services)'
+            }[x],
+            help="Gateway endpoints are free, Interface endpoints have hourly charges"
+        )
+        
+        vpc_endpoint_policy = st.sidebar.selectbox(
+            "VPC Endpoint Policy",
+            ["Full Access", "Restricted", "Custom"],
+            help="Control access through the VPC endpoint"
+        )
+        
+        # Show cost impact
+        if vpc_endpoint_type == "Interface":
+            st.sidebar.warning("💰 Interface endpoints: ~$7.20/month per endpoint")
+        else:
+            st.sidebar.success("💰 Gateway endpoints: No additional charges")
+            
+        # Show performance benefit
+        st.sidebar.info(f"📈 Expected performance boost: {'+30%' if destination_storage_type == 'S3' else '+15%'}")
+    else:
+        vpc_endpoint_type = None
+        vpc_endpoint_policy = None
 
 # Updated function calls to pass the EC2 database engine
 def update_os_performance_calls():
@@ -6333,6 +6399,30 @@ def render_enhanced_header():
     </div>
     """, unsafe_allow_html=True)
 
+
+def render_vpc_endpoint_analysis(config: Dict, analysis: Dict):
+    """Render VPC endpoint analysis section"""
+    st.subheader("🔗 VPC Endpoint Impact Analysis")
+    
+    if config.get('use_vpc_endpoint', False):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.success("✅ VPC Endpoint Enabled")
+            st.write(f"**Type:** {config.get('vpc_endpoint_type', 'Gateway')}")
+            st.write(f"**Policy:** {config.get('vpc_endpoint_policy', 'Full Access')}")
+        
+        with col2:
+            vpc_cost = calculate_vpc_endpoint_cost(config)
+            st.metric("💰 Monthly VPC Cost", f"${vpc_cost:.2f}")
+        
+        with col3:
+            performance_boost = 30 if config.get('destination_storage_type') == 'S3' else 15
+            st.metric("📈 Performance Boost", f"+{performance_boost}%")
+    else:
+        st.warning("⚠️ VPC Endpoint Disabled - Consider enabling for better performance")
+
+
 def render_api_status_sidebar():
     """Enhanced API status sidebar"""
     
@@ -6782,7 +6872,14 @@ def render_enhanced_sidebar_controls():
         'deployment_type': 'managed' if database_engine.startswith('rds_') else 'self_managed',
         'instance_type': database_engine if database_engine.startswith('ec2_') else None,
         'migration_complexity_score': migration_complexity,
-        'is_homogeneous': is_homogeneous
+        'is_homogeneous': is_homogeneous     
+   
+    # ... existing fields ...
+        'use_vpc_endpoint': use_vpc_endpoint,
+        'vpc_endpoint_type': vpc_endpoint_type,
+        'vpc_endpoint_policy': vpc_endpoint_policy,
+        # ... rest of existing fields ...
+
     }
  
     def enhanced_aws_sizing_with_ec2_support(config: Dict, aws_api_manager=None, ai_manager=None):
