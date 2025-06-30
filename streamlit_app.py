@@ -3349,7 +3349,7 @@ class EnhancedAgentSizingManager:
             },
                     # Add this to the __init__ method of EnhancedAgentSizingManager class after the existing dms_agent_specs
 
-            self.s3_copy_agent_specs = {
+            self.s3_copy_agent_specs : {
                 'small': {
                     'name': 'Small S3 Copy Instance (t3.medium)',
                     'vcpu': 2,
