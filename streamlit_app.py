@@ -4927,35 +4927,35 @@ class EnhancedMigrationAnalyzer:
 def _determine_migration_method(self, config: Dict) -> str:
         """Determine the optimal migration method based on configuration"""
     
-    source_engine = config['source_database_engine']
-    destination_storage = config.get('destination_storage_type', 'S3')
-    database_engine = config.get('database_engine', '')
-    migration_approach = config.get('migration_approach', 'auto')  # New config option
-    
-    # If user explicitly selects S3 copy method
-    if migration_approach == 's3_copy':
-        return 's3_copy'
-    
-    # If destination is S3 and user wants file-based migration
-    if destination_storage == 'S3' and migration_approach in ['file_based', 'auto']:
-        # Check if this is suitable for S3 copy
-        database_size = config.get('database_size_gb', 0)
-        if database_size > 0:  # Any file-based data
+        source_engine = config['source_database_engine']
+        destination_storage = config.get('destination_storage_type', 'S3')
+        database_engine = config.get('database_engine', '')
+        migration_approach = config.get('migration_approach', 'auto')  # New config option
+        
+        # If user explicitly selects S3 copy method
+        if migration_approach == 's3_copy':
             return 's3_copy'
-    
-    # Traditional logic for DataSync vs DMS
-    if config.get('database_engine', '').startswith('rds_'):
-        target_engine = config['database_engine'].replace('rds_', '')
-    elif config.get('database_engine', '').startswith('ec2_'):
-        target_engine = config.get('ec2_database_engine', 'mysql')
-    else:
-        target_engine = config.get('database_engine', '')
-    
-    # Homogeneous vs Heterogeneous
-    if source_engine == target_engine:
-        return 'datasync'
-    else:
-        return 'dms'
+        
+        # If destination is S3 and user wants file-based migration
+        if destination_storage == 'S3' and migration_approach in ['file_based', 'auto']:
+            # Check if this is suitable for S3 copy
+            database_size = config.get('database_size_gb', 0)
+            if database_size > 0:  # Any file-based data
+                return 's3_copy'
+        
+        # Traditional logic for DataSync vs DMS
+        if config.get('database_engine', '').startswith('rds_'):
+            target_engine = config['database_engine'].replace('rds_', '')
+        elif config.get('database_engine', '').startswith('ec2_'):
+            target_engine = config.get('ec2_database_engine', 'mysql')
+        else:
+            target_engine = config.get('database_engine', '')
+        
+        # Homogeneous vs Heterogeneous
+        if source_engine == target_engine:
+            return 'datasync'
+        else:
+            return 'dms'
     
     def _get_network_path_key(self, config: Dict) -> str:
         """Get network path key with corrected FSx routing"""
