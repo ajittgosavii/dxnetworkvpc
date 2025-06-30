@@ -2609,609 +2609,6 @@ async def comprehensive_ai_migration_analysis(self, config: Dict) -> Dict:
 
 
 
-class EnhancedNetworkIntelligenceManager:
-    """AI-powered network path intelligence with enhanced analysis including FSx destinations"""
-    
-    def __init__(self):
-        self.network_paths = {
-            'nonprod_sj_linux_nas_s3': {
-                'name': 'Non-Prod: San Jose Linux NAS → AWS S3',
-                'destination_storage': 'S3',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 S3',
-                'environment': 'non-production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 2,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.95
-                    },
-                    {
-                        'name': 'Linux Jump Server to AWS S3 (DX)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 15,
-                        'reliability': 0.998,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 2.0,
-                        'ai_optimization_potential': 0.92
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Linux NAS internal bandwidth', 'DX connection sharing'],
-                    'optimization_opportunities': ['NAS performance tuning', 'DX bandwidth upgrade', 'Parallel transfer optimization'],
-                    'risk_factors': ['Single DX connection dependency', 'NAS hardware limitations'],
-                    'recommended_improvements': ['Implement NAS caching', 'Configure QoS on DX', 'Add backup connectivity']
-                }
-            },
-            'nonprod_sj_linux_nas_fsx_windows': {
-                'name': 'Non-Prod: San Jose Linux NAS → AWS FSx for Windows',
-                'destination_storage': 'FSx_Windows',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 FSx for Windows',
-                'environment': 'non-production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 2,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.95
-                    },
-                    {
-                        'name': 'Linux Jump Server to AWS FSx Windows (DX)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 12,
-                        'reliability': 0.999,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 2.5,
-                        'ai_optimization_potential': 0.94
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Linux to Windows protocol conversion', 'SMB overhead'],
-                    'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration', 'Connection pooling'],
-                    'risk_factors': ['Cross-platform compatibility', 'SMB version negotiation'],
-                    'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode', 'Implement connection caching']
-                }
-            },
-            'nonprod_sj_linux_nas_fsx_lustre': {
-                'name': 'Non-Prod: San Jose Linux NAS → AWS FSx for Lustre',
-                'destination_storage': 'FSx_Lustre',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 FSx for Lustre',
-                'environment': 'non-production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 2,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.95
-                    },
-                    {
-                        'name': 'Linux Jump Server to AWS FSx Lustre (DX)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 8,
-                        'reliability': 0.9995,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 3.0,
-                        'ai_optimization_potential': 0.97
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Lustre client configuration', 'Parallel processing coordination'],
-                    'optimization_opportunities': ['Lustre striping optimization', 'Parallel I/O tuning', 'Client-side caching'],
-                    'risk_factors': ['Lustre complexity', 'Client compatibility'],
-                    'recommended_improvements': ['Optimize Lustre striping patterns', 'Configure parallel data transfer', 'Tune Lustre clients']
-                }
-            },
-            'nonprod_sj_windows_share_s3': {
-                'name': 'Non-Prod: San Jose Windows Share → AWS S3',
-                'destination_storage': 'S3',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 S3',
-                'environment': 'non-production',
-                'os_type': 'windows',
-                'storage_type': 'share',
-                'segments': [
-                    {
-                        'name': 'Windows Share to Windows Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.997,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.88
-                    },
-                    {
-                        'name': 'Windows Jump Server to AWS S3 (DX)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 18,
-                        'reliability': 0.998,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 2.0,
-                        'ai_optimization_potential': 0.90
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Windows file sharing overhead', 'SMB protocol latency', 'Windows network stack'],
-                    'optimization_opportunities': ['SMB3 optimization', 'Windows TCP tuning', 'Antivirus exclusions'],
-                    'risk_factors': ['Windows update interruptions', 'SMB vulnerabilities', 'File locking issues'],
-                    'recommended_improvements': ['Upgrade to SMB3.1.1', 'Optimize TCP window scaling', 'Configure bypass for migration tools']
-                }
-            },
-            'nonprod_sj_windows_share_fsx_windows': {
-                'name': 'Non-Prod: San Jose Windows Share → AWS FSx for Windows',
-                'destination_storage': 'FSx_Windows',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 FSx for Windows',
-                'environment': 'non-production',
-                'os_type': 'windows',
-                'storage_type': 'share',
-                'segments': [
-                    {
-                        'name': 'Windows Share to Windows Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.997,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.88
-                    },
-                    {
-                        'name': 'Windows Jump Server to AWS FSx Windows (DX)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 10,
-                        'reliability': 0.999,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 2.5,
-                        'ai_optimization_potential': 0.95
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['SMB protocol optimization', 'Windows AD integration'],
-                    'optimization_opportunities': ['Native Windows file system features', 'SMB Direct support', 'Deduplication optimization'],
-                    'risk_factors': ['AD integration complexity', 'File system migration'],
-                    'recommended_improvements': ['Configure SMB Direct', 'Optimize AD integration', 'Test deduplication settings']
-                }
-            },
-            'nonprod_sj_windows_share_fsx_lustre': {
-                'name': 'Non-Prod: San Jose Windows Share → AWS FSx for Lustre',
-                'destination_storage': 'FSx_Lustre',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 FSx for Lustre',
-                'environment': 'non-production',
-                'os_type': 'windows',
-                'storage_type': 'share',
-                'segments': [
-                    {
-                        'name': 'Windows Share to Windows Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.997,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.88
-                    },
-                    {
-                        'name': 'Windows Jump Server to AWS FSx Lustre (DX)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 12,
-                        'reliability': 0.9995,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 3.5,
-                        'ai_optimization_potential': 0.92
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Windows to Lustre compatibility', 'Protocol conversion overhead'],
-                    'optimization_opportunities': ['Lustre Windows client optimization', 'Protocol gateway configuration'],
-                    'risk_factors': ['Limited Windows Lustre support', 'Complex configuration'],
-                    'recommended_improvements': ['Use Lustre gateway', 'Implement protocol translation', 'Test Windows client compatibility']
-                }
-            },
-            'prod_sa_linux_nas_s3': {
-                'name': 'Prod: San Antonio Linux NAS → San Jose → AWS Production VPC S3',
-                'destination_storage': 'S3',
-                'source': 'San Antonio',
-                'destination': 'AWS US-West-2 Production VPC S3',
-                'environment': 'production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'San Antonio Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 1,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.97
-                    },
-                    {
-                        'name': 'San Antonio to San Jose (Private Line)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 12,
-                        'reliability': 0.9995,
-                        'connection_type': 'private_line',
-                        'cost_factor': 3.0,
-                        'ai_optimization_potential': 0.94
-                    },
-                    {
-                        'name': 'San Jose to AWS Production VPC S3 (DX)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 8,
-                        'reliability': 0.9999,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 4.0,
-                        'ai_optimization_potential': 0.96
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Cross-site latency accumulation', 'Multiple hop complexity'],
-                    'optimization_opportunities': ['End-to-end optimization', 'Compression algorithms', 'Parallel processing'],
-                    'risk_factors': ['Multiple failure points', 'Complex troubleshooting', 'Bandwidth contention'],
-                    'recommended_improvements': ['Implement WAN optimization', 'Add redundant paths', 'Real-time monitoring']
-                }
-            },
-            'prod_sa_linux_nas_fsx_windows': {
-                'name': 'Prod: San Antonio Linux NAS → San Jose → AWS Production VPC FSx for Windows',
-                'destination_storage': 'FSx_Windows',
-                'source': 'San Antonio',
-                'destination': 'AWS US-West-2 Production VPC FSx for Windows',
-                'environment': 'production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'San Antonio Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 1,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.97
-                    },
-                    {
-                        'name': 'San Antonio to San Jose (Private Line)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 12,
-                        'reliability': 0.9995,
-                        'connection_type': 'private_line',
-                        'cost_factor': 3.0,
-                        'ai_optimization_potential': 0.94
-                    },
-                    {
-                        'name': 'San Jose to AWS Production VPC FSx Windows (DX)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 6,
-                        'reliability': 0.9999,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 4.5,
-                        'ai_optimization_potential': 0.97
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Linux to Windows protocol conversion', 'Multi-hop latency'],
-                    'optimization_opportunities': ['Protocol optimization', 'FSx performance tuning', 'Cross-platform caching'],
-                    'risk_factors': ['Multi-site complexity', 'Protocol compatibility'],
-                    'recommended_improvements': ['Implement protocol gateways', 'Optimize FSx throughput', 'Add monitoring']
-                }
-            },
-            'prod_sa_linux_nas_fsx_lustre': {
-                'name': 'Prod: San Antonio Linux NAS → San Jose → AWS Production VPC FSx for Lustre',
-                'destination_storage': 'FSx_Lustre',
-                'source': 'San Antonio',
-                'destination': 'AWS US-West-2 Production VPC FSx for Lustre',
-                'environment': 'production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'San Antonio Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 1,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.97
-                    },
-                    {
-                        'name': 'San Antonio to San Jose (Private Line)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 12,
-                        'reliability': 0.9995,
-                        'connection_type': 'private_line',
-                        'cost_factor': 3.0,
-                        'ai_optimization_potential': 0.94
-                    },
-                    {
-                        'name': 'San Jose to AWS Production VPC FSx Lustre (DX)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 4,
-                        'reliability': 0.9999,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 5.0,
-                        'ai_optimization_potential': 0.98
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Lustre client optimization', 'High-performance requirements'],
-                    'optimization_opportunities': ['Lustre striping', 'Parallel I/O optimization', 'Client tuning'],
-                    'risk_factors': ['Lustre complexity', 'High-performance requirements'],
-                    'recommended_improvements': ['Optimize Lustre configuration', 'Implement parallel processing', 'Monitor performance']
-                }
-            },
-            
-                        # Add these new network paths to the existing network_paths dictionary
-
-            'nonprod_sj_linux_nas_s3_vpc': {
-                'name': 'Non-Prod: San Jose Linux NAS → S3 via VPC Endpoint',
-                'destination_storage': 'S3_VPC',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 S3 via VPC Endpoint',
-                'environment': 'non-production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 2,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.95
-                    },
-                    {
-                        'name': 'Jump Server to S3 VPC Endpoint',
-                        'bandwidth_mbps': 10000,  # No internet gateway bottleneck
-                        'latency_ms': 5,  # Much lower latency via VPC endpoint
-                        'reliability': 0.9995,
-                        'connection_type': 'vpc_endpoint',
-                        'cost_factor': 0.5,  # Lower cost, no NAT gateway fees
-                        'ai_optimization_potential': 0.98
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['S3 copy command parallelization'],
-                    'optimization_opportunities': ['VPC endpoint bandwidth optimization', 'S3 multipart upload tuning', 'Parallel transfer optimization'],
-                    'risk_factors': ['S3 copy command configuration'],
-                    'recommended_improvements': ['Configure S3 VPC endpoint policy', 'Optimize AWS CLI settings', 'Implement transfer monitoring']
-                }
-            },
-
-            'nonprod_sj_windows_share_s3_vpc': {
-                'name': 'Non-Prod: San Jose Windows Share → S3 via VPC Endpoint',
-                'destination_storage': 'S3_VPC',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 S3 via VPC Endpoint',
-                'environment': 'non-production',
-                'os_type': 'windows',
-                'storage_type': 'share',
-                'segments': [
-                    {
-                        'name': 'Windows Share to Windows Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.997,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.88
-                    },
-                    {
-                        'name': 'Windows Jump Server to S3 VPC Endpoint',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 6,
-                        'reliability': 0.9995,
-                        'connection_type': 'vpc_endpoint',
-                        'cost_factor': 0.5,
-                        'ai_optimization_potential': 0.96
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Windows file system overhead', 'PowerShell AWS Tools configuration'],
-                    'optimization_opportunities': ['VPC endpoint optimization', 'Windows AWS CLI tuning', 'PowerShell parallel processing'],
-                    'risk_factors': ['Windows antivirus interference', 'File locking issues'],
-                    'recommended_improvements': ['Configure antivirus exclusions', 'Optimize Windows AWS CLI', 'Use robocopy with AWS CLI integration']
-                }
-            },
-
-            'prod_sa_linux_nas_s3_vpc': {
-                'name': 'Prod: San Antonio Linux NAS → San Jose → S3 via VPC Endpoint',
-                'destination_storage': 'S3_VPC',
-                'source': 'San Antonio',
-                'destination': 'AWS US-West-2 Production VPC S3 via VPC Endpoint',
-                'environment': 'production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'segments': [
-                    {
-                        'name': 'San Antonio Linux NAS to Linux Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 1,
-                        'reliability': 0.999,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'ai_optimization_potential': 0.97
-                    },
-                    {
-                        'name': 'San Antonio to San Jose (Private Line)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 12,
-                        'reliability': 0.9995,
-                        'connection_type': 'private_line',
-                        'cost_factor': 3.0,
-                        'ai_optimization_potential': 0.94
-                    },
-                    {
-                        'name': 'San Jose to S3 via Production VPC Endpoint',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 3,  # Very low latency via VPC endpoint
-                        'reliability': 0.99995,
-                        'connection_type': 'vpc_endpoint',
-                        'cost_factor': 1.0,
-                        'ai_optimization_potential': 0.98
-                    }
-                ],
-                'ai_insights': {
-                    'performance_bottlenecks': ['Multi-hop latency for large files'],
-                    'optimization_opportunities': ['VPC endpoint bandwidth optimization', 'S3 Transfer Acceleration', 'Dedicated transfer optimization'],
-                    'risk_factors': ['Complex multi-hop architecture'],
-                    'recommended_improvements': ['Implement S3 VPC endpoint redundancy', 'Configure transfer acceleration', 'Add monitoring and alerting']
-                }
-            }
-                    }
-    
-    def calculate_ai_enhanced_path_performance(self, path_key: str, time_of_day: int = None) -> Dict:
-        """AI-enhanced network path performance calculation"""
-        
-        path = self.network_paths[path_key]
-        
-        if time_of_day is None:
-            time_of_day = datetime.now().hour
-        
-        # Original performance calculation (preserved)
-        total_latency = 0
-        min_bandwidth = float('inf')
-        total_reliability = 1.0
-        total_cost_factor = 0
-        ai_optimization_score = 1.0
-        
-        adjusted_segments = []
-        
-        for segment in path['segments']:
-            # Base metrics
-            segment_latency = segment['latency_ms']
-            segment_bandwidth = segment['bandwidth_mbps']
-            segment_reliability = segment['reliability']
-            
-            # Time-of-day and congestion adjustments (preserved original logic)
-            if segment['connection_type'] == 'internal_lan':
-                if 9 <= time_of_day <= 17:
-                    congestion_factor = 1.1
-                else:
-                    congestion_factor = 0.95
-            elif segment['connection_type'] == 'private_line':
-                if 9 <= time_of_day <= 17:
-                    congestion_factor = 1.2
-                else:
-                    congestion_factor = 0.9
-            elif segment['connection_type'] == 'direct_connect':
-                if 9 <= time_of_day <= 17:
-                    congestion_factor = 1.05
-                else:
-                    congestion_factor = 0.98
-            else:
-                congestion_factor = 1.0
-            
-            # Apply congestion
-            effective_bandwidth = segment_bandwidth / congestion_factor
-            effective_latency = segment_latency * congestion_factor
-            
-            # OS-specific adjustments (preserved)
-            if path['os_type'] == 'windows' and segment['connection_type'] != 'internal_lan':
-                effective_bandwidth *= 0.95
-                effective_latency *= 1.1
-            
-            # Destination storage adjustments
-            if 'FSx' in path['destination_storage']:
-                if path['destination_storage'] == 'FSx_Windows':
-                    effective_bandwidth *= 1.1  # Better Windows integration
-                    effective_latency *= 0.9    # Lower latency
-                elif path['destination_storage'] == 'FSx_Lustre':
-                    effective_bandwidth *= 1.3  # High performance
-                    effective_latency *= 0.7    # Very low latency
-            
-            # AI optimization potential
-            ai_optimization_score *= segment['ai_optimization_potential']
-            
-            # Accumulate metrics
-            total_latency += effective_latency
-            min_bandwidth = min(min_bandwidth, effective_bandwidth)
-            total_reliability *= segment_reliability
-            total_cost_factor += segment['cost_factor']
-            
-            adjusted_segments.append({
-                **segment,
-                'effective_bandwidth_mbps': effective_bandwidth,
-                'effective_latency_ms': effective_latency,
-                'congestion_factor': congestion_factor
-            })
-        
-        # Calculate quality scores (preserved original logic)
-        latency_score = max(0, 100 - (total_latency * 2))
-        bandwidth_score = min(100, (min_bandwidth / 1000) * 20)
-        reliability_score = total_reliability * 100
-        
-        # AI-enhanced network quality with optimization potential
-        base_network_quality = (latency_score * 0.25 + bandwidth_score * 0.45 + reliability_score * 0.30)
-        ai_enhanced_quality = base_network_quality * ai_optimization_score
-        
-        # Destination storage performance bonus
-        storage_bonus = 0
-        if path['destination_storage'] == 'FSx_Windows':
-            storage_bonus = 10
-        elif path['destination_storage'] == 'FSx_Lustre':
-            storage_bonus = 20
-        
-        ai_enhanced_quality = min(100, ai_enhanced_quality + storage_bonus)
-        
-        return {
-            'path_name': path['name'],
-            'destination_storage': path['destination_storage'],
-            'total_latency_ms': total_latency,
-            'effective_bandwidth_mbps': min_bandwidth,
-            'total_reliability': total_reliability,
-            'network_quality_score': base_network_quality,
-            'ai_enhanced_quality_score': ai_enhanced_quality,
-            'ai_optimization_potential': (1 - ai_optimization_score) * 100,
-            'total_cost_factor': total_cost_factor,
-            'storage_performance_bonus': storage_bonus,
-            'segments': adjusted_segments,
-            'environment': path['environment'],
-            'os_type': path['os_type'],
-            'storage_type': path['storage_type'],
-            'ai_insights': path['ai_insights']
-        }
-    
-    def get_available_paths_by_storage(self, os_type: str, environment: str) -> Dict:
-        """Get available network paths grouped by destination storage type"""
-        
-        storage_groups = {
-            'S3': [],
-            'FSx_Windows': [],
-            'FSx_Lustre': []
-        }
-        
-        for path_key, path_data in self.network_paths.items():
-            if (path_data['os_type'] == os_type and 
-                path_data['environment'] == environment):
-                
-                storage_type = path_data['destination_storage']
-                if storage_type in storage_groups:
-                    storage_groups[storage_type].append({
-                        'key': path_key,
-                        'name': path_data['name'],
-                        'storage_type': storage_type
-                    })
-        
-        return storage_groups
-
 class EnhancedAgentSizingManager:
     """Enhanced agent sizing with scalable agent count and AI recommendations"""
     
@@ -3346,165 +2743,109 @@ class EnhancedAgentSizingManager:
                     'Implement intelligent resource allocation',
                     'Use advanced monitoring and auto-tuning'
                 ]
+            }
+        }
+        
+        # Add S3 copy agent specifications
+        self.s3_copy_agent_specs = {
+            'small': {
+                'name': 'Small S3 Copy Instance (t3.medium)',
+                'vcpu': 2,
+                'memory_gb': 4,
+                'max_throughput_mbps_per_agent': 800,  # Higher than DataSync due to direct S3 access
+                'max_concurrent_tasks_per_agent': 50,
+                'cost_per_hour_per_agent': 0.0416,
+                'recommended_for': 'Up to 5TB per agent, VPC endpoint optimized',
+                'ai_optimization_tips': [
+                    'Configure S3 VPC endpoint for optimal performance',
+                    'Use multipart uploads for large files',
+                    'Implement parallel transfers with aws s3 cp --recursive'
+                ]
             },
-                    # Add this to the __init__ method of EnhancedAgentSizingManager class after the existing dms_agent_specs
-
-            self.s3_copy_agent_specs : {
-                'small': {
-                    'name': 'Small S3 Copy Instance (t3.medium)',
-                    'vcpu': 2,
-                    'memory_gb': 4,
-                    'max_throughput_mbps_per_agent': 800,  # Higher than DataSync due to direct S3 access
-                    'max_concurrent_tasks_per_agent': 50,
-                    'cost_per_hour_per_agent': 0.0416,
-                    'recommended_for': 'Up to 5TB per agent, VPC endpoint optimized',
-                    'ai_optimization_tips': [
-                        'Configure S3 VPC endpoint for optimal performance',
-                        'Use multipart uploads for large files',
-                        'Implement parallel transfers with aws s3 cp --recursive'
-                    ]
-                },
-                'medium': {
-                    'name': 'Medium S3 Copy Instance (c5.large)',
-                    'vcpu': 2,
-                    'memory_gb': 4,
-                    'max_throughput_mbps_per_agent': 1200,
-                    'max_concurrent_tasks_per_agent': 100,
-                    'cost_per_hour_per_agent': 0.085,
-                    'recommended_for': '5-20TB per agent, high-bandwidth VPC endpoint',
-                    'ai_optimization_tips': [
-                        'Optimize S3 transfer acceleration if needed',
-                        'Configure optimal --cli-read-timeout and --cli-write-timeout',
-                        'Use S3 batch operations for large datasets'
-                    ]
-                },
-                'large': {
-                    'name': 'Large S3 Copy Instance (c5.xlarge)',
-                    'vcpu': 4,
-                    'memory_gb': 8,
-                    'max_throughput_mbps_per_agent': 2000,
-                    'max_concurrent_tasks_per_agent': 200,
-                    'cost_per_hour_per_agent': 0.17,
-                    'recommended_for': '20-100TB per agent, dedicated VPC endpoint',
-                    'ai_optimization_tips': [
-                        'Enable S3 VPC endpoint policy optimization',
-                        'Use dedicated bandwidth allocation',
-                        'Implement intelligent retry strategies'
-                    ]
-                },
-                'xlarge': {
-                    'name': 'XLarge S3 Copy Instance (c5.2xlarge)',
-                    'vcpu': 8,
-                    'memory_gb': 16,
-                    'max_throughput_mbps_per_agent': 3500,
-                    'max_concurrent_tasks_per_agent': 400,
-                    'cost_per_hour_per_agent': 0.34,
-                    'recommended_for': '>100TB per agent, enterprise VPC endpoint',
-                    'ai_optimization_tips': [
-                        'Configure multiple S3 VPC endpoints for load distribution',
-                        'Use advanced AWS CLI configuration tuning',
-                        'Implement compression and deduplication strategies'
-                    ]
-                }
+            'medium': {
+                'name': 'Medium S3 Copy Instance (c5.large)',
+                'vcpu': 2,
+                'memory_gb': 4,
+                'max_throughput_mbps_per_agent': 1200,
+                'max_concurrent_tasks_per_agent': 100,
+                'cost_per_hour_per_agent': 0.085,
+                'recommended_for': '5-20TB per agent, high-bandwidth VPC endpoint',
+                'ai_optimization_tips': [
+                    'Optimize S3 transfer acceleration if needed',
+                    'Configure optimal --cli-read-timeout and --cli-write-timeout',
+                    'Use S3 batch operations for large datasets'
+                ]
+            },
+            'large': {
+                'name': 'Large S3 Copy Instance (c5.xlarge)',
+                'vcpu': 4,
+                'memory_gb': 8,
+                'max_throughput_mbps_per_agent': 2000,
+                'max_concurrent_tasks_per_agent': 200,
+                'cost_per_hour_per_agent': 0.17,
+                'recommended_for': '20-100TB per agent, dedicated VPC endpoint',
+                'ai_optimization_tips': [
+                    'Enable S3 VPC endpoint policy optimization',
+                    'Use dedicated bandwidth allocation',
+                    'Implement intelligent retry strategies'
+                ]
+            },
+            'xlarge': {
+                'name': 'XLarge S3 Copy Instance (c5.2xlarge)',
+                'vcpu': 8,
+                'memory_gb': 16,
+                'max_throughput_mbps_per_agent': 3500,
+                'max_concurrent_tasks_per_agent': 400,
+                'cost_per_hour_per_agent': 0.34,
+                'recommended_for': '>100TB per agent, enterprise VPC endpoint',
+                'ai_optimization_tips': [
+                    'Configure multiple S3 VPC endpoints for load distribution',
+                    'Use advanced AWS CLI configuration tuning',
+                    'Implement compression and deduplication strategies'
+                ]
             }
-                
-                
-            }
-            
+        }
     
     def calculate_agent_configuration(self, agent_type: str, agent_size: str, number_of_agents: int, destination_storage: str = 'S3') -> Dict:
         """Calculate agent configuration with S3 copy support"""
 
-    if agent_type == 'datasync':
-        agent_spec = self.datasync_agent_specs[agent_size]
-    elif agent_type == 'dms':
-        agent_spec = self.dms_agent_specs[agent_size]
-    elif agent_type == 's3_copy':  # NEW: S3 copy support
-        agent_spec = self.s3_copy_agent_specs[agent_size]
-    else:
-        raise ValueError(f"Unknown agent type: {agent_type}")
-
-    # Get actual migration architecture
-    architecture = self.get_actual_migration_architecture(agent_type, destination_storage, {})
-
-    # Calculate scaling efficiency (S3 copy scales better due to direct access)
-    if agent_type == 's3_copy':
-        scaling_efficiency = self._calculate_s3_copy_scaling_efficiency(number_of_agents)
-    else:
-        scaling_efficiency = self._calculate_scaling_efficiency(number_of_agents)
-
-    # Calculate throughput based on actual architecture
-    if architecture['agent_targets_destination'] or agent_type == 's3_copy':
-        # Direct migration (S3 or S3 copy)
-        storage_multiplier = self._get_storage_performance_multiplier(destination_storage)
-        if agent_type == 's3_copy':
-            # S3 copy gets additional VPC endpoint bonus
-            vpc_endpoint_bonus = 1.3  # 30% performance boost via VPC endpoint
-            storage_multiplier *= vpc_endpoint_bonus
-        
-        total_throughput = (agent_spec['max_throughput_mbps_per_agent'] * 
-                        number_of_agents * scaling_efficiency * storage_multiplier)
-        fsx_multiplier = storage_multiplier
-    else:
-        # Split workload (FSx scenarios) - not applicable for S3 copy
-        base_throughput = agent_spec['max_throughput_mbps_per_agent'] * number_of_agents * scaling_efficiency
-        db_portion = base_throughput * (architecture.get('database_percentage', 80) / 100)
-        file_portion = base_throughput * (architecture.get('file_percentage', 20) / 100)
-        fsx_multiplier = self._get_storage_performance_multiplier(destination_storage)
-        file_portion_enhanced = file_portion * fsx_multiplier
-        total_throughput = db_portion + file_portion_enhanced
-
-    # Rest of the method remains the same...
-    # [Include the rest of the existing calculate_agent_configuration method]
-
-    def _calculate_s3_copy_scaling_efficiency(self, number_of_agents: int) -> float:
-        """Calculate scaling efficiency for S3 copy - better scaling due to direct S3 access"""
-        if number_of_agents == 1:
-            return 1.0
-        elif number_of_agents <= 3:
-            return 0.98  # Better scaling than DataSync/DMS
-        elif number_of_agents <= 5:
-            return 0.95
-        elif number_of_agents <= 8:
-            return 0.92
-        else:
-            return 0.88
-    
-        
-    
-    def calculate_agent_configuration(self, agent_type: str, agent_size: str, number_of_agents: int, destination_storage: str = 'S3') -> Dict:
-        """Calculate agent configuration with corrected FSx architecture"""
-
         if agent_type == 'datasync':
             agent_spec = self.datasync_agent_specs[agent_size]
-        else:  # dms
+        elif agent_type == 'dms':
             agent_spec = self.dms_agent_specs[agent_size]
+        elif agent_type == 's3_copy':  # NEW: S3 copy support
+            agent_spec = self.s3_copy_agent_specs[agent_size]
+        else:
+            raise ValueError(f"Unknown agent type: {agent_type}")
 
         # Get actual migration architecture
         architecture = self.get_actual_migration_architecture(agent_type, destination_storage, {})
 
-        # Calculate scaling efficiency
-        scaling_efficiency = self._calculate_scaling_efficiency(number_of_agents)
+        # Calculate scaling efficiency (S3 copy scales better due to direct access)
+        if agent_type == 's3_copy':
+            scaling_efficiency = self._calculate_s3_copy_scaling_efficiency(number_of_agents)
+        else:
+            scaling_efficiency = self._calculate_scaling_efficiency(number_of_agents)
 
         # Calculate throughput based on actual architecture
-        if architecture['agent_targets_destination']:
-            # Direct migration (S3)
+        if architecture['agent_targets_destination'] or agent_type == 's3_copy':
+            # Direct migration (S3 or S3 copy)
             storage_multiplier = self._get_storage_performance_multiplier(destination_storage)
+            if agent_type == 's3_copy':
+                # S3 copy gets additional VPC endpoint bonus
+                vpc_endpoint_bonus = 1.3  # 30% performance boost via VPC endpoint
+                storage_multiplier *= vpc_endpoint_bonus
+            
             total_throughput = (agent_spec['max_throughput_mbps_per_agent'] * 
                             number_of_agents * scaling_efficiency * storage_multiplier)
-            fsx_multiplier = storage_multiplier  # Use storage_multiplier for consistency
+            fsx_multiplier = storage_multiplier
         else:
-            # Split workload (FSx scenarios)
+            # Split workload (FSx scenarios) - not applicable for S3 copy
             base_throughput = agent_spec['max_throughput_mbps_per_agent'] * number_of_agents * scaling_efficiency
-            
-            # Database portion goes to EC2+EBS (no FSx multiplier)
             db_portion = base_throughput * (architecture.get('database_percentage', 80) / 100)
-            
-            # File portion gets FSx multiplier
             file_portion = base_throughput * (architecture.get('file_percentage', 20) / 100)
             fsx_multiplier = self._get_storage_performance_multiplier(destination_storage)
             file_portion_enhanced = file_portion * fsx_multiplier
-            
             total_throughput = db_portion + file_portion_enhanced
 
         total_concurrent_tasks = (agent_spec['max_concurrent_tasks_per_agent'] * number_of_agents)
@@ -3539,6 +2880,19 @@ class EnhancedAgentSizingManager:
             'scaling_recommendations': self._get_scaling_recommendations(agent_size, number_of_agents, destination_storage),
             'optimal_configuration': self._assess_configuration_optimality(agent_size, number_of_agents, destination_storage)
         }
+    
+    def _calculate_s3_copy_scaling_efficiency(self, number_of_agents: int) -> float:
+        """Calculate scaling efficiency for S3 copy - better scaling due to direct S3 access"""
+        if number_of_agents == 1:
+            return 1.0
+        elif number_of_agents <= 3:
+            return 0.98  # Better scaling than DataSync/DMS
+        elif number_of_agents <= 5:
+            return 0.95
+        elif number_of_agents <= 8:
+            return 0.92
+        else:
+            return 0.88
     
     def _get_storage_performance_multiplier(self, destination_storage: str) -> float:
         """Get performance multiplier based on destination storage type"""
@@ -3681,6 +3035,65 @@ class EnhancedAgentSizingManager:
         else:
             return f"Configuration needs optimization for better {destination_storage} efficiency"
     
+    def get_actual_migration_architecture(self, agent_type: str, destination_storage: str, config: Dict) -> Dict:
+        """Determine the actual migration architecture based on destination storage"""
+
+        database_size_gb = config.get('database_size_gb', 1000)
+        
+        if destination_storage == 'S3':
+            # Direct migration to S3
+            return {
+                'primary_target': 'S3',
+                'secondary_target': None,
+                'agent_targets_destination': True,
+                'architecture_type': 'direct_cloud_storage',
+                'bandwidth_calculation': 'direct',
+                'description': f'{agent_type.upper()} agents transfer directly to S3'
+            }
+        
+        elif destination_storage == 'FSx_Windows':
+            # Hybrid architecture - adjust percentages based on database size
+            db_percentage = min(90, max(60, 80 - (database_size_gb - 1000) // 1000 * 5))
+            file_percentage = 100 - db_percentage
+            
+            return {
+                'primary_target': 'EC2_EBS',  # Database goes to EC2 + EBS
+                'secondary_target': 'FSx_Windows',  # File data goes to FSx Windows
+                'agent_targets_destination': False,  # Agents don't directly target FSx
+                'architecture_type': 'hybrid_storage',
+                'bandwidth_calculation': 'split_workload',
+                'database_percentage': db_percentage,
+                'file_percentage': file_percentage,
+                'description': f'{agent_type.upper()} for database → EC2+EBS; DataSync for files → FSx Windows'
+            }
+        
+        elif destination_storage == 'FSx_Lustre':
+            # HPC architecture - adjust percentages based on database size
+            db_percentage = min(85, max(50, 70 - (database_size_gb - 1000) // 1000 * 5))
+            file_percentage = 100 - db_percentage
+            
+            return {
+                'primary_target': 'EC2_EBS',  # Database still goes to EC2 + EBS
+                'secondary_target': 'FSx_Lustre',  # HPC data goes to FSx Lustre
+                'agent_targets_destination': False,
+                'architecture_type': 'hpc_hybrid',
+                'bandwidth_calculation': 'split_workload',
+                'database_percentage': db_percentage,
+                'file_percentage': file_percentage,
+                'description': f'{agent_type.upper()} for database → EC2+EBS; DataSync for HPC data → FSx Lustre'
+            }
+        
+        else:
+            # Fallback
+            return {
+                'primary_target': destination_storage,
+                'secondary_target': None,
+                'agent_targets_destination': True,
+                'architecture_type': 'standard',
+                'bandwidth_calculation': 'direct',
+                'description': f'{agent_type.upper()} agents transfer to {destination_storage}'
+            }
+    
     def recommend_optimal_agents(self, database_size_gb: int, network_bandwidth_mbps: int, 
                                 migration_window_hours: int, destination_storage: str = 'S3') -> Dict:
         """AI-powered recommendation for optimal agent configuration including storage destination"""
@@ -3747,7 +3160,7 @@ class EnhancedAgentSizingManager:
             }
         }
 
-    def get_actual_migration_architecture(self, agent_type: str, destination_storage: str, config: Dict) -> Dict:
+def get_actual_migration_architecture(self, agent_type: str, destination_storage: str, config: Dict) -> Dict:
         """Determine the actual migration architecture based on destination storage"""
 
         database_size_gb = config.get('database_size_gb', 1000)
