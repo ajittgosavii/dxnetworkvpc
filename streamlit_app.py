@@ -4924,8 +4924,8 @@ class EnhancedMigrationAnalyzer:
         }
     
     
-    def _determine_migration_method(self, config: Dict) -> str:
-    """Determine the optimal migration method based on configuration"""
+def _determine_migration_method(self, config: Dict) -> str:
+        """Determine the optimal migration method based on configuration"""
     
     source_engine = config['source_database_engine']
     destination_storage = config.get('destination_storage_type', 'S3')
