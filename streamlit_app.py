@@ -7085,37 +7085,37 @@ else:
         if st.sidebar.button("🔄 Refresh AI Analysis", type="primary"):
             st.rerun()
         
-        return {
-            'operating_system': operating_system,
-            'server_type': server_type,
-            'ram_gb': ram_gb,
-            'cpu_cores': cpu_cores,
-            'cpu_ghz': cpu_ghz,
-            'nic_type': nic_type,
-            'nic_speed': nic_speed,
-            'source_database_engine': source_database_engine,
-            'database_engine': database_engine,
-            'database_size_gb': database_size_gb,
-            'downtime_tolerance_minutes': downtime_tolerance_minutes,
-            'performance_requirements': performance_requirements,
-            'destination_storage_type': destination_storage_type,
-            'environment': environment,
-            'datasync_agent_size': datasync_agent_size,
-            'dms_agent_size': dms_agent_size,
-            'number_of_agents': number_of_agents,
-            'enable_ai_analysis': enable_ai_analysis,
-            'ai_analysis_depth': ai_analysis_depth,
-            'use_realtime_pricing': use_realtime_pricing,
-            'current_storage_gb': current_storage_gb,
-            'peak_iops': peak_iops,
-            'max_throughput_mbps': max_throughput_mbps,
-            'anticipated_max_memory_gb': anticipated_max_memory_gb,
-            'anticipated_max_cpu_cores': anticipated_max_cpu_cores,
-            'deployment_type': 'managed' if database_engine.startswith('rds_') else 'self_managed',
-            'instance_type': database_engine if database_engine.startswith('ec2_') else None,
-            'migration_complexity_score': migration_complexity,
-            'is_homogeneous': is_homogeneous
-        }
+                return {
+                    'operating_system': operating_system,
+                    'server_type': server_type,
+                    'ram_gb': ram_gb,
+                    'cpu_cores': cpu_cores,
+                    'cpu_ghz': cpu_ghz,
+                    'nic_type': nic_type,
+                    'nic_speed': nic_speed,
+                    'source_database_engine': source_database_engine,
+                    'database_engine': database_engine,
+                    'database_size_gb': database_size_gb,
+                    'downtime_tolerance_minutes': downtime_tolerance_minutes,
+                    'performance_requirements': performance_requirements,
+                    'destination_storage_type': destination_storage_type,
+                    'environment': environment,
+                    'datasync_agent_size': datasync_agent_size,
+                    'dms_agent_size': dms_agent_size,
+                    'number_of_agents': number_of_agents,
+                    'enable_ai_analysis': enable_ai_analysis,
+                    'ai_analysis_depth': ai_analysis_depth,
+                    'use_realtime_pricing': use_realtime_pricing,
+                    'current_storage_gb': current_storage_gb,
+                    'peak_iops': peak_iops,
+                    'max_throughput_mbps': max_throughput_mbps,
+                    'anticipated_max_memory_gb': anticipated_max_memory_gb,
+                    'anticipated_max_cpu_cores': anticipated_max_cpu_cores,
+                    'deployment_type': 'managed' if database_engine.startswith('rds_') else 'self_managed',
+                    'instance_type': database_engine if database_engine.startswith('ec2_') else None,
+                    'migration_complexity_score': migration_complexity,
+                    'is_homogeneous': is_homogeneous
+                }
         
         # Render API status
         render_api_status_sidebar()
