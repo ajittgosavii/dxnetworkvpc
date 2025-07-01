@@ -38,6 +38,16 @@ st.markdown("""
         border: 1px solid #e5e7eb;
     }
     
+    .vpc-warning-card {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 6px;
+        margin: 1rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-left: 3px solid #f59e0b;
+        border: 1px solid #d97706;
+    }
+    
     .network-path-card {
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         padding: 1.5rem;
@@ -71,7 +81,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 class NetworkPatternAnalyzer:
-    """Core class for analyzing network migration patterns"""
+    """Core class for analyzing network migration patterns with VPC endpoint considerations"""
     
     def __init__(self):
         self.network_patterns = {
@@ -90,7 +100,16 @@ class NetworkPatternAnalyzer:
                 'cost_factor': 1.5,
                 'security_level': 'high',
                 'protocol_overhead': 0.05,  # 5% protocol overhead
-                'network_congestion_factor': 0.9  # 10% reduction due to congestion
+                'network_congestion_factor': 0.9,  # 10% reduction due to congestion
+                # VPC Endpoint specific limitations
+                'vpc_endpoint_limitations': {
+                    'ipv4_only': True,
+                    'no_shared_vpc': True,
+                    'no_dedicated_tenancy': True,
+                    'requires_4_network_interfaces': True,
+                    'additional_security_groups': True,
+                    'privatelink_routing_overhead': 0.03  # 3% additional overhead for PrivateLink routing
+                }
             },
             'sj_nonprod_direct_connect': {
                 'name': 'San Jose Non-Prod → AWS Direct Connect',
@@ -144,12 +163,28 @@ class NetworkPatternAnalyzer:
             }
         }
         
-        # DataSync Agent Configurations
+        # DataSync Agent Configurations with VPC Endpoint considerations
         self.datasync_agents = {
-            'small': {'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 250, 'cost_per_hour': 0.042},
-            'medium': {'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 500, 'cost_per_hour': 0.085},
-            'large': {'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 1000, 'cost_per_hour': 0.17},
-            'xlarge': {'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 2000, 'cost_per_hour': 0.34}
+            'small': {
+                'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 250, 'cost_per_hour': 0.042,
+                'vpc_endpoint_compatible': True,
+                'vpc_endpoint_throughput_reduction': 0.1  # 10% reduction through VPC endpoints
+            },
+            'medium': {
+                'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 500, 'cost_per_hour': 0.085,
+                'vpc_endpoint_compatible': True,
+                'vpc_endpoint_throughput_reduction': 0.08  # 8% reduction through VPC endpoints
+            },
+            'large': {
+                'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 1000, 'cost_per_hour': 0.17,
+                'vpc_endpoint_compatible': True,
+                'vpc_endpoint_throughput_reduction': 0.05  # 5% reduction through VPC endpoints
+            },
+            'xlarge': {
+                'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 2000, 'cost_per_hour': 0.34,
+                'vpc_endpoint_compatible': True,
+                'vpc_endpoint_throughput_reduction': 0.03  # 3% reduction through VPC endpoints
+            }
         }
         
         # DMS Instance Configurations
@@ -172,8 +207,69 @@ class NetworkPatternAnalyzer:
             return 'sa_prod_via_sj'
         return 'sj_nonprod_direct_connect'
     
+    def assess_vpc_endpoint_compatibility(self, pattern_key: str, agent_type: str, agent_size: str) -> Dict:
+        """Assess compatibility and limitations when using DataSync with VPC endpoints"""
+        pattern = self.network_patterns[pattern_key]
+        compatibility_assessment = {
+            'is_vpc_endpoint': pattern['pattern_type'] == 'vpc_endpoint',
+            'is_datasync': agent_type == 'datasync',
+            'warnings': [],
+            'performance_impacts': [],
+            'requirements': []
+        }
+        
+        if compatibility_assessment['is_vpc_endpoint'] and compatibility_assessment['is_datasync']:
+            # VPC Endpoint specific considerations for DataSync
+            vpc_limitations = pattern.get('vpc_endpoint_limitations', {})
+            
+            if vpc_limitations.get('ipv4_only'):
+                compatibility_assessment['warnings'].append(
+                    "VPC Endpoints only support IPv4 - IPv6 and dual-stack configurations not supported"
+                )
+            
+            if vpc_limitations.get('no_shared_vpc'):
+                compatibility_assessment['warnings'].append(
+                    "Shared VPCs are not supported with DataSync VPC endpoints"
+                )
+            
+            if vpc_limitations.get('no_dedicated_tenancy'):
+                compatibility_assessment['warnings'].append(
+                    "VPCs with dedicated tenancy are not supported"
+                )
+            
+            if vpc_limitations.get('requires_4_network_interfaces'):
+                compatibility_assessment['requirements'].append(
+                    "DataSync creates 4 network interfaces in your VPC - ensure subnet capacity"
+                )
+                compatibility_assessment['requirements'].append(
+                    "Agent must be able to reach all 4 network interface IP addresses"
+                )
+            
+            if vpc_limitations.get('additional_security_groups'):
+                compatibility_assessment['requirements'].append(
+                    "Configure security groups for TCP 443 and TCP 1024-1062 port ranges"
+                )
+                compatibility_assessment['requirements'].append(
+                    "Allow ephemeral outbound traffic and connection tracking"
+                )
+            
+            # Performance impacts
+            agent_spec = self.datasync_agents[agent_size]
+            vpc_throughput_reduction = agent_spec.get('vpc_endpoint_throughput_reduction', 0.05)
+            privatelink_overhead = vpc_limitations.get('privatelink_routing_overhead', 0.03)
+            
+            total_performance_impact = (vpc_throughput_reduction + privatelink_overhead) * 100
+            compatibility_assessment['performance_impacts'].append(
+                f"Expected {total_performance_impact:.1f}% throughput reduction due to VPC endpoint routing"
+            )
+            compatibility_assessment['performance_impacts'].append(
+                "Additional latency from PrivateLink network interface routing"
+            )
+        
+        return compatibility_assessment
+    
     def calculate_migration_throughput(self, pattern_key: str, agent_type: str, agent_size: str, num_agents: int) -> Dict:
-        """Calculate effective migration throughput"""
+        """Calculate effective migration throughput with VPC endpoint considerations"""
         pattern = self.network_patterns[pattern_key]
         
         # Get agent specifications
@@ -182,8 +278,20 @@ class NetworkPatternAnalyzer:
         else:
             agent_spec = self.dms_instances[agent_size]
         
-        # Calculate agent capacity
-        total_agent_throughput = agent_spec['throughput_mbps'] * num_agents
+        # Calculate base agent capacity
+        base_agent_throughput = agent_spec['throughput_mbps'] * num_agents
+        
+        # Apply VPC endpoint throughput reduction for DataSync
+        if pattern['pattern_type'] == 'vpc_endpoint' and agent_type == 'datasync':
+            vpc_reduction = agent_spec.get('vpc_endpoint_throughput_reduction', 0.05)
+            vpc_adjusted_throughput = base_agent_throughput * (1 - vpc_reduction)
+            
+            # Apply PrivateLink routing overhead
+            vpc_limitations = pattern.get('vpc_endpoint_limitations', {})
+            privatelink_overhead = vpc_limitations.get('privatelink_routing_overhead', 0.03)
+            vpc_adjusted_throughput *= (1 - privatelink_overhead)
+        else:
+            vpc_adjusted_throughput = base_agent_throughput
         
         # Apply scaling efficiency
         if num_agents == 1:
@@ -195,7 +303,7 @@ class NetworkPatternAnalyzer:
         else:
             scaling_efficiency = 0.85
         
-        effective_agent_throughput = total_agent_throughput * scaling_efficiency
+        effective_agent_throughput = vpc_adjusted_throughput * scaling_efficiency
         network_bandwidth = pattern['total_bandwidth_mbps']
         effective_throughput = min(effective_agent_throughput, network_bandwidth)
         
@@ -207,15 +315,18 @@ class NetworkPatternAnalyzer:
             'effective_throughput_mbps': effective_throughput,
             'network_bandwidth_mbps': network_bandwidth,
             'agent_throughput_mbps': effective_agent_throughput,
+            'vpc_adjusted_throughput_mbps': vpc_adjusted_throughput,
+            'base_agent_throughput_mbps': base_agent_throughput,
             'network_utilization_percent': network_utilization,
             'agent_utilization_percent': agent_utilization,
             'bottleneck': 'network' if effective_throughput == network_bandwidth else 'agents',
             'scaling_efficiency': scaling_efficiency,
-            'latency_ms': pattern['total_latency_ms']
+            'latency_ms': pattern['total_latency_ms'],
+            'vpc_impact_percent': ((base_agent_throughput - vpc_adjusted_throughput) / base_agent_throughput * 100) if base_agent_throughput > 0 else 0
         }
     
     def calculate_bandwidth_waterfall(self, pattern_key: str, agent_type: str, agent_size: str, num_agents: int) -> Dict:
-        """Calculate detailed bandwidth waterfall analysis"""
+        """Calculate detailed bandwidth waterfall analysis with VPC endpoint considerations"""
         pattern = self.network_patterns[pattern_key]
         
         # Get agent specifications
@@ -236,7 +347,23 @@ class NetworkPatternAnalyzer:
         agent_limited_bandwidth = min(network_limitation, total_agent_capacity)
         agent_reduction = network_limitation - agent_limited_bandwidth
         
-        # Step 4: Scaling Efficiency Impact
+        # Step 4: VPC Endpoint Specific Reductions (NEW)
+        vpc_endpoint_adjusted_bandwidth = agent_limited_bandwidth
+        vpc_endpoint_reduction = 0
+        
+        if pattern['pattern_type'] == 'vpc_endpoint' and agent_type == 'datasync':
+            # DataSync VPC endpoint throughput reduction
+            vpc_throughput_reduction = agent_spec.get('vpc_endpoint_throughput_reduction', 0.05)
+            vpc_endpoint_adjusted_bandwidth *= (1 - vpc_throughput_reduction)
+            
+            # PrivateLink routing overhead
+            vpc_limitations = pattern.get('vpc_endpoint_limitations', {})
+            privatelink_overhead = vpc_limitations.get('privatelink_routing_overhead', 0.03)
+            vpc_endpoint_adjusted_bandwidth *= (1 - privatelink_overhead)
+            
+            vpc_endpoint_reduction = agent_limited_bandwidth - vpc_endpoint_adjusted_bandwidth
+        
+        # Step 5: Scaling Efficiency Impact
         if num_agents == 1:
             scaling_efficiency = 1.0
         elif num_agents <= 3:
@@ -246,20 +373,20 @@ class NetworkPatternAnalyzer:
         else:
             scaling_efficiency = 0.85
         
-        scaling_adjusted_bandwidth = agent_limited_bandwidth * scaling_efficiency
-        scaling_reduction = agent_limited_bandwidth - scaling_adjusted_bandwidth
+        scaling_adjusted_bandwidth = vpc_endpoint_adjusted_bandwidth * scaling_efficiency
+        scaling_reduction = vpc_endpoint_adjusted_bandwidth - scaling_adjusted_bandwidth
         
-        # Step 5: Protocol Overhead
+        # Step 6: Protocol Overhead
         protocol_overhead = pattern.get('protocol_overhead', 0.03)
         protocol_adjusted_bandwidth = scaling_adjusted_bandwidth * (1 - protocol_overhead)
         protocol_reduction = scaling_adjusted_bandwidth - protocol_adjusted_bandwidth
         
-        # Step 6: Network Congestion
+        # Step 7: Network Congestion
         congestion_factor = pattern.get('network_congestion_factor', 0.95)
         final_effective_bandwidth = protocol_adjusted_bandwidth * congestion_factor
         congestion_reduction = protocol_adjusted_bandwidth - final_effective_bandwidth
         
-        # Step 7: Quality of Service adjustments
+        # Step 8: Quality of Service adjustments
         if pattern['environment'] == 'production':
             qos_factor = 0.98
         else:
@@ -268,37 +395,51 @@ class NetworkPatternAnalyzer:
         qos_adjusted_bandwidth = final_effective_bandwidth * qos_factor
         qos_reduction = final_effective_bandwidth - qos_adjusted_bandwidth
         
+        # Build waterfall steps
+        steps = [
+            {'name': 'Theoretical Maximum', 'value': theoretical_max, 'cumulative': theoretical_max, 'type': 'positive'},
+            {'name': 'Network Path Limit', 'value': -network_reduction, 'cumulative': network_limitation, 'type': 'negative'},
+            {'name': 'Agent Capacity Limit', 'value': -agent_reduction, 'cumulative': agent_limited_bandwidth, 'type': 'negative'}
+        ]
+        
+        # Add VPC endpoint step if applicable
+        if vpc_endpoint_reduction > 0:
+            steps.append({'name': 'VPC Endpoint Overhead', 'value': -vpc_endpoint_reduction, 'cumulative': vpc_endpoint_adjusted_bandwidth, 'type': 'negative'})
+        
+        steps.extend([
+            {'name': 'Scaling Efficiency', 'value': -scaling_reduction, 'cumulative': scaling_adjusted_bandwidth, 'type': 'negative'},
+            {'name': 'Protocol Overhead', 'value': -protocol_reduction, 'cumulative': protocol_adjusted_bandwidth, 'type': 'negative'},
+            {'name': 'Network Congestion', 'value': -congestion_reduction, 'cumulative': final_effective_bandwidth, 'type': 'negative'},
+            {'name': 'QoS Overhead', 'value': -qos_reduction, 'cumulative': qos_adjusted_bandwidth, 'type': 'negative'},
+            {'name': 'Final Effective', 'value': qos_adjusted_bandwidth, 'cumulative': qos_adjusted_bandwidth, 'type': 'total'}
+        ])
+        
         return {
-            'steps': [
-                {'name': 'Theoretical Maximum', 'value': theoretical_max, 'cumulative': theoretical_max, 'type': 'positive'},
-                {'name': 'Network Path Limit', 'value': -network_reduction, 'cumulative': network_limitation, 'type': 'negative'},
-                {'name': 'Agent Capacity Limit', 'value': -agent_reduction, 'cumulative': agent_limited_bandwidth, 'type': 'negative'},
-                {'name': 'Scaling Efficiency', 'value': -scaling_reduction, 'cumulative': scaling_adjusted_bandwidth, 'type': 'negative'},
-                {'name': 'Protocol Overhead', 'value': -protocol_reduction, 'cumulative': protocol_adjusted_bandwidth, 'type': 'negative'},
-                {'name': 'Network Congestion', 'value': -congestion_reduction, 'cumulative': final_effective_bandwidth, 'type': 'negative'},
-                {'name': 'QoS Overhead', 'value': -qos_reduction, 'cumulative': qos_adjusted_bandwidth, 'type': 'negative'},
-                {'name': 'Final Effective', 'value': qos_adjusted_bandwidth, 'cumulative': qos_adjusted_bandwidth, 'type': 'total'}
-            ],
+            'steps': steps,
             'summary': {
                 'theoretical_max_mbps': theoretical_max,
                 'network_limited_mbps': network_limitation,
                 'agent_limited_mbps': agent_limited_bandwidth,
+                'vpc_endpoint_adjusted_mbps': vpc_endpoint_adjusted_bandwidth,
                 'final_effective_mbps': qos_adjusted_bandwidth,
                 'total_reduction_mbps': theoretical_max - qos_adjusted_bandwidth,
+                'vpc_endpoint_reduction_mbps': vpc_endpoint_reduction,
                 'efficiency_percentage': (qos_adjusted_bandwidth / theoretical_max) * 100,
-                'primary_bottleneck': self._identify_primary_bottleneck(network_reduction, agent_reduction, scaling_reduction, protocol_reduction, congestion_reduction, qos_reduction),
+                'primary_bottleneck': self._identify_primary_bottleneck(network_reduction, agent_reduction, vpc_endpoint_reduction, scaling_reduction, protocol_reduction, congestion_reduction, qos_reduction),
                 'scaling_efficiency': scaling_efficiency,
                 'protocol_overhead_pct': protocol_overhead * 100,
                 'congestion_impact_pct': (1 - congestion_factor) * 100,
-                'qos_overhead_pct': (1 - qos_factor) * 100
+                'qos_overhead_pct': (1 - qos_factor) * 100,
+                'vpc_endpoint_impact_pct': (vpc_endpoint_reduction / theoretical_max) * 100 if vpc_endpoint_reduction > 0 else 0
             }
         }
     
-    def _identify_primary_bottleneck(self, network_red, agent_red, scaling_red, protocol_red, congestion_red, qos_red) -> str:
+    def _identify_primary_bottleneck(self, network_red, agent_red, vpc_red, scaling_red, protocol_red, congestion_red, qos_red) -> str:
         """Identify the primary bottleneck in the bandwidth waterfall"""
         reductions = {
             'Network Path': network_red,
             'Agent Capacity': agent_red,
+            'VPC Endpoint': vpc_red,
             'Scaling Inefficiency': scaling_red,
             'Protocol Overhead': protocol_red,
             'Network Congestion': congestion_red,
@@ -329,13 +470,35 @@ class NetworkPatternAnalyzer:
         }
     
     def generate_ai_recommendation(self, config: Dict, analysis_results: Dict) -> Dict:
-        """Generate AI-powered recommendations"""
+        """Generate AI-powered recommendations with VPC endpoint considerations"""
         database_size = config['database_size_gb']
         migration_time = analysis_results['migration_time']
         throughput_analysis = analysis_results['throughput_analysis']
+        vpc_compatibility = analysis_results.get('vpc_compatibility', {})
         
         recommendations = []
         priority_score = 0
+        
+        # VPC Endpoint specific recommendations
+        if vpc_compatibility.get('is_vpc_endpoint') and vpc_compatibility.get('is_datasync'):
+            if len(vpc_compatibility.get('warnings', [])) > 0:
+                recommendations.append({
+                    'type': 'vpc_endpoint_limitations',
+                    'priority': 'high',
+                    'description': f'VPC Endpoint has {len(vpc_compatibility["warnings"])} compatibility warnings that may impact DataSync performance.',
+                    'impact': 'Potential configuration issues and performance degradation'
+                })
+                priority_score += 15
+            
+            vpc_impact = throughput_analysis.get('vpc_impact_percent', 0)
+            if vpc_impact > 5:
+                recommendations.append({
+                    'type': 'vpc_endpoint_performance',
+                    'priority': 'medium',
+                    'description': f'VPC Endpoint reduces DataSync throughput by {vpc_impact:.1f}%. Consider Direct Connect for better performance.',
+                    'impact': 'Moderate performance improvement with Direct Connect'
+                })
+                priority_score += 10
         
         if throughput_analysis['bottleneck'] == 'network':
             recommendations.append({
@@ -395,7 +558,7 @@ def render_header():
     <div class="main-header">
         <h1>🌐 AWS Database Migration Network Pattern Analyzer</h1>
         <p style="font-size: 1.2rem; margin-top: 0.5rem;">
-            Network Path Analysis • Latency Optimization • Throughput Calculation • Bandwidth Waterfall • AI-Powered Recommendations
+            Network Path Analysis • VPC Endpoint Considerations • Latency Optimization • Throughput Calculation • Bandwidth Waterfall • AI-Powered Recommendations
         </p>
         <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">
             San Jose ↔ San Antonio ↔ AWS West-2 • VPC Endpoint • Direct Connect • DataSync • DMS
@@ -503,8 +666,55 @@ def render_sidebar_controls():
         'max_downtime_hours': max_downtime_hours
     }
 
+def render_vpc_endpoint_analysis(config: Dict, analyzer: NetworkPatternAnalyzer):
+    """Render VPC endpoint specific analysis"""
+    pattern_key = analyzer.determine_optimal_pattern(
+        config['source_location'], 
+        config['environment'], 
+        config['is_homogeneous']
+    )
+    
+    vpc_compatibility = analyzer.assess_vpc_endpoint_compatibility(
+        pattern_key, config['agent_type'], config['agent_size']
+    )
+    
+    if vpc_compatibility['is_vpc_endpoint'] and vpc_compatibility['is_datasync']:
+        st.markdown("**⚠️ VPC Endpoint + DataSync Compatibility Analysis:**")
+        
+        # Warnings
+        if vpc_compatibility['warnings']:
+            st.markdown("**🚨 Compatibility Warnings:**")
+            for warning in vpc_compatibility['warnings']:
+                st.warning(f"• {warning}")
+        
+        # Requirements
+        if vpc_compatibility['requirements']:
+            st.markdown("**📋 Network Requirements:**")
+            for requirement in vpc_compatibility['requirements']:
+                st.info(f"• {requirement}")
+        
+        # Performance Impacts
+        if vpc_compatibility['performance_impacts']:
+            st.markdown("**📉 Performance Impacts:**")
+            for impact in vpc_compatibility['performance_impacts']:
+                st.warning(f"• {impact}")
+        
+        # Summary card
+        st.markdown(f"""
+        <div class="vpc-warning-card">
+            <h4>🔍 VPC Endpoint Impact Summary</h4>
+            <p><strong>Configuration:</strong> DataSync agent with VPC Endpoint</p>
+            <p><strong>Warnings:</strong> {len(vpc_compatibility['warnings'])} compatibility issues</p>
+            <p><strong>Requirements:</strong> {len(vpc_compatibility['requirements'])} network configuration items</p>
+            <p><strong>Performance Impact:</strong> Expected throughput reduction due to PrivateLink routing</p>
+            <p><strong>Recommendation:</strong> Consider Direct Connect for production workloads requiring maximum performance</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    return vpc_compatibility
+
 def create_network_diagram(pattern_key: str, analyzer: NetworkPatternAnalyzer):
-    """Create interactive network path diagram"""
+    """Create interactive network path diagram with VPC endpoint annotations"""
     pattern = analyzer.network_patterns[pattern_key]
     fig = go.Figure()
     
@@ -516,7 +726,10 @@ def create_network_diagram(pattern_key: str, analyzer: NetworkPatternAnalyzer):
         line_width = max(3, min(12, segment['bandwidth_mbps'] / 200))
         reliability = segment['reliability']
         
-        if reliability > 0.999:
+        # Special coloring for VPC endpoints
+        if pattern['pattern_type'] == 'vpc_endpoint' and 'VPC' in segment['name']:
+            line_color = '#f59e0b'  # Orange for VPC Endpoint
+        elif reliability > 0.999:
             line_color = '#22c55e'
         elif reliability > 0.995:
             line_color = '#f59e0b'
@@ -540,10 +753,16 @@ def create_network_diagram(pattern_key: str, analyzer: NetworkPatternAnalyzer):
         ))
         
         mid_x = (x_positions[i] + x_positions[i+1]) / 2
+        
+        # Add VPC Endpoint annotation
+        annotation_text = f"{segment['bandwidth_mbps']:,} Mbps<br>{segment['latency_ms']:.1f} ms"
+        if pattern['pattern_type'] == 'vpc_endpoint' and 'VPC' in segment['name']:
+            annotation_text += "<br>⚠️ VPC Endpoint"
+        
         fig.add_annotation(
             x=mid_x,
             y=y_position + 15,
-            text=f"{segment['bandwidth_mbps']:,} Mbps<br>{segment['latency_ms']:.1f} ms",
+            text=annotation_text,
             showarrow=False,
             font=dict(size=10),
             bgcolor='rgba(255,255,255,0.8)',
@@ -573,8 +792,12 @@ def create_network_diagram(pattern_key: str, analyzer: NetworkPatternAnalyzer):
         hovertemplate="<b>Destination: AWS West-2</b><extra></extra>"
     ))
     
+    title = f"Network Path: {pattern['name']}"
+    if pattern['pattern_type'] == 'vpc_endpoint':
+        title += " ⚠️ (VPC Endpoint Limitations Apply)"
+    
     fig.update_layout(
-        title=f"Network Path: {pattern['name']}",
+        title=title,
         xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
         showlegend=False,
@@ -585,7 +808,7 @@ def create_network_diagram(pattern_key: str, analyzer: NetworkPatternAnalyzer):
     return fig
 
 def create_bandwidth_waterfall_chart(waterfall_data: Dict):
-    """Create interactive bandwidth waterfall chart"""
+    """Create interactive bandwidth waterfall chart with VPC endpoint considerations"""
     steps = waterfall_data['steps']
     
     fig = go.Figure()
@@ -617,11 +840,12 @@ def create_bandwidth_waterfall_chart(waterfall_data: Dict):
                 hovertemplate=f"<b>{step['name']}</b><br>Final Bandwidth: {step['value']:.0f} Mbps<extra></extra>"
             ))
         else:
-            # Reduction steps
+            # Reduction steps - special color for VPC Endpoint
+            color = '#f59e0b' if 'VPC Endpoint' in step['name'] else '#ef4444'
             fig.add_trace(go.Bar(
                 x=[step['name']],
                 y=[abs(step['value'])],
-                marker_color='#ef4444',
+                marker_color=color,
                 name=step['name'],
                 text=[f"{step['value']:.0f} Mbps"],
                 textposition='outside',
@@ -629,7 +853,7 @@ def create_bandwidth_waterfall_chart(waterfall_data: Dict):
             ))
     
     fig.update_layout(
-        title="Bandwidth Waterfall Analysis: Theoretical Max to Effective Throughput",
+        title="Bandwidth Waterfall Analysis: Theoretical Max to Effective Throughput (Including VPC Endpoint Impact)",
         xaxis_title="Migration Pipeline Stages",
         yaxis_title="Bandwidth (Mbps)",
         showlegend=False,
@@ -642,7 +866,7 @@ def create_bandwidth_waterfall_chart(waterfall_data: Dict):
     return fig
 
 def render_bandwidth_waterfall_tab(config: Dict, analyzer: NetworkPatternAnalyzer):
-    """Render bandwidth waterfall analysis tab"""
+    """Render bandwidth waterfall analysis tab with VPC endpoint considerations"""
     st.subheader("💧 Bandwidth Waterfall Analysis")
     
     pattern_key = analyzer.determine_optimal_pattern(
@@ -683,11 +907,20 @@ def render_bandwidth_waterfall_tab(config: Dict, analyzer: NetworkPatternAnalyze
         )
     
     with col4:
-        st.metric(
-            "✅ Final Effective",
-            f"{waterfall_data['summary']['final_effective_mbps']:,.0f} Mbps",
-            delta=f"{waterfall_data['summary']['efficiency_percentage']:.1f}% efficient"
-        )
+        # Show VPC endpoint impact if applicable
+        vpc_impact = waterfall_data['summary'].get('vpc_endpoint_impact_pct', 0)
+        if vpc_impact > 0:
+            st.metric(
+                "⚠️ VPC Endpoint Impact",
+                f"{vpc_impact:.1f}%",
+                delta=f"-{waterfall_data['summary']['vpc_endpoint_reduction_mbps']:,.0f} Mbps"
+            )
+        else:
+            st.metric(
+                "✅ Final Effective",
+                f"{waterfall_data['summary']['final_effective_mbps']:,.0f} Mbps",
+                delta=f"{waterfall_data['summary']['efficiency_percentage']:.1f}% efficient"
+            )
     
     with col5:
         st.metric(
@@ -701,7 +934,7 @@ def render_bandwidth_waterfall_tab(config: Dict, analyzer: NetworkPatternAnalyze
     waterfall_chart = create_bandwidth_waterfall_chart(waterfall_data)
     st.plotly_chart(waterfall_chart, use_container_width=True)
     
-    # Detailed breakdown
+    # Enhanced breakdown with VPC endpoint details
     col1, col2 = st.columns(2)
     
     with col1:
@@ -720,7 +953,7 @@ def render_bandwidth_waterfall_tab(config: Dict, analyzer: NetworkPatternAnalyze
         df_impact = pd.DataFrame(impact_data)
         st.dataframe(df_impact, use_container_width=True)
         
-        st.markdown(f"""
+        insights_text = f"""
         <div class="waterfall-card">
             <h4>Key Insights</h4>
             <p><strong>Efficiency:</strong> {waterfall_data['summary']['efficiency_percentage']:.1f}% of theoretical maximum</p>
@@ -728,8 +961,19 @@ def render_bandwidth_waterfall_tab(config: Dict, analyzer: NetworkPatternAnalyze
             <p><strong>Primary Bottleneck:</strong> {waterfall_data['summary']['primary_bottleneck']}</p>
             <p><strong>Protocol Overhead:</strong> {waterfall_data['summary']['protocol_overhead_pct']:.1f}%</p>
             <p><strong>Congestion Impact:</strong> {waterfall_data['summary']['congestion_impact_pct']:.1f}%</p>
-        </div>
-        """, unsafe_allow_html=True)
+        """
+        
+        # Add VPC endpoint specific insights
+        vpc_impact = waterfall_data['summary'].get('vpc_endpoint_impact_pct', 0)
+        if vpc_impact > 0:
+            insights_text += f"""
+            <p><strong>VPC Endpoint Impact:</strong> {vpc_impact:.1f}% throughput reduction</p>
+            <p><strong>PrivateLink Overhead:</strong> Additional routing latency and processing</p>
+            """
+        
+        insights_text += "</div>"
+        
+        st.markdown(insights_text, unsafe_allow_html=True)
     
     with col2:
         st.markdown("**📈 Efficiency Breakdown:**")
@@ -762,7 +1006,7 @@ def render_bandwidth_waterfall_tab(config: Dict, analyzer: NetworkPatternAnalyze
     return waterfall_data
 
 def render_network_analysis_tab(config: Dict, analyzer: NetworkPatternAnalyzer):
-    """Render network analysis tab"""
+    """Render network analysis tab with VPC endpoint considerations"""
     st.subheader("🌐 Network Path Analysis")
     
     pattern_key = analyzer.determine_optimal_pattern(
@@ -772,6 +1016,9 @@ def render_network_analysis_tab(config: Dict, analyzer: NetworkPatternAnalyzer):
     )
     
     pattern = analyzer.network_patterns[pattern_key]
+    
+    # VPC Endpoint compatibility assessment
+    vpc_compatibility = render_vpc_endpoint_analysis(config, analyzer)
     
     throughput_analysis = analyzer.calculate_migration_throughput(
         pattern_key,
@@ -798,10 +1045,12 @@ def render_network_analysis_tab(config: Dict, analyzer: NetworkPatternAnalyzer):
         )
     
     with col3:
+        vpc_impact = throughput_analysis.get('vpc_impact_percent', 0)
+        delta_text = f"VPC Impact: -{vpc_impact:.1f}%" if vpc_impact > 0 else f"Utilization: {throughput_analysis['network_utilization_percent']:.1f}%"
         st.metric(
             "⚡ Effective Throughput",
             f"{throughput_analysis['effective_throughput_mbps']:,.0f} Mbps",
-            delta=f"Utilization: {throughput_analysis['network_utilization_percent']:.1f}%"
+            delta=delta_text
         )
     
     with col4:
@@ -827,7 +1076,8 @@ def render_network_analysis_tab(config: Dict, analyzer: NetworkPatternAnalyzer):
     return {
         'pattern_key': pattern_key,
         'pattern': pattern,
-        'throughput_analysis': throughput_analysis
+        'throughput_analysis': throughput_analysis,
+        'vpc_compatibility': vpc_compatibility
     }
 
 def render_migration_timing_tab(config: Dict, network_analysis: Dict, analyzer: NetworkPatternAnalyzer):
@@ -852,10 +1102,12 @@ def render_migration_timing_tab(config: Dict, network_analysis: Dict, analyzer: 
         )
     
     with col2:
+        vpc_impact = throughput_analysis.get('vpc_impact_percent', 0)
+        delta_text = f"VPC Impact: -{vpc_impact:.1f}%" if vpc_impact > 0 else f"{throughput_analysis['effective_throughput_mbps']/8:.0f} MB/s"
         st.metric(
             "⚡ Effective Speed",
             f"{throughput_analysis['effective_throughput_mbps']:,.0f} Mbps",
-            delta=f"{throughput_analysis['effective_throughput_mbps']/8:.0f} MB/s"
+            delta=delta_text
         )
     
     with col3:
@@ -884,13 +1136,14 @@ def render_migration_timing_tab(config: Dict, network_analysis: Dict, analyzer: 
     return migration_time
 
 def render_ai_recommendations_tab(config: Dict, network_analysis: Dict, migration_time: Dict, analyzer: NetworkPatternAnalyzer):
-    """Render AI recommendations tab"""
+    """Render AI recommendations tab with VPC endpoint considerations"""
     st.subheader("🤖 AI-Powered Migration Recommendations")
     
     analysis_results = {
         'throughput_analysis': network_analysis['throughput_analysis'],
         'migration_time': migration_time,
-        'pattern': network_analysis['pattern']
+        'pattern': network_analysis['pattern'],
+        'vpc_compatibility': network_analysis.get('vpc_compatibility', {})
     }
     
     ai_recommendations = analyzer.generate_ai_recommendation(config, analysis_results)
@@ -938,7 +1191,9 @@ def render_ai_recommendations_tab(config: Dict, network_analysis: Dict, migratio
             'low': '🟢'
         }.get(rec['priority'], '⚪')
         
-        with st.expander(f"{priority_color} {rec['type'].replace('_', ' ').title()}", expanded=(rec['priority'] == 'high')):
+        expanded = (rec['priority'] == 'high') or ('vpc_endpoint' in rec['type'])
+        
+        with st.expander(f"{priority_color} {rec['type'].replace('_', ' ').title()}", expanded=expanded):
             st.write(f"**Description:** {rec['description']}")
             st.write(f"**Expected Impact:** {rec['impact']}")
             st.write(f"**Priority Level:** {rec['priority'].title()}")
@@ -953,7 +1208,7 @@ def main():
     # Sidebar configuration
     config = render_sidebar_controls()
     
-    # Main tabs - Updated to include Bandwidth Waterfall
+    # Main tabs - Updated to include VPC Endpoint considerations
     tab1, tab2, tab3, tab4 = st.tabs([
         "🌐 Network Analysis", 
         "💧 Bandwidth Waterfall",
