@@ -661,525 +661,354 @@ class EnhancedNetworkAnalyzer:
     
     def __init__(self):
         # Operating System Network Stack Characteristics
-        self.os_characteristics = {
-            'windows_server_2019': {
-                'name': 'Windows Server 2019',
-                'tcp_stack_efficiency': 0.94,
-                'memory_copy_overhead': 0.08,
-                'interrupt_overhead': 0.05,
-                'kernel_bypass_support': False,
-                'max_tcp_window_size': '64KB',
-                'rss_support': True,
-                'network_virtualization_overhead': 0.12
-            },
-            'windows_server_2022': {
-                'name': 'Windows Server 2022',
-                'tcp_stack_efficiency': 0.96,
-                'memory_copy_overhead': 0.06,
-                'interrupt_overhead': 0.04,
-                'kernel_bypass_support': True,
-                'max_tcp_window_size': '1MB',
-                'rss_support': True,
-                'network_virtualization_overhead': 0.08
-            },
-            'linux_rhel8': {
-                'name': 'Red Hat Enterprise Linux 8',
-                'tcp_stack_efficiency': 0.97,
-                'memory_copy_overhead': 0.04,
-                'interrupt_overhead': 0.03,
-                'kernel_bypass_support': True,
-                'max_tcp_window_size': '16MB',
-                'rss_support': True,
-                'network_virtualization_overhead': 0.05
-            },
-            'linux_ubuntu': {
-                'name': 'Ubuntu Linux (Latest)',
-                'tcp_stack_efficiency': 0.98,
-                'memory_copy_overhead': 0.03,
-                'interrupt_overhead': 0.02,
-                'kernel_bypass_support': True,
-                'max_tcp_window_size': '16MB',
-                'rss_support': True,
-                'network_virtualization_overhead': 0.04
-            }
-        }
-        
-        # Network Interface Card Characteristics
-        self.nic_characteristics = {
-            '1gbps_standard': {
-                'name': '1 Gbps Standard NIC',
-                'theoretical_bandwidth_mbps': 1000,
-                'real_world_efficiency': 0.94,
-                'cpu_utilization_per_gbps': 0.15,
-                'pcie_gen': '2.0',
-                'pcie_lanes': 1,
-                'hardware_offload_support': ['checksum'],
-                'mtu_support': 1500,
-                'buffer_size_mb': 1,
-                'interrupt_coalescing': False
-            },
-            '10gbps_standard': {
-                'name': '10 Gbps Standard NIC',
-                'theoretical_bandwidth_mbps': 10000,
-                'real_world_efficiency': 0.92,
-                'cpu_utilization_per_gbps': 0.08,
-                'pcie_gen': '3.0',
-                'pcie_lanes': 4,
-                'hardware_offload_support': ['checksum', 'segmentation', 'rss'],
-                'mtu_support': 9000,
-                'buffer_size_mb': 4,
-                'interrupt_coalescing': True
-            },
-            '25gbps_high_performance': {
-                'name': '25 Gbps High-Performance NIC',
-                'theoretical_bandwidth_mbps': 25000,
-                'real_world_efficiency': 0.96,
-                'cpu_utilization_per_gbps': 0.04,
-                'pcie_gen': '3.0',
-                'pcie_lanes': 8,
-                'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma'],
-                'mtu_support': 9000,
-                'buffer_size_mb': 16,
-                'interrupt_coalescing': True
-            },
-            '100gbps_enterprise': {
-                'name': '100 Gbps Enterprise NIC',
-                'theoretical_bandwidth_mbps': 100000,
-                'real_world_efficiency': 0.98,
-                'cpu_utilization_per_gbps': 0.02,
-                'pcie_gen': '4.0',
-                'pcie_lanes': 16,
-                'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma', 'encryption'],
-                'mtu_support': 9000,
-                'buffer_size_mb': 64,
-                'interrupt_coalescing': True
-            }
-        }
-        
-        # LAN Infrastructure Characteristics
-        self.lan_characteristics = {
-            'gigabit_switch': {
-                'name': 'Gigabit Ethernet Switch',
-                'switching_capacity_gbps': 48,
-                'port_buffer_mb': 12,
-                'switching_latency_us': 5,
-                'oversubscription_ratio': '3:1',
-                'congestion_threshold': 0.8,
-                'qos_support': True,
-                'vlan_overhead': 0.01
-            },
-            '10gb_switch': {
-                'name': '10 Gigabit Ethernet Switch',
-                'switching_capacity_gbps': 480,
-                'port_buffer_mb': 48,
-                'switching_latency_us': 2,
-                'oversubscription_ratio': '2:1',
-                'congestion_threshold': 0.85,
-                'qos_support': True,
-                'vlan_overhead': 0.005
-            },
-            '25gb_switch': {
-                'name': '25 Gigabit Ethernet Switch',
-                'switching_capacity_gbps': 1200,
-                'port_buffer_mb': 128,
-                'switching_latency_us': 1,
-                'oversubscription_ratio': '1.5:1',
-                'congestion_threshold': 0.9,
-                'qos_support': True,
-                'vlan_overhead': 0.003
-            },
-            'spine_leaf_fabric': {
-                'name': 'Spine-Leaf Fabric',
-                'switching_capacity_gbps': 5000,
-                'port_buffer_mb': 256,
-                'switching_latency_us': 0.5,
-                'oversubscription_ratio': '1:1',
-                'congestion_threshold': 0.95,
-                'qos_support': True,
-                'vlan_overhead': 0.001
-            }
-        }
-        
-        # WAN Provider Characteristics
-        self.wan_characteristics = {
-            'mpls_tier1': {
-                'name': 'MPLS Tier-1 Provider',
-                'bandwidth_efficiency': 0.96,
-                'latency_consistency': 0.98,
-                'packet_loss_rate': 0.0001,
-                'jitter_ms': 2,
-                'burstable_overhead': 0.1,
-                'qos_classes': 4,
-                'sla_availability': 0.9999
-            },
-            'fiber_metro': {
-                'name': 'Metro Fiber Ethernet',
-                'bandwidth_efficiency': 0.98,
-                'latency_consistency': 0.99,
-                'packet_loss_rate': 0.00005,
-                'jitter_ms': 1,
-                'burstable_overhead': 0.05,
-                'qos_classes': 8,
-                'sla_availability': 0.99995
-            },
-            'internet_transit': {
-                'name': 'Internet Transit',
-                'bandwidth_efficiency': 0.85,
-                'latency_consistency': 0.9,
-                'packet_loss_rate': 0.001,
-                'jitter_ms': 10,
-                'burstable_overhead': 0.2,
-                'qos_classes': 0,
-                'sla_availability': 0.999
-            },
-            'aws_dx_dedicated': {
-                'name': 'AWS Direct Connect Dedicated',
-                'bandwidth_efficiency': 0.99,
-                'latency_consistency': 0.999,
-                'packet_loss_rate': 0.00001,
-                'jitter_ms': 0.5,
-                'burstable_overhead': 0.02,
-                'qos_classes': 8,
-                'sla_availability': 0.9999
-            }
-        }
-        
-        # AWS Direct Connect Specific Factors
-        self.dx_characteristics = {
-            '1gbps_dedicated': {
-                'name': '1 Gbps Dedicated Connection',
-                'committed_bandwidth_mbps': 1000,
-                'burst_capability': 1.0,
-                'aws_edge_processing_overhead': 0.02,
-                'cross_connect_latency_ms': 1,
-                'bgp_convergence_impact': 0.01,
-                'virtual_interface_overhead': 0.005
-            },
-            '10gbps_dedicated': {
-                'name': '10 Gbps Dedicated Connection',
-                'committed_bandwidth_mbps': 10000,
-                'burst_capability': 1.0,
-                'aws_edge_processing_overhead': 0.01,
-                'cross_connect_latency_ms': 0.8,
-                'bgp_convergence_impact': 0.005,
-                'virtual_interface_overhead': 0.003
-            },
-            '100gbps_dedicated': {
-                'name': '100 Gbps Dedicated Connection',
-                'committed_bandwidth_mbps': 100000,
-                'burst_capability': 1.0,
-                'aws_edge_processing_overhead': 0.005,
-                'cross_connect_latency_ms': 0.5,
-                'bgp_convergence_impact': 0.002,
-                'virtual_interface_overhead': 0.001
-            }
-        }
-        
-        # Enhanced Network Patterns with realistic infrastructure + database scenarios
-        self.network_patterns = {
-            'sj_nonprod_vpc_endpoint': {
-                'name': 'San Jose Non-Prod → AWS VPC Endpoint',
-                'source': 'San Jose',
-                'environment': 'non-production',
-                'pattern_type': 'vpc_endpoint',
-                'os_type': 'linux_rhel8',
-                'nic_type': '10gbps_standard',
-                'lan_type': '10gb_switch',
-                'wan_type': 'fiber_metro',
-                'dx_type': None,
-                'committed_bandwidth_mbps': 2000,
-                'baseline_latency_ms': 8,
-                'cost_factor': 1.5,
-                'security_level': 'high',
-                'reliability_score': 0.85,
-                'complexity_score': 0.3,
-                'vpc_endpoint_limitations': {
-                    'ipv4_only': True,
-                    'no_shared_vpc': True,
-                    'privatelink_routing_overhead': 0.03
+            self.os_characteristics = {
+                'windows_server_2019': {
+                    'name': 'Windows Server 2019',
+                    'tcp_stack_efficiency': 0.94,
+                    'memory_copy_overhead': 0.08,
+                    'interrupt_overhead': 0.05,
+                    'kernel_bypass_support': False,
+                    'max_tcp_window_size': '64KB',
+                    'rss_support': True,
+                    'network_virtualization_overhead': 0.12
                 },
-                'database_suitability': {
-                    'oltp': 0.7,
-                    'olap': 0.9,
-                    'replication': 0.6,
-                    'backup': 0.95
-                }
-            },
-            'sj_nonprod_direct_connect': {
-                'name': 'San Jose Non-Prod → AWS Direct Connect',
-                'source': 'San Jose',
-                'environment': 'non-production',
-                'pattern_type': 'direct_connect',
-                'os_type': 'linux_rhel8',
-                'nic_type': '10gbps_standard',
-                'lan_type': '10gb_switch',
-                'wan_type': 'mpls_tier1',
-                'dx_type': '10gbps_dedicated',
-                'committed_bandwidth_mbps': 2000,
-                'baseline_latency_ms': 12,
-                'cost_factor': 2.0,
-                'security_level': 'high',
-                'reliability_score': 0.95,
-                'complexity_score': 0.6,
-                'database_suitability': {
-                    'oltp': 0.9,
-                    'olap': 0.95,
-                    'replication': 0.95,
-                    'backup': 0.9
-                }
-            },
-            'sj_prod_direct_connect': {
-                'name': 'San Jose Production → AWS Direct Connect',
-                'source': 'San Jose',
-                'environment': 'production',
-                'pattern_type': 'direct_connect',
-                'os_type': 'linux_ubuntu',
-                'nic_type': '25gbps_high_performance',
-                'lan_type': 'spine_leaf_fabric',
-                'wan_type': 'aws_dx_dedicated',
-                'dx_type': '100gbps_dedicated',
-                'committed_bandwidth_mbps': 10000,
-                'baseline_latency_ms': 6,
-                'cost_factor': 3.5,
-                'security_level': 'very_high',
-                'reliability_score': 0.99,
-                'complexity_score': 0.7,
-                'database_suitability': {
-                    'oltp': 0.98,
-                    'olap': 0.98,
-                    'replication': 0.99,
-                    'backup': 0.95
-                }
-            },
-            'sa_prod_via_sj': {
-                'name': 'San Antonio Production → San Jose → AWS',
-                'source': 'San Antonio',
-                'environment': 'production',
-                'pattern_type': 'multi_hop',
-                'os_type': 'windows_server_2022',
-                'nic_type': '25gbps_high_performance',
-                'lan_type': 'spine_leaf_fabric',
-                'wan_type': 'mpls_tier1',
-                'dx_type': '100gbps_dedicated',
-                'committed_bandwidth_mbps': 10000,
-                'baseline_latency_ms': 18,
-                'cost_factor': 4.0,
-                'security_level': 'very_high',
-                'reliability_score': 0.92,
-                'complexity_score': 0.9,
-                'database_suitability': {
-                    'oltp': 0.85,
-                    'olap': 0.95,
-                    'replication': 0.88,
-                    'backup': 0.9
+                'windows_server_2022': {
+                    'name': 'Windows Server 2022',
+                    'tcp_stack_efficiency': 0.96,
+                    'memory_copy_overhead': 0.06,
+                    'interrupt_overhead': 0.04,
+                    'kernel_bypass_support': True,
+                    'max_tcp_window_size': '1MB',
+                    'rss_support': True,
+                    'network_virtualization_overhead': 0.08
+                },
+                'linux_rhel8': {
+                    'name': 'Red Hat Enterprise Linux 8',
+                    'tcp_stack_efficiency': 0.97,
+                    'memory_copy_overhead': 0.04,
+                    'interrupt_overhead': 0.03,
+                    'kernel_bypass_support': True,
+                    'max_tcp_window_size': '16MB',
+                    'rss_support': True,
+                    'network_virtualization_overhead': 0.05
+                },
+                'linux_ubuntu': {
+                    'name': 'Ubuntu Linux (Latest)',
+                    'tcp_stack_efficiency': 0.98,
+                    'memory_copy_overhead': 0.03,
+                    'interrupt_overhead': 0.02,
+                    'kernel_bypass_support': True,
+                    'max_tcp_window_size': '16MB',
+                    'rss_support': True,
+                    'network_virtualization_overhead': 0.04
                 }
             }
-        }
-        
-# End of database_scenarios dictionary
-    database_scenarios = {
-        'mariadb_oltp_rds': {
-            'name': 'MariaDB OLTP → RDS MariaDB',
-            'workload_type': 'oltp',
-            'aws_target': 'rds',
-            'target_service': 'Amazon RDS for MariaDB',
-            'latency_sensitivity': 'high',
-            'bandwidth_requirement': 'medium',
-            'consistency_requirement': 'strict',
-            'recommended_services': ['dms'],
-            'min_bandwidth_mbps': 600,
-            'max_tolerable_latency_ms': 10,
-            'migration_complexity': 'low',
-            'downtime_sensitivity': 'high'
-        }
-    }
-      # Close the database_scenarios dictionary
-    
-    # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
-        self.migration_services = {
-            'datasync': {
-                'name': 'AWS DataSync',
-                'use_case': 'File and object data transfer',
-                'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
-                'vpc_endpoint_compatible': True,
-                'encryption_in_transit': True,
-                'encryption_at_rest': True,
-                'application_efficiency': 0.92,
-                'protocol_efficiency': 0.96,
-                'latency_sensitivity': 'medium',
-                'tcp_window_scaling_required': True,
-                'vmware_deployment': True,  # NEW FLAG
-                'database_compatibility': {
-                    'file_based_backups': True,
-                    'live_replication': False,
-                    'transaction_logs': True
+            
+            # Network Interface Card Characteristics
+            self.nic_characteristics = {
+                '1gbps_standard': {
+                    'name': '1 Gbps Standard NIC',
+                    'theoretical_bandwidth_mbps': 1000,
+                    'real_world_efficiency': 0.94,
+                    'cpu_utilization_per_gbps': 0.15,
+                    'pcie_gen': '2.0',
+                    'pcie_lanes': 1,
+                    'hardware_offload_support': ['checksum'],
+                    'mtu_support': 1500,
+                    'buffer_size_mb': 1,
+                    'interrupt_coalescing': False
                 },
-                'sizes': {
-                    'small': {
-                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
-                        'vpc_endpoint_throughput_reduction': 0.1,
-                        'optimal_file_size_mb': '1-100',
-                        'concurrent_transfers': 16,
-                        'tcp_connections': 16,
-                        'instance_type': 'm5.xlarge',
-                        'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
-                        'effective_throughput_mbps': 340  # NEW: After VMware overhead
+                '10gbps_standard': {
+                    'name': '10 Gbps Standard NIC',
+                    'theoretical_bandwidth_mbps': 10000,
+                    'real_world_efficiency': 0.92,
+                    'cpu_utilization_per_gbps': 0.08,
+                    'pcie_gen': '3.0',
+                    'pcie_lanes': 4,
+                    'hardware_offload_support': ['checksum', 'segmentation', 'rss'],
+                    'mtu_support': 9000,
+                    'buffer_size_mb': 4,
+                    'interrupt_coalescing': True
+                },
+                '25gbps_high_performance': {
+                    'name': '25 Gbps High-Performance NIC',
+                    'theoretical_bandwidth_mbps': 25000,
+                    'real_world_efficiency': 0.96,
+                    'cpu_utilization_per_gbps': 0.04,
+                    'pcie_gen': '3.0',
+                    'pcie_lanes': 8,
+                    'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma'],
+                    'mtu_support': 9000,
+                    'buffer_size_mb': 16,
+                    'interrupt_coalescing': True
+                },
+                '100gbps_enterprise': {
+                    'name': '100 Gbps Enterprise NIC',
+                    'theoretical_bandwidth_mbps': 100000,
+                    'real_world_efficiency': 0.98,
+                    'cpu_utilization_per_gbps': 0.02,
+                    'pcie_gen': '4.0',
+                    'pcie_lanes': 16,
+                    'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma', 'encryption'],
+                    'mtu_support': 9000,
+                    'buffer_size_mb': 64,
+                    'interrupt_coalescing': True
+                }
+            }
+            
+            # LAN Infrastructure Characteristics
+            self.lan_characteristics = {
+                'gigabit_switch': {
+                    'name': 'Gigabit Ethernet Switch',
+                    'switching_capacity_gbps': 48,
+                    'port_buffer_mb': 12,
+                    'switching_latency_us': 5,
+                    'oversubscription_ratio': '3:1',
+                    'congestion_threshold': 0.8,
+                    'qos_support': True,
+                    'vlan_overhead': 0.01
+                },
+                '10gb_switch': {
+                    'name': '10 Gigabit Ethernet Switch',
+                    'switching_capacity_gbps': 480,
+                    'port_buffer_mb': 48,
+                    'switching_latency_us': 2,
+                    'oversubscription_ratio': '2:1',
+                    'congestion_threshold': 0.85,
+                    'qos_support': True,
+                    'vlan_overhead': 0.005
+                },
+                '25gb_switch': {
+                    'name': '25 Gigabit Ethernet Switch',
+                    'switching_capacity_gbps': 1200,
+                    'port_buffer_mb': 128,
+                    'switching_latency_us': 1,
+                    'oversubscription_ratio': '1.5:1',
+                    'congestion_threshold': 0.9,
+                    'qos_support': True,
+                    'vlan_overhead': 0.003
+                },
+                'spine_leaf_fabric': {
+                    'name': 'Spine-Leaf Fabric',
+                    'switching_capacity_gbps': 5000,
+                    'port_buffer_mb': 256,
+                    'switching_latency_us': 0.5,
+                    'oversubscription_ratio': '1:1',
+                    'congestion_threshold': 0.95,
+                    'qos_support': True,
+                    'vlan_overhead': 0.001
+                }
+            }
+            
+            # WAN Provider Characteristics
+            self.wan_characteristics = {
+                'mpls_tier1': {
+                    'name': 'MPLS Tier-1 Provider',
+                    'bandwidth_efficiency': 0.96,
+                    'latency_consistency': 0.98,
+                    'packet_loss_rate': 0.0001,
+                    'jitter_ms': 2,
+                    'burstable_overhead': 0.1,
+                    'qos_classes': 4,
+                    'sla_availability': 0.9999
+                },
+                'fiber_metro': {
+                    'name': 'Metro Fiber Ethernet',
+                    'bandwidth_efficiency': 0.98,
+                    'latency_consistency': 0.99,
+                    'packet_loss_rate': 0.00005,
+                    'jitter_ms': 1,
+                    'burstable_overhead': 0.05,
+                    'qos_classes': 8,
+                    'sla_availability': 0.99995
+                },
+                'internet_transit': {
+                    'name': 'Internet Transit',
+                    'bandwidth_efficiency': 0.85,
+                    'latency_consistency': 0.9,
+                    'packet_loss_rate': 0.001,
+                    'jitter_ms': 10,
+                    'burstable_overhead': 0.2,
+                    'qos_classes': 0,
+                    'sla_availability': 0.999
+                },
+                'aws_dx_dedicated': {
+                    'name': 'AWS Direct Connect Dedicated',
+                    'bandwidth_efficiency': 0.99,
+                    'latency_consistency': 0.999,
+                    'packet_loss_rate': 0.00001,
+                    'jitter_ms': 0.5,
+                    'burstable_overhead': 0.02,
+                    'qos_classes': 8,
+                    'sla_availability': 0.9999
+                }
+            }
+            
+            # AWS Direct Connect Specific Factors
+            self.dx_characteristics = {
+                '1gbps_dedicated': {
+                    'name': '1 Gbps Dedicated Connection',
+                    'committed_bandwidth_mbps': 1000,
+                    'burst_capability': 1.0,
+                    'aws_edge_processing_overhead': 0.02,
+                    'cross_connect_latency_ms': 1,
+                    'bgp_convergence_impact': 0.01,
+                    'virtual_interface_overhead': 0.005
+                },
+                '10gbps_dedicated': {
+                    'name': '10 Gbps Dedicated Connection',
+                    'committed_bandwidth_mbps': 10000,
+                    'burst_capability': 1.0,
+                    'aws_edge_processing_overhead': 0.01,
+                    'cross_connect_latency_ms': 0.8,
+                    'bgp_convergence_impact': 0.005,
+                    'virtual_interface_overhead': 0.003
+                },
+                '100gbps_dedicated': {
+                    'name': '100 Gbps Dedicated Connection',
+                    'committed_bandwidth_mbps': 100000,
+                    'burst_capability': 1.0,
+                    'aws_edge_processing_overhead': 0.005,
+                    'cross_connect_latency_ms': 0.5,
+                    'bgp_convergence_impact': 0.002,
+                    'virtual_interface_overhead': 0.001
+                }
+            }
+            
+            # Enhanced Network Patterns with realistic infrastructure + database scenarios
+            self.network_patterns = {
+                'sj_nonprod_vpc_endpoint': {
+                    'name': 'San Jose Non-Prod → AWS VPC Endpoint',
+                    'source': 'San Jose',
+                    'environment': 'non-production',
+                    'pattern_type': 'vpc_endpoint',
+                    'os_type': 'linux_rhel8',
+                    'nic_type': '10gbps_standard',
+                    'lan_type': '10gb_switch',
+                    'wan_type': 'fiber_metro',
+                    'dx_type': None,
+                    'committed_bandwidth_mbps': 2000,
+                    'baseline_latency_ms': 8,
+                    'cost_factor': 1.5,
+                    'security_level': 'high',
+                    'reliability_score': 0.85,
+                    'complexity_score': 0.3,
+                    'vpc_endpoint_limitations': {
+                        'ipv4_only': True,
+                        'no_shared_vpc': True,
+                        'privatelink_routing_overhead': 0.03
                     },
-                    'medium': {
-                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
-                        'vpc_endpoint_throughput_reduction': 0.08,
-                        'optimal_file_size_mb': '100-1000',
-                        'concurrent_transfers': 32,
-                        'tcp_connections': 32,
-                        'instance_type': 'm5.2xlarge',
-                        'vmware_overhead': 0.12,
-                        'effective_throughput_mbps': 880
-                    },
-                    'large': {
-                        'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
-                        'vpc_endpoint_throughput_reduction': 0.05,
-                        'optimal_file_size_mb': '1000+',
-                        'concurrent_transfers': 64,
-                        'tcp_connections': 64,
-                        'instance_type': 'm5.4xlarge',
-                        'vmware_overhead': 0.10,
-                        'effective_throughput_mbps': 1800
-                    },
-                    'xlarge': {
-                        'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
-                        'vpc_endpoint_throughput_reduction': 0.03,
-                        'optimal_file_size_mb': '1000+',
-                        'concurrent_transfers': 128,
-                        'tcp_connections': 128,
-                        'instance_type': 'm5.8xlarge',
-                        'vmware_overhead': 0.08,  # Less overhead on larger VMs
-                        'effective_throughput_mbps': 3680
+                    'database_suitability': {
+                        'oltp': 0.7,
+                        'olap': 0.9,
+                        'replication': 0.6,
+                        'backup': 0.95
+                    }
+                },
+                'sj_nonprod_direct_connect': {
+                    'name': 'San Jose Non-Prod → AWS Direct Connect',
+                    'source': 'San Jose',
+                    'environment': 'non-production',
+                    'pattern_type': 'direct_connect',
+                    'os_type': 'linux_rhel8',
+                    'nic_type': '10gbps_standard',
+                    'lan_type': '10gb_switch',
+                    'wan_type': 'mpls_tier1',
+                    'dx_type': '10gbps_dedicated',
+                    'committed_bandwidth_mbps': 2000,
+                    'baseline_latency_ms': 12,
+                    'cost_factor': 2.0,
+                    'security_level': 'high',
+                    'reliability_score': 0.95,
+                    'complexity_score': 0.6,
+                    'database_suitability': {
+                        'oltp': 0.9,
+                        'olap': 0.95,
+                        'replication': 0.95,
+                        'backup': 0.9
+                    }
+                },
+                'sj_prod_direct_connect': {
+                    'name': 'San Jose Production → AWS Direct Connect',
+                    'source': 'San Jose',
+                    'environment': 'production',
+                    'pattern_type': 'direct_connect',
+                    'os_type': 'linux_ubuntu',
+                    'nic_type': '25gbps_high_performance',
+                    'lan_type': 'spine_leaf_fabric',
+                    'wan_type': 'aws_dx_dedicated',
+                    'dx_type': '100gbps_dedicated',
+                    'committed_bandwidth_mbps': 10000,
+                    'baseline_latency_ms': 6,
+                    'cost_factor': 3.5,
+                    'security_level': 'very_high',
+                    'reliability_score': 0.99,
+                    'complexity_score': 0.7,
+                    'database_suitability': {
+                        'oltp': 0.98,
+                        'olap': 0.98,
+                        'replication': 0.99,
+                        'backup': 0.95
+                    }
+                },
+                'sa_prod_via_sj': {
+                    'name': 'San Antonio Production → San Jose → AWS',
+                    'source': 'San Antonio',
+                    'environment': 'production',
+                    'pattern_type': 'multi_hop',
+                    'os_type': 'windows_server_2022',
+                    'nic_type': '25gbps_high_performance',
+                    'lan_type': 'spine_leaf_fabric',
+                    'wan_type': 'mpls_tier1',
+                    'dx_type': '100gbps_dedicated',
+                    'committed_bandwidth_mbps': 10000,
+                    'baseline_latency_ms': 18,
+                    'cost_factor': 4.0,
+                    'security_level': 'very_high',
+                    'reliability_score': 0.92,
+                    'complexity_score': 0.9,
+                    'database_suitability': {
+                        'oltp': 0.85,
+                        'olap': 0.95,
+                        'replication': 0.88,
+                        'backup': 0.9
                     }
                 }
-            },
-            'dms': {
-                'name': 'AWS Database Migration Service',
-                'use_case': 'Database migration and replication',
-                'protocols': ['TCP/IP', 'SSL/TLS'],
-                'vpc_endpoint_compatible': True,
-                'encryption_in_transit': True,
-                'encryption_at_rest': True,
-                'application_efficiency': 0.88,
-                'protocol_efficiency': 0.94,
+            }
+            
+    # End of database_scenarios dictionary
+        database_scenarios = {
+            'mariadb_oltp_rds': {
+                'name': 'MariaDB OLTP → RDS MariaDB',
+                'workload_type': 'oltp',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for MariaDB',
                 'latency_sensitivity': 'high',
-                'requires_endpoints': True,
-                'supports_cdc': True,
-                'tcp_window_scaling_required': True,
-                'database_compatibility': {
-                    'file_based_backups': False,
-                    'live_replication': True,
-                    'transaction_logs': True,
-                    'schema_conversion': True
-                },
-                'sizes': {
-                    'small': {
-                        'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
-                        'max_connections': 50,
-                        'optimal_table_size_gb': '1-10',
-                        'tcp_connections': 4,
-                        'instance_type': 'dms.t3.medium'
-                    },
-                    'medium': {
-                        'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
-                        'max_connections': 100,
-                        'optimal_table_size_gb': '10-100',
-                        'tcp_connections': 8,
-                        'instance_type': 'dms.r5.large'
-                    },
-                    'large': {
-                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
-                        'max_connections': 200,
-                        'optimal_table_size_gb': '100-500',
-                        'tcp_connections': 16,
-                        'instance_type': 'dms.r5.xlarge'
-                    },
-                    'xlarge': {
-                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
-                        'max_connections': 400,
-                        'optimal_table_size_gb': '500+',
-                        'tcp_connections': 32,
-                        'instance_type': 'dms.r5.2xlarge'
-                    }
-                }
-            },
-                'fsx_windows': {
-                    'name': 'Amazon FSx for Windows File Server',
-                    'use_case': 'Windows-based file shares and applications',
-                    'protocols': ['SMB', 'NFS', 'iSCSI'],
-                    'vpc_endpoint_compatible': False,
-                    'encryption_in_transit': True,
-                    'encryption_at_rest': True,
-                    'application_efficiency': 0.95,
-                    'protocol_efficiency': 0.93,
-                    'latency_sensitivity': 'low',
-                    'requires_active_directory': True,
-                    'supports_deduplication': True,
-                    'tcp_window_scaling_required': False,
-                    'database_compatibility': {
-                        'file_based_backups': True,
-                        'live_replication': False,
-                        'transaction_logs': False
-                    },
-                    'sizes': {
-                        'small': {
-                            'storage_gb': 32, 'throughput_mbps': 16, 'cost_per_hour': 0.013,
-                            'iops': 96, 'max_concurrent_users': 50
-                        },
-                        'medium': {
-                            'storage_gb': 64, 'throughput_mbps': 32, 'cost_per_hour': 0.025,
-                            'iops': 192, 'max_concurrent_users': 100
-                        },
-                        'large': {
-                            'storage_gb': 2048, 'throughput_mbps': 512, 'cost_per_hour': 0.40,
-                            'iops': 6144, 'max_concurrent_users': 500
-                        }
-                    }
-                },
-                'fsx_lustre': {
-                    'name': 'Amazon FSx for Lustre',
-                    'use_case': 'High-performance computing and machine learning',
-                    'protocols': ['Lustre', 'POSIX'],
-                    'vpc_endpoint_compatible': False,
-                    'encryption_in_transit': True,
-                    'encryption_at_rest': True,
-                    'application_efficiency': 0.98,
-                    'protocol_efficiency': 0.97,
-                    'latency_sensitivity': 'very_low',
-                    'supports_s3_integration': True,
-                    'tcp_window_scaling_required': False,
-                    'database_compatibility': {
-                        'file_based_backups': True,
-                        'live_replication': False,
-                        'transaction_logs': False
-                    },
-                    'sizes': {
-                        'small': {
-                            'storage_gb': 1200, 'throughput_mbps': 240, 'cost_per_hour': 0.15,
-                            'iops': 'unlimited', 'max_concurrent_clients': 100
-                        },
-                        'large': {
-                            'storage_gb': 7200, 'throughput_mbps': 1440, 'cost_per_hour': 0.90,
-                            'iops': 'unlimited', 'max_concurrent_clients': 500
-                        }
-                    }
-                },
-                'storage_gateway': {
-                    'name': 'AWS Storage Gateway',
-                    'use_case': 'Hybrid cloud storage integration',
-                    'protocols': ['NFS', 'SMB', 'iSCSI', 'VTL'],
+                'bandwidth_requirement': 'medium',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 600,
+                'max_tolerable_latency_ms': 10,
+                'migration_complexity': 'low',
+                'downtime_sensitivity': 'high'
+            }
+        }
+        # Close the database_scenarios dictionary
+        
+        # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
+            self.migration_services = {
+                'datasync': {
+                    'name': 'AWS DataSync',
+                    'use_case': 'File and object data transfer',
+                    'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
                     'vpc_endpoint_compatible': True,
                     'encryption_in_transit': True,
                     'encryption_at_rest': True,
-                    'application_efficiency': 0.85,
-                    'protocol_efficiency': 0.92,
+                    'application_efficiency': 0.92,
+                    'protocol_efficiency': 0.96,
                     'latency_sensitivity': 'medium',
-                    'supports_caching': True,
                     'tcp_window_scaling_required': True,
+                    'vmware_deployment': True,  # NEW FLAG
                     'database_compatibility': {
                         'file_based_backups': True,
                         'live_replication': False,
@@ -1187,18 +1016,189 @@ class EnhancedNetworkAnalyzer:
                     },
                     'sizes': {
                         'small': {
-                            'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 125, 'cost_per_hour': 0.05,
-                            'cache_gb': 150, 'max_volumes': 32,
-                            'instance_type': 'm5.xlarge'
+                            'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
+                            'vpc_endpoint_throughput_reduction': 0.1,
+                            'optimal_file_size_mb': '1-100',
+                            'concurrent_transfers': 16,
+                            'tcp_connections': 16,
+                            'instance_type': 'm5.xlarge',
+                            'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
+                            'effective_throughput_mbps': 340  # NEW: After VMware overhead
+                        },
+                        'medium': {
+                            'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
+                            'vpc_endpoint_throughput_reduction': 0.08,
+                            'optimal_file_size_mb': '100-1000',
+                            'concurrent_transfers': 32,
+                            'tcp_connections': 32,
+                            'instance_type': 'm5.2xlarge',
+                            'vmware_overhead': 0.12,
+                            'effective_throughput_mbps': 880
                         },
                         'large': {
-                            'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 500, 'cost_per_hour': 0.20,
-                            'cache_gb': 600, 'max_volumes': 128,
-                            'instance_type': 'm5.4xlarge'
+                            'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
+                            'vpc_endpoint_throughput_reduction': 0.05,
+                            'optimal_file_size_mb': '1000+',
+                            'concurrent_transfers': 64,
+                            'tcp_connections': 64,
+                            'instance_type': 'm5.4xlarge',
+                            'vmware_overhead': 0.10,
+                            'effective_throughput_mbps': 1800
+                        },
+                        'xlarge': {
+                            'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
+                            'vpc_endpoint_throughput_reduction': 0.03,
+                            'optimal_file_size_mb': '1000+',
+                            'concurrent_transfers': 128,
+                            'tcp_connections': 128,
+                            'instance_type': 'm5.8xlarge',
+                            'vmware_overhead': 0.08,  # Less overhead on larger VMs
+                            'effective_throughput_mbps': 3680
                         }
                     }
-                }
-        }
+                },
+                'dms': {
+                    'name': 'AWS Database Migration Service',
+                    'use_case': 'Database migration and replication',
+                    'protocols': ['TCP/IP', 'SSL/TLS'],
+                    'vpc_endpoint_compatible': True,
+                    'encryption_in_transit': True,
+                    'encryption_at_rest': True,
+                    'application_efficiency': 0.88,
+                    'protocol_efficiency': 0.94,
+                    'latency_sensitivity': 'high',
+                    'requires_endpoints': True,
+                    'supports_cdc': True,
+                    'tcp_window_scaling_required': True,
+                    'database_compatibility': {
+                        'file_based_backups': False,
+                        'live_replication': True,
+                        'transaction_logs': True,
+                        'schema_conversion': True
+                    },
+                    'sizes': {
+                        'small': {
+                            'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
+                            'max_connections': 50,
+                            'optimal_table_size_gb': '1-10',
+                            'tcp_connections': 4,
+                            'instance_type': 'dms.t3.medium'
+                        },
+                        'medium': {
+                            'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
+                            'max_connections': 100,
+                            'optimal_table_size_gb': '10-100',
+                            'tcp_connections': 8,
+                            'instance_type': 'dms.r5.large'
+                        },
+                        'large': {
+                            'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
+                            'max_connections': 200,
+                            'optimal_table_size_gb': '100-500',
+                            'tcp_connections': 16,
+                            'instance_type': 'dms.r5.xlarge'
+                        },
+                        'xlarge': {
+                            'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
+                            'max_connections': 400,
+                            'optimal_table_size_gb': '500+',
+                            'tcp_connections': 32,
+                            'instance_type': 'dms.r5.2xlarge'
+                        }
+                    }
+                },
+                    'fsx_windows': {
+                        'name': 'Amazon FSx for Windows File Server',
+                        'use_case': 'Windows-based file shares and applications',
+                        'protocols': ['SMB', 'NFS', 'iSCSI'],
+                        'vpc_endpoint_compatible': False,
+                        'encryption_in_transit': True,
+                        'encryption_at_rest': True,
+                        'application_efficiency': 0.95,
+                        'protocol_efficiency': 0.93,
+                        'latency_sensitivity': 'low',
+                        'requires_active_directory': True,
+                        'supports_deduplication': True,
+                        'tcp_window_scaling_required': False,
+                        'database_compatibility': {
+                            'file_based_backups': True,
+                            'live_replication': False,
+                            'transaction_logs': False
+                        },
+                        'sizes': {
+                            'small': {
+                                'storage_gb': 32, 'throughput_mbps': 16, 'cost_per_hour': 0.013,
+                                'iops': 96, 'max_concurrent_users': 50
+                            },
+                            'medium': {
+                                'storage_gb': 64, 'throughput_mbps': 32, 'cost_per_hour': 0.025,
+                                'iops': 192, 'max_concurrent_users': 100
+                            },
+                            'large': {
+                                'storage_gb': 2048, 'throughput_mbps': 512, 'cost_per_hour': 0.40,
+                                'iops': 6144, 'max_concurrent_users': 500
+                            }
+                        }
+                    },
+                    'fsx_lustre': {
+                        'name': 'Amazon FSx for Lustre',
+                        'use_case': 'High-performance computing and machine learning',
+                        'protocols': ['Lustre', 'POSIX'],
+                        'vpc_endpoint_compatible': False,
+                        'encryption_in_transit': True,
+                        'encryption_at_rest': True,
+                        'application_efficiency': 0.98,
+                        'protocol_efficiency': 0.97,
+                        'latency_sensitivity': 'very_low',
+                        'supports_s3_integration': True,
+                        'tcp_window_scaling_required': False,
+                        'database_compatibility': {
+                            'file_based_backups': True,
+                            'live_replication': False,
+                            'transaction_logs': False
+                        },
+                        'sizes': {
+                            'small': {
+                                'storage_gb': 1200, 'throughput_mbps': 240, 'cost_per_hour': 0.15,
+                                'iops': 'unlimited', 'max_concurrent_clients': 100
+                            },
+                            'large': {
+                                'storage_gb': 7200, 'throughput_mbps': 1440, 'cost_per_hour': 0.90,
+                                'iops': 'unlimited', 'max_concurrent_clients': 500
+                            }
+                        }
+                    },
+                    'storage_gateway': {
+                        'name': 'AWS Storage Gateway',
+                        'use_case': 'Hybrid cloud storage integration',
+                        'protocols': ['NFS', 'SMB', 'iSCSI', 'VTL'],
+                        'vpc_endpoint_compatible': True,
+                        'encryption_in_transit': True,
+                        'encryption_at_rest': True,
+                        'application_efficiency': 0.85,
+                        'protocol_efficiency': 0.92,
+                        'latency_sensitivity': 'medium',
+                        'supports_caching': True,
+                        'tcp_window_scaling_required': True,
+                        'database_compatibility': {
+                            'file_based_backups': True,
+                            'live_replication': False,
+                            'transaction_logs': True
+                        },
+                        'sizes': {
+                            'small': {
+                                'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 125, 'cost_per_hour': 0.05,
+                                'cache_gb': 150, 'max_volumes': 32,
+                                'instance_type': 'm5.xlarge'
+                            },
+                            'large': {
+                                'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 500, 'cost_per_hour': 0.20,
+                                'cache_gb': 600, 'max_volumes': 128,
+                                'instance_type': 'm5.4xlarge'
+                            }
+                        }
+                    }
+            }
         
         # Initialize new clients
     self.pricing_client = AWSPricingClient()
