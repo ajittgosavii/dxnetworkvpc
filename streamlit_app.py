@@ -2697,7 +2697,7 @@ def render_network_performance_dashboard(components, network_perf, agent_perf):
         tickfont=dict(size=11)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key="storage_comparison_unique")
 
 def render_infrastructure_component_analysis(components, config):
     """Render detailed infrastructure component analysis with enhanced visibility"""
@@ -3786,7 +3786,7 @@ def main():
         render_datasync_backup_configuration(config, agent_perf)
         
         # Database-specific storage comparison
-        render_database_storage_comparison(config, "_tab2")  # ADD unique key
+        #render_database_storage_comparison(config, "_tab2")  # ADD unique key
         
         # Backup file transfer timeline
         st.markdown("**⏱️ Backup Transfer Timeline Analysis**")
@@ -3837,7 +3837,7 @@ def main():
         st.subheader("📊 Database Storage Performance Comparison")
         
         # Render database-specific storage comparison (moved to tab2, but kept for backwards compatibility)
-        render_database_storage_comparison(config, "_tab3")  # ADD unique key
+        #render_database_storage_comparison(config, "_tab3")  # ADD unique key
         
         # SQL Server vs Linux database comparison
         st.markdown("**⚖️ SQL Server (Windows) vs Linux Database Comparison**")
