@@ -996,190 +996,19 @@ class EnhancedNetworkAnalyzer:
       # Close the database_scenarios dictionary
     
     # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
-    self.migration_services = {
-        'datasync': {
-            'name': 'AWS DataSync',
-            'use_case': 'File and object data transfer',
-            'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
-            'vpc_endpoint_compatible': True,
-            'encryption_in_transit': True,
-            'encryption_at_rest': True,
-            'application_efficiency': 0.92,
-            'protocol_efficiency': 0.96,
-            'latency_sensitivity': 'medium',
-            'tcp_window_scaling_required': True,
-            'vmware_deployment': True,  # NEW FLAG
-            'database_compatibility': {
-                'file_based_backups': True,
-                'live_replication': False,
-                'transaction_logs': True
-            },
-            'sizes': {
-                'small': {
-                    'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
-                    'vpc_endpoint_throughput_reduction': 0.1,
-                    'optimal_file_size_mb': '1-100',
-                    'concurrent_transfers': 16,
-                    'tcp_connections': 16,
-                    'instance_type': 'm5.xlarge',
-                    'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
-                    'effective_throughput_mbps': 340  # NEW: After VMware overhead
-                },
-                'medium': {
-                    'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
-                    'vpc_endpoint_throughput_reduction': 0.08,
-                    'optimal_file_size_mb': '100-1000',
-                    'concurrent_transfers': 32,
-                    'tcp_connections': 32,
-                    'instance_type': 'm5.2xlarge',
-                    'vmware_overhead': 0.12,
-                    'effective_throughput_mbps': 880
-                },
-                'large': {
-                    'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
-                    'vpc_endpoint_throughput_reduction': 0.05,
-                    'optimal_file_size_mb': '1000+',
-                    'concurrent_transfers': 64,
-                    'tcp_connections': 64,
-                    'instance_type': 'm5.4xlarge',
-                    'vmware_overhead': 0.10,
-                    'effective_throughput_mbps': 1800
-                },
-                'xlarge': {
-                    'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
-                    'vpc_endpoint_throughput_reduction': 0.03,
-                    'optimal_file_size_mb': '1000+',
-                    'concurrent_transfers': 128,
-                    'tcp_connections': 128,
-                    'instance_type': 'm5.8xlarge',
-                    'vmware_overhead': 0.08,  # Less overhead on larger VMs
-                    'effective_throughput_mbps': 3680
-                }
-            }
-        },
-        'dms': {
-            'name': 'AWS Database Migration Service',
-            'use_case': 'Database migration and replication',
-            'protocols': ['TCP/IP', 'SSL/TLS'],
-            'vpc_endpoint_compatible': True,
-            'encryption_in_transit': True,
-            'encryption_at_rest': True,
-            'application_efficiency': 0.88,
-            'protocol_efficiency': 0.94,
-            'latency_sensitivity': 'high',
-            'requires_endpoints': True,
-            'supports_cdc': True,
-            'tcp_window_scaling_required': True,
-            'database_compatibility': {
-                'file_based_backups': False,
-                'live_replication': True,
-                'transaction_logs': True,
-                'schema_conversion': True
-            },
-            'sizes': {
-                'small': {
-                    'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
-                    'max_connections': 50,
-                    'optimal_table_size_gb': '1-10',
-                    'tcp_connections': 4,
-                    'instance_type': 'dms.t3.medium'
-                },
-                'medium': {
-                    'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
-                    'max_connections': 100,
-                    'optimal_table_size_gb': '10-100',
-                    'tcp_connections': 8,
-                    'instance_type': 'dms.r5.large'
-                },
-                'large': {
-                    'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
-                    'max_connections': 200,
-                    'optimal_table_size_gb': '100-500',
-                    'tcp_connections': 16,
-                    'instance_type': 'dms.r5.xlarge'
-                },
-                'xlarge': {
-                    'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
-                    'max_connections': 400,
-                    'optimal_table_size_gb': '500+',
-                    'tcp_connections': 32,
-                    'instance_type': 'dms.r5.2xlarge'
-                }
-            }
-        },
-            'fsx_windows': {
-                'name': 'Amazon FSx for Windows File Server',
-                'use_case': 'Windows-based file shares and applications',
-                'protocols': ['SMB', 'NFS', 'iSCSI'],
-                'vpc_endpoint_compatible': False,
-                'encryption_in_transit': True,
-                'encryption_at_rest': True,
-                'application_efficiency': 0.95,
-                'protocol_efficiency': 0.93,
-                'latency_sensitivity': 'low',
-                'requires_active_directory': True,
-                'supports_deduplication': True,
-                'tcp_window_scaling_required': False,
-                'database_compatibility': {
-                    'file_based_backups': True,
-                    'live_replication': False,
-                    'transaction_logs': False
-                },
-                'sizes': {
-                    'small': {
-                        'storage_gb': 32, 'throughput_mbps': 16, 'cost_per_hour': 0.013,
-                        'iops': 96, 'max_concurrent_users': 50
-                    },
-                    'medium': {
-                        'storage_gb': 64, 'throughput_mbps': 32, 'cost_per_hour': 0.025,
-                        'iops': 192, 'max_concurrent_users': 100
-                    },
-                    'large': {
-                        'storage_gb': 2048, 'throughput_mbps': 512, 'cost_per_hour': 0.40,
-                        'iops': 6144, 'max_concurrent_users': 500
-                    }
-                }
-            },
-            'fsx_lustre': {
-                'name': 'Amazon FSx for Lustre',
-                'use_case': 'High-performance computing and machine learning',
-                'protocols': ['Lustre', 'POSIX'],
-                'vpc_endpoint_compatible': False,
-                'encryption_in_transit': True,
-                'encryption_at_rest': True,
-                'application_efficiency': 0.98,
-                'protocol_efficiency': 0.97,
-                'latency_sensitivity': 'very_low',
-                'supports_s3_integration': True,
-                'tcp_window_scaling_required': False,
-                'database_compatibility': {
-                    'file_based_backups': True,
-                    'live_replication': False,
-                    'transaction_logs': False
-                },
-                'sizes': {
-                    'small': {
-                        'storage_gb': 1200, 'throughput_mbps': 240, 'cost_per_hour': 0.15,
-                        'iops': 'unlimited', 'max_concurrent_clients': 100
-                    },
-                    'large': {
-                        'storage_gb': 7200, 'throughput_mbps': 1440, 'cost_per_hour': 0.90,
-                        'iops': 'unlimited', 'max_concurrent_clients': 500
-                    }
-                }
-            },
-            'storage_gateway': {
-                'name': 'AWS Storage Gateway',
-                'use_case': 'Hybrid cloud storage integration',
-                'protocols': ['NFS', 'SMB', 'iSCSI', 'VTL'],
+        self.migration_services = {
+            'datasync': {
+                'name': 'AWS DataSync',
+                'use_case': 'File and object data transfer',
+                'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
                 'vpc_endpoint_compatible': True,
                 'encryption_in_transit': True,
                 'encryption_at_rest': True,
-                'application_efficiency': 0.85,
-                'protocol_efficiency': 0.92,
+                'application_efficiency': 0.92,
+                'protocol_efficiency': 0.96,
                 'latency_sensitivity': 'medium',
-                'supports_caching': True,
                 'tcp_window_scaling_required': True,
+                'vmware_deployment': True,  # NEW FLAG
                 'database_compatibility': {
                     'file_based_backups': True,
                     'live_replication': False,
@@ -1187,18 +1016,189 @@ class EnhancedNetworkAnalyzer:
                 },
                 'sizes': {
                     'small': {
-                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 125, 'cost_per_hour': 0.05,
-                        'cache_gb': 150, 'max_volumes': 32,
-                        'instance_type': 'm5.xlarge'
+                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
+                        'vpc_endpoint_throughput_reduction': 0.1,
+                        'optimal_file_size_mb': '1-100',
+                        'concurrent_transfers': 16,
+                        'tcp_connections': 16,
+                        'instance_type': 'm5.xlarge',
+                        'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
+                        'effective_throughput_mbps': 340  # NEW: After VMware overhead
+                    },
+                    'medium': {
+                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
+                        'vpc_endpoint_throughput_reduction': 0.08,
+                        'optimal_file_size_mb': '100-1000',
+                        'concurrent_transfers': 32,
+                        'tcp_connections': 32,
+                        'instance_type': 'm5.2xlarge',
+                        'vmware_overhead': 0.12,
+                        'effective_throughput_mbps': 880
                     },
                     'large': {
-                        'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 500, 'cost_per_hour': 0.20,
-                        'cache_gb': 600, 'max_volumes': 128,
-                        'instance_type': 'm5.4xlarge'
+                        'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
+                        'vpc_endpoint_throughput_reduction': 0.05,
+                        'optimal_file_size_mb': '1000+',
+                        'concurrent_transfers': 64,
+                        'tcp_connections': 64,
+                        'instance_type': 'm5.4xlarge',
+                        'vmware_overhead': 0.10,
+                        'effective_throughput_mbps': 1800
+                    },
+                    'xlarge': {
+                        'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
+                        'vpc_endpoint_throughput_reduction': 0.03,
+                        'optimal_file_size_mb': '1000+',
+                        'concurrent_transfers': 128,
+                        'tcp_connections': 128,
+                        'instance_type': 'm5.8xlarge',
+                        'vmware_overhead': 0.08,  # Less overhead on larger VMs
+                        'effective_throughput_mbps': 3680
                     }
                 }
-            }
-    }
+            },
+            'dms': {
+                'name': 'AWS Database Migration Service',
+                'use_case': 'Database migration and replication',
+                'protocols': ['TCP/IP', 'SSL/TLS'],
+                'vpc_endpoint_compatible': True,
+                'encryption_in_transit': True,
+                'encryption_at_rest': True,
+                'application_efficiency': 0.88,
+                'protocol_efficiency': 0.94,
+                'latency_sensitivity': 'high',
+                'requires_endpoints': True,
+                'supports_cdc': True,
+                'tcp_window_scaling_required': True,
+                'database_compatibility': {
+                    'file_based_backups': False,
+                    'live_replication': True,
+                    'transaction_logs': True,
+                    'schema_conversion': True
+                },
+                'sizes': {
+                    'small': {
+                        'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
+                        'max_connections': 50,
+                        'optimal_table_size_gb': '1-10',
+                        'tcp_connections': 4,
+                        'instance_type': 'dms.t3.medium'
+                    },
+                    'medium': {
+                        'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
+                        'max_connections': 100,
+                        'optimal_table_size_gb': '10-100',
+                        'tcp_connections': 8,
+                        'instance_type': 'dms.r5.large'
+                    },
+                    'large': {
+                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
+                        'max_connections': 200,
+                        'optimal_table_size_gb': '100-500',
+                        'tcp_connections': 16,
+                        'instance_type': 'dms.r5.xlarge'
+                    },
+                    'xlarge': {
+                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
+                        'max_connections': 400,
+                        'optimal_table_size_gb': '500+',
+                        'tcp_connections': 32,
+                        'instance_type': 'dms.r5.2xlarge'
+                    }
+                }
+            },
+                'fsx_windows': {
+                    'name': 'Amazon FSx for Windows File Server',
+                    'use_case': 'Windows-based file shares and applications',
+                    'protocols': ['SMB', 'NFS', 'iSCSI'],
+                    'vpc_endpoint_compatible': False,
+                    'encryption_in_transit': True,
+                    'encryption_at_rest': True,
+                    'application_efficiency': 0.95,
+                    'protocol_efficiency': 0.93,
+                    'latency_sensitivity': 'low',
+                    'requires_active_directory': True,
+                    'supports_deduplication': True,
+                    'tcp_window_scaling_required': False,
+                    'database_compatibility': {
+                        'file_based_backups': True,
+                        'live_replication': False,
+                        'transaction_logs': False
+                    },
+                    'sizes': {
+                        'small': {
+                            'storage_gb': 32, 'throughput_mbps': 16, 'cost_per_hour': 0.013,
+                            'iops': 96, 'max_concurrent_users': 50
+                        },
+                        'medium': {
+                            'storage_gb': 64, 'throughput_mbps': 32, 'cost_per_hour': 0.025,
+                            'iops': 192, 'max_concurrent_users': 100
+                        },
+                        'large': {
+                            'storage_gb': 2048, 'throughput_mbps': 512, 'cost_per_hour': 0.40,
+                            'iops': 6144, 'max_concurrent_users': 500
+                        }
+                    }
+                },
+                'fsx_lustre': {
+                    'name': 'Amazon FSx for Lustre',
+                    'use_case': 'High-performance computing and machine learning',
+                    'protocols': ['Lustre', 'POSIX'],
+                    'vpc_endpoint_compatible': False,
+                    'encryption_in_transit': True,
+                    'encryption_at_rest': True,
+                    'application_efficiency': 0.98,
+                    'protocol_efficiency': 0.97,
+                    'latency_sensitivity': 'very_low',
+                    'supports_s3_integration': True,
+                    'tcp_window_scaling_required': False,
+                    'database_compatibility': {
+                        'file_based_backups': True,
+                        'live_replication': False,
+                        'transaction_logs': False
+                    },
+                    'sizes': {
+                        'small': {
+                            'storage_gb': 1200, 'throughput_mbps': 240, 'cost_per_hour': 0.15,
+                            'iops': 'unlimited', 'max_concurrent_clients': 100
+                        },
+                        'large': {
+                            'storage_gb': 7200, 'throughput_mbps': 1440, 'cost_per_hour': 0.90,
+                            'iops': 'unlimited', 'max_concurrent_clients': 500
+                        }
+                    }
+                },
+                'storage_gateway': {
+                    'name': 'AWS Storage Gateway',
+                    'use_case': 'Hybrid cloud storage integration',
+                    'protocols': ['NFS', 'SMB', 'iSCSI', 'VTL'],
+                    'vpc_endpoint_compatible': True,
+                    'encryption_in_transit': True,
+                    'encryption_at_rest': True,
+                    'application_efficiency': 0.85,
+                    'protocol_efficiency': 0.92,
+                    'latency_sensitivity': 'medium',
+                    'supports_caching': True,
+                    'tcp_window_scaling_required': True,
+                    'database_compatibility': {
+                        'file_based_backups': True,
+                        'live_replication': False,
+                        'transaction_logs': True
+                    },
+                    'sizes': {
+                        'small': {
+                            'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 125, 'cost_per_hour': 0.05,
+                            'cache_gb': 150, 'max_volumes': 32,
+                            'instance_type': 'm5.xlarge'
+                        },
+                        'large': {
+                            'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 500, 'cost_per_hour': 0.20,
+                            'cache_gb': 600, 'max_volumes': 128,
+                            'instance_type': 'm5.4xlarge'
+                        }
+                    }
+                }
+        }
         
         # Initialize new clients
     self.pricing_client = AWSPricingClient()
