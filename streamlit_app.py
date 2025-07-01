@@ -1832,7 +1832,7 @@ def render_database_storage_comparison(config: Dict):
         font=dict(size=12)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, key=f"storage_comparison_chart{chart_key_suffix}")
     
     # Performance insights
     best_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmax()]
@@ -3786,7 +3786,7 @@ def main():
         render_datasync_backup_configuration(config, agent_perf)
         
         # Database-specific storage comparison
-        render_database_storage_comparison(config)
+        render_database_storage_comparison(config, "_tab2")  # ADD unique key
         
         # Backup file transfer timeline
         st.markdown("**⏱️ Backup Transfer Timeline Analysis**")
@@ -3837,7 +3837,7 @@ def main():
         st.subheader("📊 Database Storage Performance Comparison")
         
         # Render database-specific storage comparison (moved to tab2, but kept for backwards compatibility)
-        render_database_storage_comparison(config)
+        render_database_storage_comparison(config, "_tab3")  # ADD unique key
         
         # SQL Server vs Linux database comparison
         st.markdown("**⚖️ SQL Server (Windows) vs Linux Database Comparison**")
