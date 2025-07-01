@@ -21,123 +21,146 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Enhanced CSS styling with database backup migration focus
+# Professional CSS styling with enterprise colors (preserving all original card types)
 st.markdown("""
 <style>
+    /* Professional color scheme */
+    :root {
+        --primary-blue: #1f2937;
+        --secondary-blue: #374151;
+        --accent-blue: #3b82f6;
+        --light-gray: #f8fafc;
+        --medium-gray: #e5e7eb;
+        --dark-gray: #6b7280;
+        --success-green: #059669;
+        --warning-orange: #d97706;
+        --danger-red: #dc2626;
+        --info-blue: #0284c7;
+    }
+    
     .main-header {
-        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
+        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
         padding: 2rem;
         border-radius: 8px;
         color: white;
         text-align: center;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 15px rgba(30,58,138,0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     
     .network-card {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        background: #f0fdf4;
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #22c55e;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--success-green);
         font-size: 14px;
         line-height: 1.6;
     }
     
     .performance-card {
-        background: linear-gradient(135deg, #fef7f0 0%, #fed7aa 100%);
+        background: #fffbeb;
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #f97316;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--warning-orange);
         font-size: 14px;
         line-height: 1.6;
     }
     
     .agent-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+        background: var(--light-gray);
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #64748b;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--dark-gray);
         font-size: 14px;
         line-height: 1.6;
     }
     
     .placement-card {
-        background: linear-gradient(135deg, #fef3f2 0%, #fecaca 100%);
+        background: #fef2f2;
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #ef4444;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--danger-red);
         font-size: 14px;
         line-height: 1.6;
     }
     
     .decision-matrix {
-        background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+        background: #f0f9ff;
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #3b82f6;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--info-blue);
         font-size: 14px;
         line-height: 1.6;
     }
     
     .warning-card {
-        background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
+        background: #fefce8;
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #f59e0b;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--warning-orange);
         font-size: 14px;
         line-height: 1.6;
     }
 
     .professional-ai-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: white;
+        border: 1px solid var(--medium-gray);
         padding: 2rem;
         border-radius: 10px;
         color: #1e293b;
         margin: 1rem 0;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-        border-left: 5px solid #3b82f6;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 5px solid var(--accent-blue);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: 15px;
         line-height: 1.7;
     }
 
     .aws-card {
-        background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%);
+        background: #fef3c7;
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #d97706;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid var(--warning-orange);
         font-size: 14px;
         line-height: 1.6;
     }
 
     .backup-card {
-        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+        background: #ede9fe;
+        border: 1px solid var(--medium-gray);
         padding: 1.5rem;
         border-radius: 8px;
         color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         border-left: 4px solid #8b5cf6;
         font-size: 14px;
         line-height: 1.6;
@@ -171,11 +194,11 @@ st.markdown("""
 
     .network-segment-card {
         background: white;
-        border: 2px solid #e2e8f0;
+        border: 1px solid var(--medium-gray);
         border-radius: 8px;
         padding: 1.25rem;
         margin: 0.75rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         font-size: 14px;
         line-height: 1.6;
     }
@@ -191,11 +214,11 @@ st.markdown("""
 
     .ai-section {
         background: white;
-        border: 2px solid #e2e8f0;
+        border: 1px solid var(--medium-gray);
         border-radius: 10px;
         padding: 2rem;
         margin: 1.5rem 0;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         font-size: 15px;
         line-height: 1.7;
     }
@@ -222,8 +245,8 @@ st.markdown("""
     }
 
     .ai-highlight {
-        background: #f8fafc;
-        border-left: 4px solid #3b82f6;
+        background: var(--light-gray);
+        border-left: 4px solid var(--accent-blue);
         padding: 1.5rem;
         margin: 1.5rem 0;
         border-radius: 0 8px 8px 0;
@@ -232,11 +255,11 @@ st.markdown("""
 
     .metric-container {
         background: white;
-        border: 2px solid #e5e7eb;
+        border: 1px solid var(--medium-gray);
         border-radius: 8px;
         padding: 1rem;
         margin: 0.5rem;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         text-align: center;
     }
 
@@ -249,33 +272,33 @@ st.markdown("""
 
     .metric-label {
         font-size: 14px;
-        color: #6b7280;
+        color: var(--dark-gray);
         font-weight: 500;
     }
 
     .placement-option {
         background: white;
-        border: 2px solid #e2e8f0;
+        border: 1px solid var(--medium-gray);
         border-radius: 8px;
         padding: 1.5rem;
         margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         transition: all 0.3s ease;
     }
 
     .placement-option:hover {
-        border-color: #3b82f6;
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
+        border-color: var(--accent-blue);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
     }
 
     .placement-option.recommended {
-        border-color: #10b981;
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-color: var(--success-green);
+        background: #f0fdf4;
     }
 
     .placement-score {
         display: inline-block;
-        background: #3b82f6;
+        background: var(--accent-blue);
         color: white;
         padding: 0.5rem 1rem;
         border-radius: 20px;
@@ -285,15 +308,40 @@ st.markdown("""
     }
 
     .placement-score.excellent {
-        background: #10b981;
+        background: var(--success-green);
     }
 
     .placement-score.good {
-        background: #f59e0b;
+        background: var(--warning-orange);
     }
 
     .placement-score.poor {
-        background: #ef4444;
+        background: var(--danger-red);
+    }
+
+    /* New Waterfall Analysis Styles */
+    .waterfall-segment {
+        background: white;
+        border: 1px solid var(--medium-gray);
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        position: relative;
+    }
+    
+    .waterfall-arrow {
+        text-align: center;
+        color: var(--dark-gray);
+        font-size: 20px;
+        margin: 0.5rem 0;
+    }
+    
+    .performance-summary {
+        background: var(--light-gray);
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        border: 1px solid var(--medium-gray);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -632,6 +680,122 @@ class ClaudeAIIntegration:
             
         except Exception as e:
             return f"Error getting placement recommendations: {str(e)}"
+
+class WaterfallBandwidthAnalyzer:
+    """NEW: Waterfall bandwidth analysis for network path segments"""
+    
+    def __init__(self):
+        self.bottleneck_thresholds = {
+            'critical': 0.3,    # Less than 30% of maximum
+            'concerning': 0.6,  # Less than 60% of maximum
+            'acceptable': 0.85  # Less than 85% of maximum
+        }
+    
+    def analyze_waterfall(self, network_segments: List[Dict]) -> Dict:
+        """Analyze bandwidth waterfall through network segments"""
+        
+        # Calculate cumulative bottlenecks
+        waterfall_data = []
+        cumulative_bandwidth = float('inf')
+        cumulative_latency = 0
+        cumulative_reliability = 1.0
+        
+        for i, segment in enumerate(network_segments):
+            effective_bw = segment['effective_bandwidth_mbps']
+            latency = segment['effective_latency_ms']
+            reliability = segment['reliability']
+            
+            # Update cumulative metrics
+            cumulative_bandwidth = min(cumulative_bandwidth, effective_bw)
+            cumulative_latency += latency
+            cumulative_reliability *= reliability
+            
+            # Calculate bottleneck severity
+            if i == 0:
+                bottleneck_ratio = 1.0
+            else:
+                previous_min = min([s['effective_bandwidth_mbps'] for s in network_segments[:i]])
+                bottleneck_ratio = effective_bw / previous_min if previous_min > 0 else 1.0
+            
+            # Determine bottleneck status
+            if bottleneck_ratio < self.bottleneck_thresholds['critical']:
+                bottleneck_status = 'Critical Bottleneck'
+                status_color = '#dc2626'
+            elif bottleneck_ratio < self.bottleneck_thresholds['concerning']:
+                bottleneck_status = 'Performance Concern'
+                status_color = '#d97706'
+            elif bottleneck_ratio < self.bottleneck_thresholds['acceptable']:
+                bottleneck_status = 'Minor Impact'
+                status_color = '#059669'
+            else:
+                bottleneck_status = 'Optimal'
+                status_color = '#3b82f6'
+            
+            waterfall_data.append({
+                'segment_name': segment['name'],
+                'segment_bandwidth': effective_bw,
+                'cumulative_bandwidth': cumulative_bandwidth,
+                'cumulative_latency': cumulative_latency,
+                'cumulative_reliability': cumulative_reliability,
+                'bottleneck_ratio': bottleneck_ratio,
+                'bottleneck_status': bottleneck_status,
+                'status_color': status_color,
+                'latency_contribution': latency,
+                'reliability_impact': reliability,
+                'connection_type': segment['connection_type']
+            })
+        
+        # Find primary bottleneck
+        min_bandwidth_segment = min(waterfall_data, key=lambda x: x['segment_bandwidth'])
+        
+        analysis = {
+            'waterfall_segments': waterfall_data,
+            'final_bandwidth': cumulative_bandwidth,
+            'final_latency': cumulative_latency,
+            'final_reliability': cumulative_reliability,
+            'primary_bottleneck': min_bandwidth_segment,
+            'bottleneck_count': len([s for s in waterfall_data if 'Bottleneck' in s['bottleneck_status']]),
+            'optimization_potential': self._calculate_optimization_potential(waterfall_data)
+        }
+        
+        return analysis
+    
+    def _calculate_optimization_potential(self, waterfall_data: List[Dict]) -> Dict:
+        """Calculate optimization potential for the network path"""
+        
+        if not waterfall_data:
+            return {'total_potential': 0, 'recommendations': []}
+        
+        max_possible = max([s['segment_bandwidth'] for s in waterfall_data])
+        current_final = min([s['segment_bandwidth'] for s in waterfall_data])
+        
+        potential_improvement = ((max_possible - current_final) / current_final) * 100 if current_final > 0 else 0
+        
+        recommendations = []
+        
+        # Identify optimization opportunities
+        for segment in waterfall_data:
+            if 'Bottleneck' in segment['bottleneck_status']:
+                recommendations.append({
+                    'segment': segment['segment_name'],
+                    'current_bandwidth': segment['segment_bandwidth'],
+                    'improvement_type': 'Critical Path Optimization',
+                    'priority': 'High'
+                })
+            elif segment['bottleneck_ratio'] < 0.8:
+                recommendations.append({
+                    'segment': segment['segment_name'],
+                    'current_bandwidth': segment['segment_bandwidth'],
+                    'improvement_type': 'Performance Tuning',
+                    'priority': 'Medium'
+                })
+        
+        return {
+            'total_potential': potential_improvement,
+            'recommendations': recommendations,
+            'max_possible_bandwidth': max_possible,
+            'current_bandwidth': current_final
+        }
 
 class EnhancedNetworkPathManager:
     """Enhanced network path manager with database backup storage focus"""
@@ -1710,7 +1874,7 @@ def render_backup_migration_overview(config: Dict):
         """
     
     st.markdown(f"""
-    <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; font-size: 15px; line-height: 1.8;">
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; font-size: 15px; line-height: 1.8;">
         {flow_description}
     </div>
     """, unsafe_allow_html=True)
@@ -1921,13 +2085,126 @@ def render_s3_storage_optimization(config: Dict, agent_perf: Dict):
         </div>
         """, unsafe_allow_html=True)
 
+def render_waterfall_analysis(network_perf: Dict):
+    """NEW: Render waterfall bandwidth analysis"""
+    st.subheader("🌊 Waterfall Bandwidth Analysis")
+    
+    # Initialize waterfall analyzer
+    waterfall_analyzer = WaterfallBandwidthAnalyzer()
+    waterfall_analysis = waterfall_analyzer.analyze_waterfall(network_perf['segments'])
+    
+    # Create waterfall visualization
+    fig = go.Figure()
+    
+    # Add waterfall bars
+    x_labels = []
+    y_values = []
+    colors = []
+    
+    for i, segment in enumerate(waterfall_analysis['waterfall_segments']):
+        x_labels.append(f"Step {i+1}")
+        y_values.append(segment['cumulative_bandwidth'])
+        colors.append(segment['status_color'])
+    
+    fig.add_trace(go.Bar(
+        x=x_labels,
+        y=y_values,
+        marker_color=colors,
+        text=[f"{val:,.0f} Mbps" for val in y_values],
+        textposition='outside',
+        name='Cumulative Bandwidth'
+    ))
+    
+    fig.update_layout(
+        title="Network Path Bandwidth Waterfall",
+        xaxis_title="Network Segments",
+        yaxis_title="Cumulative Bandwidth (Mbps)",
+        height=400,
+        showlegend=False,
+        plot_bgcolor='white'
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Detailed segment analysis
+    st.markdown("#### 📋 Detailed Segment Analysis")
+    
+    for i, segment in enumerate(waterfall_analysis['waterfall_segments']):
+        with st.container():
+            col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
+            
+            with col1:
+                status_class = "placement-card" if "Critical" in segment['bottleneck_status'] else \
+                              "warning-card" if "Concern" in segment['bottleneck_status'] else \
+                              "network-card"
+                
+                st.markdown(f"""
+                <div class="waterfall-segment {status_class}">
+                    <h5>Step {i+1}: {segment['segment_name']}</h5>
+                    <p><strong>Status:</strong> {segment['bottleneck_status']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.metric(
+                    "Segment Bandwidth",
+                    f"{segment['segment_bandwidth']:,.0f} Mbps",
+                    help="Individual segment bandwidth"
+                )
+            
+            with col3:
+                st.metric(
+                    "Cumulative Bandwidth",
+                    f"{segment['cumulative_bandwidth']:,.0f} Mbps",
+                    help="Bandwidth after this segment"
+                )
+            
+            with col4:
+                st.metric(
+                    "Latency Contribution",
+                    f"{segment['latency_contribution']:.1f} ms",
+                    help="Latency added by this segment"
+                )
+            
+            if i < len(waterfall_analysis['waterfall_segments']) - 1:
+                st.markdown('<div class="waterfall-arrow">⬇️</div>', unsafe_allow_html=True)
+    
+    # Optimization recommendations
+    optimization = waterfall_analysis['optimization_potential']
+    
+    st.markdown("#### 🎯 Optimization Opportunities")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="decision-matrix">
+            <h4>📊 Optimization Summary</h4>
+            <ul>
+                <li><strong>Current Bandwidth:</strong> {optimization['current_bandwidth']:,.0f} Mbps</li>
+                <li><strong>Maximum Possible:</strong> {optimization['max_possible_bandwidth']:,.0f} Mbps</li>
+                <li><strong>Improvement Potential:</strong> {optimization['total_potential']:.1f}%</li>
+                <li><strong>Critical Bottlenecks:</strong> {waterfall_analysis['bottleneck_count']}</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        if optimization['recommendations']:
+            st.markdown("**Priority Recommendations:**")
+            for rec in optimization['recommendations']:
+                priority_color = "🔴" if rec['priority'] == 'High' else "🟡"
+                st.markdown(f"{priority_color} **{rec['segment']}** ({rec['priority']} Priority): {rec['improvement_type']}")
+        else:
+            st.success("✅ Network path is well optimized!")
+
 def main():
-    """Enhanced main application focused on database backup migration with DataSync"""
+    """Enhanced main application with professional styling and all original features"""
     # Header
     st.markdown("""
     <div class="main-header">
         <h1 style="font-size: 32px; margin-bottom: 15px;">🗄️ AWS DataSync Database Backup Migration Analyzer</h1>
-        <p style="font-size: 18px; margin: 0;">Database Backup Transfer Optimization • DataSync Agent Placement • SQL Server & Oracle/PostgreSQL Support • S3 Storage Analysis</p>
+        <p style="font-size: 18px; margin: 0;">Professional Database Backup Transfer Optimization • DataSync Agent Placement • Waterfall Network Analysis • SQL Server & Oracle/PostgreSQL Support</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -1987,8 +2264,9 @@ def main():
         config['backup_size_gb']
     )
     
-    # Enhanced tabs focused on backup migration
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    # Enhanced tabs with NEW waterfall analysis tab
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "🌊 Waterfall Analysis",  # NEW
         "🎯 DataSync Agent Placement",
         "📊 Backup Performance Analysis",
         "☁️ S3 Storage Optimization", 
@@ -1998,6 +2276,10 @@ def main():
     ])
     
     with tab1:
+        # NEW: Waterfall bandwidth analysis
+        render_waterfall_analysis(network_perf)
+    
+    with tab2:
         st.subheader("🎯 DataSync Agent Placement for Backup Migration")
         
         # Agent placement analysis specific to backup scenarios
@@ -2025,7 +2307,7 @@ def main():
             <div class="{card_class}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                     <h4>{option['strategy']['name']} {'⭐ RECOMMENDED' if is_recommended else ''}</h4>
-                    <span style="background: {'#10b981' if option['placement_score'] >= 80 else '#f59e0b' if option['placement_score'] >= 65 else '#ef4444'}; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold;">{option['placement_score']:.1f}/100</span>
+                    <span style="background: {'#059669' if option['placement_score'] >= 80 else '#d97706' if option['placement_score'] >= 65 else '#dc2626'}; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold;">{option['placement_score']:.1f}/100</span>
                 </div>
                 
                 <p style="margin-bottom: 1rem;">{option['strategy']['description']}</p>
@@ -2089,7 +2371,7 @@ def main():
             except Exception as e:
                 st.warning(f"AI analysis error: {str(e)}")
     
-    with tab2:
+    with tab3:
         st.subheader("📊 Database Backup Transfer Performance Analysis")
         
         # Render backup-specific performance analysis
@@ -2170,7 +2452,7 @@ def main():
         
         st.plotly_chart(fig_transfer, use_container_width=True)
     
-    with tab3:
+    with tab4:
         st.subheader("☁️ S3 Storage Optimization for Database Backups")
         
         # Render S3 storage optimization
@@ -2221,7 +2503,7 @@ def main():
             </div>
             """, unsafe_allow_html=True)
     
-    with tab4:
+    with tab5:
         st.subheader("🌐 Database Backup Network Path Analysis")
         
         # Network path visualization specific to backup flows
@@ -2273,7 +2555,7 @@ def main():
         with perf_col4:
             st.metric("Quality Score", f"{network_perf['network_quality_score']:.1f}/100")
     
-    with tab5:
+    with tab6:
         st.subheader("☁️ AWS DataSync Integration")
         
         aws_integration = st.session_state.get('aws_integration')
@@ -2310,7 +2592,7 @@ def main():
         else:
             st.warning("AWS integration not connected. Configure AWS credentials to see real-time DataSync information.")
     
-    with tab6:
+    with tab7:
         st.subheader("🧠 AI-Powered Backup Migration Analysis")
         
         claude_integration = st.session_state.get('claude_integration')
@@ -2352,7 +2634,7 @@ def main():
         else:
             st.info("Claude AI integration not connected. Configure Claude API key for intelligent backup migration analysis.")
     
-    # Executive Summary for Backup Migration
+    # Executive Summary for Backup Migration (preserved)
     st.markdown("---")
     st.markdown("### 🎯 Database Backup Migration Executive Summary")
     
