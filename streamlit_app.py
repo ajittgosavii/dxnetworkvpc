@@ -750,22 +750,24 @@ class EnhancedNetworkPathManager:
         return result
 
 class EnhancedAgentManager:
-    """Enhanced agent manager with detailed physical vs VMware analysis"""
+    """Enhanced agent manager with detailed physical vs VMware analysis and corrected pricing"""
     
     def __init__(self):
+        # Updated AWS pricing (per hour) as of 2024 - using on-demand pricing for corresponding EC2 instances
         self.datasync_specs = {
-            'small': {'throughput_mbps': 250, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0416},
-            'medium': {'throughput_mbps': 500, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.085},
-            'large': {'throughput_mbps': 1000, 'vcpu': 4, 'memory': 8, 'cost_hour': 0.17},
-            'xlarge': {'throughput_mbps': 2000, 'vcpu': 8, 'memory': 16, 'cost_hour': 0.34}
+            'small': {'throughput_mbps': 250, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0416},    # t3.medium
+            'medium': {'throughput_mbps': 500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.0832},   # t3.large  
+            'large': {'throughput_mbps': 1000, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.1664},  # t3.xlarge
+            'xlarge': {'throughput_mbps': 2000, 'vcpu': 8, 'memory': 32, 'cost_hour': 0.3328}  # t3.2xlarge
         }
         
+        # Updated DMS pricing (per hour) as of 2024 - actual DMS instance pricing
         self.dms_specs = {
-            'small': {'throughput_mbps': 200, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0416},
-            'medium': {'throughput_mbps': 400, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.085},
-            'large': {'throughput_mbps': 800, 'vcpu': 4, 'memory': 8, 'cost_hour': 0.17},
-            'xlarge': {'throughput_mbps': 1500, 'vcpu': 8, 'memory': 16, 'cost_hour': 0.34},
-            'xxlarge': {'throughput_mbps': 2500, 'vcpu': 16, 'memory': 32, 'cost_hour': 0.68}
+            'small': {'throughput_mbps': 200, 'vcpu': 1, 'memory': 1, 'cost_hour': 0.0193},      # dms.t3.micro
+            'medium': {'throughput_mbps': 400, 'vcpu': 1, 'memory': 2, 'cost_hour': 0.0386},     # dms.t3.small
+            'large': {'throughput_mbps': 800, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0772},      # dms.t3.medium
+            'xlarge': {'throughput_mbps': 1500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.1544},    # dms.t3.large
+            'xxlarge': {'throughput_mbps': 2500, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.3088}   # dms.t3.xlarge
         }
         
         # Physical vs VMware performance characteristics
@@ -1171,71 +1173,79 @@ def render_network_path_visualization(network_perf: Dict, config: Dict, agent_pe
     identify_network_bottlenecks(topology_components, network_perf, agent_perf)
 
 def create_detailed_network_diagram(components):
-    """Create detailed network topology diagram with enhanced visibility"""
+    """Create detailed network topology diagram with enhanced visibility - FIXED"""
     st.markdown("#### 🗺️ Network Topology Flow Diagram")
     
-    # Create Sankey diagram for network flow
-    import plotly.graph_objects as go
+    try:
+        # Prepare data for Sankey diagram with proper structure
+        labels = []
+        sources = []
+        targets = []
+        values = []
+        colors = []
+        
+        color_map = {
+            'Source Storage': '#ef4444',
+            'Source Network': '#f97316', 
+            'Local Network': '#eab308',
+            'WAN': '#06b6d4',
+            'Migration Platform': '#3b82f6',
+            'Migration Agents': '#8b5cf6',
+            'AWS Edge': '#6b7280',
+            'AWS VPC': '#ef4444',
+            'AWS Services': '#22c55e'
+        }
+        
+        # Build labels and connections
+        for i, comp in enumerate(components):
+            labels.append(f"{comp['icon']} {comp['component']}")
+            colors.append(color_map.get(comp['layer'], '#6b7280'))
+            
+            if i > 0:
+                sources.append(i-1)
+                targets.append(i)
+                # Use bandwidth_out from previous component as the flow value
+                flow_value = components[i-1]['bandwidth_out']
+                values.append(flow_value)
+        
+        # Only create diagram if we have valid data
+        if len(sources) > 0 and len(targets) > 0 and len(values) > 0:
+            # Create Sankey diagram with fixed positioning
+            fig_sankey = go.Figure(data=[go.Sankey(
+                node=dict(
+                    pad=15,
+                    thickness=20,
+                    line=dict(color="black", width=2),
+                    label=labels,
+                    color=colors
+                ),
+                link=dict(
+                    source=sources,
+                    target=targets,
+                    value=values,
+                    color='rgba(128, 128, 128, 0.3)'
+                )
+            )])
+            
+            fig_sankey.update_layout(
+                title=dict(
+                    text="Network Infrastructure Flow - Bandwidth Progression",
+                    font=dict(size=18, family="Arial Black")
+                ),
+                font=dict(size=12, family="Arial"),
+                height=600,
+                margin=dict(l=20, r=20, t=80, b=20)
+            )
+            
+            st.plotly_chart(fig_sankey, use_container_width=True)
+        else:
+            st.warning("Unable to create network flow diagram - insufficient data points")
     
-    # Prepare data for Sankey diagram
-    labels = []
-    sources = []
-    targets = []
-    values = []
-    colors = []
+    except Exception as e:
+        st.error(f"Error creating network diagram: {str(e)}")
+        st.info("Displaying component details instead:")
     
-    color_map = {
-        'Source Storage': 'rgba(255, 99, 132, 0.9)',
-        'Source Network': 'rgba(255, 159, 64, 0.9)', 
-        'Local Network': 'rgba(255, 205, 86, 0.9)',
-        'WAN': 'rgba(75, 192, 192, 0.9)',
-        'Migration Platform': 'rgba(54, 162, 235, 0.9)',
-        'Migration Agents': 'rgba(153, 102, 255, 0.9)',
-        'AWS Edge': 'rgba(201, 203, 207, 0.9)',
-        'AWS VPC': 'rgba(255, 99, 132, 0.7)',
-        'AWS Services': 'rgba(46, 204, 113, 0.9)'
-    }
-    
-    for i, comp in enumerate(components):
-        labels.append(f"{comp['icon']} {comp['component']}")
-        if i > 0:
-            sources.append(i-1)
-            targets.append(i)
-            values.append(comp['bandwidth_in'])
-        colors.append(color_map.get(comp['layer'], 'rgba(128, 128, 128, 0.9)'))
-    
-    # Create Sankey diagram with improved visibility
-    fig_sankey = go.Figure(data=[go.Sankey(
-        node=dict(
-            pad=20,
-            thickness=25,
-            line=dict(color="black", width=1),
-            label=labels,
-            color=colors,
-            x=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] if len(labels) == 9 else None,
-            y=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] if len(labels) == 9 else None
-        ),
-        link=dict(
-            source=sources,
-            target=targets,
-            value=values,
-            color=[f'rgba(100, 100, 100, 0.4)' for _ in values]
-        )
-    )])
-    
-    fig_sankey.update_layout(
-        title=dict(
-            text="Network Infrastructure Flow - Bandwidth Progression",
-            font=dict(size=18, family="Arial Black")
-        ),
-        font=dict(size=14, family="Arial"),
-        height=600,
-        margin=dict(l=50, r=50, t=80, b=50)
-    )
-    
-    st.plotly_chart(fig_sankey, use_container_width=True)
-    
-    # Create detailed component grid
+    # Create detailed component grid (always show this as fallback)
     st.markdown("#### 🧩 Infrastructure Component Details")
     
     # Group components by layer
@@ -2393,10 +2403,8 @@ def main():
         config['server_type'], storage_type, os_type
     )
     
-    # Get AWS real-time data
+    # Get AWS real-time data (moved to tab 5 only)
     aws_data = {}
-    if st.session_state.get('aws_integration') and st.session_state['aws_integration'].session:
-        aws_data = render_aws_integration_panel(st.session_state['aws_integration'])
     
     # Main content tabs with enhanced styling
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
@@ -2461,6 +2469,10 @@ def main():
                 <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">🐧 Linux NFS Advantages</h4>
                 <ul style="font-size: 14px; line-height: 1.7; margin: 0; padding-left: 20px;">
                     <li style="margin-bottom: 8px;"><strong>Network efficiency:</strong> TCP window scaling</li>
+                    <li style="margin-bottom: 8px;"><strong>Protocol design:</strong> Stateless operation</li>
+                    <li style="margin-bottom: 8px;"><strong>Kernel integration:</strong> Direct kernel calls</li>
+                    <li style="margin-bottom: 8px;"><strong>Caching:</strong> Aggressive client-side caching</li>
+                    <li style="margin-bottom: 8px;"><strong>Performance:</strong> Minimal protocol overhead</li>
                 </ul>
                 <p style="margin-top: 15px; font-size: 15px;"><strong>Typical Performance:</strong> 85-95% of line rate</p>
             </div>
