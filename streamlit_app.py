@@ -3701,7 +3701,7 @@ def render_network_path_diagram_tab():
         </div>
         """, unsafe_allow_html=True)
 
-# Main application
+# Integration with main application
 def main():
     render_corporate_header()
     
@@ -3718,7 +3718,7 @@ def main():
     if config.get('claude_api_key'):
         analyzer.ai_client.api_key = config['claude_api_key']
     
-    # Main tabs - 6 TABS including new Network Architecture
+    # UPDATED: 6 TABS including the new Network Path Diagram
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "💧 Infrastructure Analysis",    # Enhanced version of original Realistic Analysis
         "⏱️ Migration Analysis",         # Enhanced version of original Migration Analysis 
@@ -3776,6 +3776,3 @@ def main():
                 st.session_state['ai_recommendation'], 
                 config
             )
-
-if __name__ == "__main__":
-    main()
