@@ -3213,16 +3213,16 @@ def render_database_guidance_tab(config: Dict):
         }
     }
     
-    def create_network_topology_diagram():
-        """Create a comprehensive network topology diagram for production and non-production environments"""
+def create_network_topology_diagram():
+    """Create a comprehensive network topology diagram for production and non-production environments"""
         
-        # Create subplots for both environments
-        fig = make_subplots(
-            rows=2, cols=1,
-            subplot_titles=("Production Environment: San Antonio → San Jose → AWS West 2", 
+    # Create subplots for both environments
+    fig = make_subplots(
+        rows=2, cols=1,
+        subplot_titles=("Production Environment: San Antonio → San Jose → AWS West 2", 
                         "Non-Production Environment: San Jose → AWS West 2"),
-            vertical_spacing=0.15,
-            specs=[[{"type": "scatter"}], [{"type": "scatter"}]]
+        vertical_spacing=0.15,
+        specs=[[{"type": "scatter"}], [{"type": "scatter"}]]
         )
         
         # Production Environment Nodes
@@ -3776,3 +3776,7 @@ def main():
                 st.session_state['ai_recommendation'], 
                 config
             )
+            
+
+if __name__ == "__main__":
+    main()
