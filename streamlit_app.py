@@ -1778,7 +1778,7 @@ def render_database_storage_comparison(config: Dict):
     base_throughput = 1000  # Base throughput for comparison
     current_db = config['source_database_engine']
     
-    for config_item in configs_item:
+    for config_item in database_configs:
         is_current = config_item['db'] == current_db
         backup_info = get_database_backup_info(config_item['db'])
         
