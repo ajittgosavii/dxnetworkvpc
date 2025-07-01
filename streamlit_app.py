@@ -1294,7 +1294,7 @@ class EnhancedNetworkAnalyzer:
                     }
                 }
             }
-        }
+        
         
         # Initialize new clients
         self.pricing_client = AWSPricingClient()
