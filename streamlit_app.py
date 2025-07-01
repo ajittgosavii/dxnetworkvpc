@@ -2,29 +2,36 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
-from typing import Dict, List, Tuple
+import json
+import requests
+import boto3
+from typing import Dict, List, Tuple, Optional
+import asyncio
+import aiohttp
+from dataclasses import dataclass
+import numpy as np
 
 # Page configuration
 st.set_page_config(
-    page_title="AWS Migration Network Pattern Analyzer",
-    page_icon="🌐",
+    page_title="Enhanced AWS Migration Network Analyzer",
+    page_icon="🚀",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Professional CSS styling
+# Enhanced CSS styling (preserving original + new styles)
 st.markdown("""
 <style>
     .main-header {
-        background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
         padding: 2rem;
-        border-radius: 8px;
+        border-radius: 12px;
         color: white;
         text-align: center;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(30,58,138,0.1);
+        box-shadow: 0 4px 20px rgba(15,23,42,0.3);
         border: 1px solid rgba(255,255,255,0.1);
     }
     
@@ -47,13 +54,307 @@ st.markdown("""
         background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         border-left: 3px solid #16a34a;
     }
+    
+    .pattern-comparison-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #3b82f6;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .ai-recommendation-card {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #f59e0b;
+        border: 1px solid #f3f4f6;
+    }
+    
+    .cost-analysis-card {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #16a34a;
+        border: 1px solid #f3f4f6;
+    }
+    
+    .database-scenario-card {
+        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #6366f1;
+        border: 1px solid #f3f4f6;
+    }
+    
+    .network-metric-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 6px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
+    }
+    
+    .best-pattern-highlight {
+        background: linear-gradient(135deg, #065f46 0%, #047857 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-class EnhancedNetworkAnalyzer:
-    """Comprehensive network analyzer with realistic infrastructure modeling and migration services"""
+@dataclass
+class PatternAnalysis:
+    """Data class for pattern analysis results"""
+    pattern_name: str
+    total_cost_usd: float
+    migration_time_hours: float
+    effective_bandwidth_mbps: float
+    reliability_score: float
+    complexity_score: float
+    ai_recommendation_score: float
+    use_cases: List[str]
+    pros: List[str]
+    cons: List[str]
+
+class AWSPricingClient:
+    """AWS Pricing API client for real-time cost data"""
     
     def __init__(self):
+        self.pricing_client = None
+        self.region = 'us-east-1'  # Pricing API is only available in us-east-1
+        
+    def initialize_client(self, aws_access_key: str = None, aws_secret_key: str = None):
+        """Initialize AWS pricing client"""
+        try:
+            if aws_access_key and aws_secret_key:
+                self.pricing_client = boto3.client(
+                    'pricing',
+                    region_name=self.region,
+                    aws_access_key_id=aws_access_key,
+                    aws_secret_access_key=aws_secret_key
+                )
+            else:
+                # Try to use default credentials
+                self.pricing_client = boto3.client('pricing', region_name=self.region)
+        except Exception as e:
+            st.warning(f"Could not initialize AWS pricing client: {e}")
+            self.pricing_client = None
+    
+    def get_direct_connect_pricing(self, port_speed: str, location: str = 'US East (N. Virginia)') -> Dict:
+        """Get Direct Connect pricing"""
+        if not self.pricing_client:
+            return self._get_mock_dx_pricing(port_speed)
+        
+        try:
+            response = self.pricing_client.get_products(
+                ServiceCode='AmazonConnect',
+                Filters=[
+                    {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location},
+                    {'Type': 'TERM_MATCH', 'Field': 'portSpeed', 'Value': port_speed}
+                ]
+            )
+            
+            if response['PriceList']:
+                price_data = json.loads(response['PriceList'][0])
+                return self._parse_dx_pricing(price_data)
+            else:
+                return self._get_mock_dx_pricing(port_speed)
+                
+        except Exception as e:
+            st.warning(f"Error fetching Direct Connect pricing: {e}")
+            return self._get_mock_dx_pricing(port_speed)
+    
+    def get_ec2_pricing(self, instance_type: str, region: str = 'US East (N. Virginia)') -> Dict:
+        """Get EC2 instance pricing"""
+        if not self.pricing_client:
+            return self._get_mock_ec2_pricing(instance_type)
+        
+        try:
+            response = self.pricing_client.get_products(
+                ServiceCode='AmazonEC2',
+                Filters=[
+                    {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': region},
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                    {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'},
+                    {'Type': 'TERM_MATCH', 'Field': 'operating-system', 'Value': 'Linux'}
+                ]
+            )
+            
+            if response['PriceList']:
+                price_data = json.loads(response['PriceList'][0])
+                return self._parse_ec2_pricing(price_data)
+            else:
+                return self._get_mock_ec2_pricing(instance_type)
+                
+        except Exception as e:
+            st.warning(f"Error fetching EC2 pricing: {e}")
+            return self._get_mock_ec2_pricing(instance_type)
+    
+    def _get_mock_dx_pricing(self, port_speed: str) -> Dict:
+        """Mock Direct Connect pricing data"""
+        pricing_map = {
+            '1Gbps': {'port_hour': 0.30, 'data_transfer_gb': 0.02},
+            '10Gbps': {'port_hour': 2.25, 'data_transfer_gb': 0.02},
+            '100Gbps': {'port_hour': 22.50, 'data_transfer_gb': 0.015}
+        }
+        return pricing_map.get(port_speed, pricing_map['10Gbps'])
+    
+    def _get_mock_ec2_pricing(self, instance_type: str) -> Dict:
+        """Mock EC2 pricing data"""
+        pricing_map = {
+            'm5.large': {'hourly': 0.096},
+            'm5.xlarge': {'hourly': 0.192},
+            'm5.2xlarge': {'hourly': 0.384},
+            'm5.4xlarge': {'hourly': 0.768},
+            'c5.xlarge': {'hourly': 0.17},
+            'c5.2xlarge': {'hourly': 0.34},
+            'r5.xlarge': {'hourly': 0.252},
+            'dms.t3.medium': {'hourly': 0.0464},
+            'dms.r5.large': {'hourly': 0.144},
+            'dms.r5.xlarge': {'hourly': 0.288},
+            'dms.r5.2xlarge': {'hourly': 0.576}
+        }
+        return pricing_map.get(instance_type, pricing_map['m5.xlarge'])
+
+class ClaudeAIClient:
+    """Claude AI client for intelligent recommendations"""
+    
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key
+        self.base_url = "https://api.anthropic.com/v1/messages"
+        
+    def get_pattern_recommendation(self, analysis_data: Dict) -> Dict:
+        """Get AI recommendation for best migration pattern"""
+        if not self.api_key:
+            return self._get_mock_ai_recommendation(analysis_data)
+        
+        try:
+            prompt = self._build_analysis_prompt(analysis_data)
+            
+            headers = {
+                "x-api-key": self.api_key,
+                "content-type": "application/json",
+                "anthropic-version": "2023-06-01"
+            }
+            
+            payload = {
+                "model": "claude-3-sonnet-20240229",
+                "max_tokens": 1000,
+                "messages": [{"role": "user", "content": prompt}]
+            }
+            
+            response = requests.post(self.base_url, headers=headers, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                result = response.json()
+                return self._parse_ai_response(result['content'][0]['text'])
+            else:
+                st.warning(f"Claude AI API error: {response.status_code}")
+                return self._get_mock_ai_recommendation(analysis_data)
+                
+        except Exception as e:
+            st.warning(f"Error calling Claude AI: {e}")
+            return self._get_mock_ai_recommendation(analysis_data)
+    
+    def _build_analysis_prompt(self, analysis_data: Dict) -> str:
+        """Build analysis prompt for Claude AI"""
+        return f"""
+        You are an AWS network architecture expert helping a database engineer choose the best migration pattern.
+        
+        Analysis Data:
+        - Data Size: {analysis_data.get('data_size_gb', 0)} GB
+        - Migration Service: {analysis_data.get('migration_service', 'unknown')}
+        - Environment: {analysis_data.get('environment', 'unknown')}
+        - Max Downtime: {analysis_data.get('max_downtime_hours', 0)} hours
+        - Source Location: {analysis_data.get('source_location', 'unknown')}
+        
+        Available Patterns:
+        1. VPC Endpoint: Lower cost, higher latency, works with compatible services
+        2. Direct Connect: Higher cost, lower latency, dedicated bandwidth
+        3. Multi-hop: Highest cost, variable latency, complex routing
+        
+        Please recommend the best pattern considering:
+        - Total cost (infrastructure + time)
+        - Migration time constraints
+        - Database-specific requirements
+        - Risk factors
+        
+        Respond in JSON format with:
+        {{
+            "recommended_pattern": "pattern_name",
+            "confidence_score": 0.85,
+            "reasoning": "explanation",
+            "cost_justification": "why this cost is worth it",
+            "risk_assessment": "potential risks",
+            "database_considerations": "specific to database migration"
+        }}
+        """
+    
+    def _parse_ai_response(self, response_text: str) -> Dict:
+        """Parse Claude AI response"""
+        try:
+            # Try to extract JSON from response
+            start_idx = response_text.find('{')
+            end_idx = response_text.rfind('}') + 1
+            if start_idx != -1 and end_idx > start_idx:
+                json_str = response_text[start_idx:end_idx]
+                return json.loads(json_str)
+        except:
+            pass
+        
+        # Fallback to mock response
+        return {
+            "recommended_pattern": "direct_connect",
+            "confidence_score": 0.75,
+            "reasoning": "Based on analysis, Direct Connect provides the best balance of performance and reliability",
+            "cost_justification": "Higher upfront cost offset by reduced migration time and improved reliability",
+            "risk_assessment": "Low risk with proper planning and testing",
+            "database_considerations": "Direct Connect provides consistent latency crucial for database replication"
+        }
+    
+    def _get_mock_ai_recommendation(self, analysis_data: Dict) -> Dict:
+        """Mock AI recommendation based on simple rules"""
+        data_size = analysis_data.get('data_size_gb', 0)
+        environment = analysis_data.get('environment', 'non-production')
+        
+        if environment == 'production' and data_size > 500:
+            pattern = "direct_connect"
+            reasoning = "Production environment with large dataset requires dedicated, reliable connectivity"
+        elif data_size < 100:
+            pattern = "vpc_endpoint"
+            reasoning = "Small dataset can efficiently use VPC endpoint with lower cost"
+        else:
+            pattern = "direct_connect"
+            reasoning = "Medium to large dataset benefits from dedicated bandwidth"
+        
+        return {
+            "recommended_pattern": pattern,
+            "confidence_score": 0.80,
+            "reasoning": reasoning,
+            "cost_justification": "Optimized for data size and environment requirements",
+            "risk_assessment": "Standard risk mitigation recommended",
+            "database_considerations": "Ensure consistent connectivity for database integrity"
+        }
+
+class EnhancedNetworkAnalyzer:
+    """Comprehensive network analyzer with realistic infrastructure modeling and migration services + AI enhancements"""
+    
+    def __init__(self):
+        # PRESERVING ALL ORIGINAL CHARACTERISTICS
+        
         # Operating System Network Stack Characteristics
         self.os_characteristics = {
             'windows_server_2019': {
@@ -269,7 +570,7 @@ class EnhancedNetworkAnalyzer:
             }
         }
         
-        # Enhanced Network Patterns with realistic infrastructure
+        # Enhanced Network Patterns with realistic infrastructure + database scenarios
         self.network_patterns = {
             'sj_nonprod_vpc_endpoint': {
                 'name': 'San Jose Non-Prod → AWS VPC Endpoint',
@@ -285,10 +586,18 @@ class EnhancedNetworkAnalyzer:
                 'baseline_latency_ms': 8,
                 'cost_factor': 1.5,
                 'security_level': 'high',
+                'reliability_score': 0.85,
+                'complexity_score': 0.3,
                 'vpc_endpoint_limitations': {
                     'ipv4_only': True,
                     'no_shared_vpc': True,
                     'privatelink_routing_overhead': 0.03
+                },
+                'database_suitability': {
+                    'oltp': 0.7,
+                    'olap': 0.9,
+                    'replication': 0.6,
+                    'backup': 0.95
                 }
             },
             'sj_nonprod_direct_connect': {
@@ -304,7 +613,15 @@ class EnhancedNetworkAnalyzer:
                 'committed_bandwidth_mbps': 2000,
                 'baseline_latency_ms': 12,
                 'cost_factor': 2.0,
-                'security_level': 'high'
+                'security_level': 'high',
+                'reliability_score': 0.95,
+                'complexity_score': 0.6,
+                'database_suitability': {
+                    'oltp': 0.9,
+                    'olap': 0.95,
+                    'replication': 0.95,
+                    'backup': 0.9
+                }
             },
             'sj_prod_direct_connect': {
                 'name': 'San Jose Production → AWS Direct Connect',
@@ -319,7 +636,15 @@ class EnhancedNetworkAnalyzer:
                 'committed_bandwidth_mbps': 10000,
                 'baseline_latency_ms': 6,
                 'cost_factor': 3.5,
-                'security_level': 'very_high'
+                'security_level': 'very_high',
+                'reliability_score': 0.99,
+                'complexity_score': 0.7,
+                'database_suitability': {
+                    'oltp': 0.98,
+                    'olap': 0.98,
+                    'replication': 0.99,
+                    'backup': 0.95
+                }
             },
             'sa_prod_via_sj': {
                 'name': 'San Antonio Production → San Jose → AWS',
@@ -334,11 +659,19 @@ class EnhancedNetworkAnalyzer:
                 'committed_bandwidth_mbps': 10000,
                 'baseline_latency_ms': 18,
                 'cost_factor': 4.0,
-                'security_level': 'very_high'
+                'security_level': 'very_high',
+                'reliability_score': 0.92,
+                'complexity_score': 0.9,
+                'database_suitability': {
+                    'oltp': 0.85,
+                    'olap': 0.95,
+                    'replication': 0.88,
+                    'backup': 0.9
+                }
             }
         }
         
-        # Comprehensive Migration Services
+        # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
         self.migration_services = {
             'datasync': {
                 'name': 'AWS DataSync',
@@ -351,34 +684,43 @@ class EnhancedNetworkAnalyzer:
                 'protocol_efficiency': 0.96,
                 'latency_sensitivity': 'medium',
                 'tcp_window_scaling_required': True,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': True
+                },
                 'sizes': {
                     'small': {
                         'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 250, 'cost_per_hour': 0.042,
                         'vpc_endpoint_throughput_reduction': 0.1,
                         'optimal_file_size_mb': '1-100',
                         'concurrent_transfers': 8,
-                        'tcp_connections': 8
+                        'tcp_connections': 8,
+                        'instance_type': 'm5.large'
                     },
                     'medium': {
                         'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 500, 'cost_per_hour': 0.085,
                         'vpc_endpoint_throughput_reduction': 0.08,
                         'optimal_file_size_mb': '100-1000',
                         'concurrent_transfers': 16,
-                        'tcp_connections': 16
+                        'tcp_connections': 16,
+                        'instance_type': 'm5.xlarge'
                     },
                     'large': {
                         'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 1000, 'cost_per_hour': 0.17,
                         'vpc_endpoint_throughput_reduction': 0.05,
                         'optimal_file_size_mb': '1000+',
                         'concurrent_transfers': 32,
-                        'tcp_connections': 32
+                        'tcp_connections': 32,
+                        'instance_type': 'm5.2xlarge'
                     },
                     'xlarge': {
                         'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 2000, 'cost_per_hour': 0.34,
                         'vpc_endpoint_throughput_reduction': 0.03,
                         'optimal_file_size_mb': '1000+',
                         'concurrent_transfers': 64,
-                        'tcp_connections': 64
+                        'tcp_connections': 64,
+                        'instance_type': 'm5.4xlarge'
                     }
                 }
             },
@@ -395,30 +737,40 @@ class EnhancedNetworkAnalyzer:
                 'requires_endpoints': True,
                 'supports_cdc': True,
                 'tcp_window_scaling_required': True,
+                'database_compatibility': {
+                    'file_based_backups': False,
+                    'live_replication': True,
+                    'transaction_logs': True,
+                    'schema_conversion': True
+                },
                 'sizes': {
                     'small': {
                         'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
                         'max_connections': 50,
                         'optimal_table_size_gb': '1-10',
-                        'tcp_connections': 4
+                        'tcp_connections': 4,
+                        'instance_type': 'dms.t3.medium'
                     },
                     'medium': {
                         'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
                         'max_connections': 100,
                         'optimal_table_size_gb': '10-100',
-                        'tcp_connections': 8
+                        'tcp_connections': 8,
+                        'instance_type': 'dms.r5.large'
                     },
                     'large': {
                         'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
                         'max_connections': 200,
                         'optimal_table_size_gb': '100-500',
-                        'tcp_connections': 16
+                        'tcp_connections': 16,
+                        'instance_type': 'dms.r5.xlarge'
                     },
                     'xlarge': {
                         'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
                         'max_connections': 400,
                         'optimal_table_size_gb': '500+',
-                        'tcp_connections': 32
+                        'tcp_connections': 32,
+                        'instance_type': 'dms.r5.2xlarge'
                     }
                 }
             },
@@ -435,6 +787,11 @@ class EnhancedNetworkAnalyzer:
                 'requires_active_directory': True,
                 'supports_deduplication': True,
                 'tcp_window_scaling_required': False,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': False
+                },
                 'sizes': {
                     'small': {
                         'storage_gb': 32, 'throughput_mbps': 16, 'cost_per_hour': 0.013,
@@ -462,6 +819,11 @@ class EnhancedNetworkAnalyzer:
                 'latency_sensitivity': 'very_low',
                 'supports_s3_integration': True,
                 'tcp_window_scaling_required': False,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': False
+                },
                 'sizes': {
                     'small': {
                         'storage_gb': 1200, 'throughput_mbps': 240, 'cost_per_hour': 0.15,
@@ -485,19 +847,75 @@ class EnhancedNetworkAnalyzer:
                 'latency_sensitivity': 'medium',
                 'supports_caching': True,
                 'tcp_window_scaling_required': True,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': True
+                },
                 'sizes': {
                     'small': {
                         'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 125, 'cost_per_hour': 0.05,
-                        'cache_gb': 150, 'max_volumes': 32
+                        'cache_gb': 150, 'max_volumes': 32,
+                        'instance_type': 'm5.xlarge'
                     },
                     'large': {
                         'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 500, 'cost_per_hour': 0.20,
-                        'cache_gb': 600, 'max_volumes': 128
+                        'cache_gb': 600, 'max_volumes': 128,
+                        'instance_type': 'm5.4xlarge'
                     }
                 }
             }
         }
+        
+        # Database-specific migration scenarios (NEW)
+        self.database_scenarios = {
+            'mysql_oltp': {
+                'name': 'MySQL OLTP Database',
+                'workload_type': 'oltp',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'medium',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 500,
+                'max_tolerable_latency_ms': 10
+            },
+            'postgresql_analytics': {
+                'name': 'PostgreSQL Analytics',
+                'workload_type': 'olap',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'eventual',
+                'recommended_services': ['dms', 'datasync'],
+                'min_bandwidth_mbps': 1000,
+                'max_tolerable_latency_ms': 50
+            },
+            'oracle_enterprise': {
+                'name': 'Oracle Enterprise Database',
+                'workload_type': 'mixed',
+                'latency_sensitivity': 'very_high',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 2000,
+                'max_tolerable_latency_ms': 5
+            },
+            'mongodb_cluster': {
+                'name': 'MongoDB Cluster',
+                'workload_type': 'mixed',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'eventual',
+                'recommended_services': ['dms', 'datasync'],
+                'min_bandwidth_mbps': 1500,
+                'max_tolerable_latency_ms': 20
+            }
+        }
+        
+        # Initialize new clients
+        self.pricing_client = AWSPricingClient()
+        self.ai_client = ClaudeAIClient()
     
+    # PRESERVING ALL ORIGINAL METHODS
     def determine_optimal_pattern(self, source_location: str, environment: str, migration_service: str) -> str:
         """Determine optimal network pattern based on requirements"""
         if source_location == 'San Jose':
@@ -513,7 +931,7 @@ class EnhancedNetworkAnalyzer:
         return 'sj_nonprod_direct_connect'
     
     def calculate_realistic_bandwidth_waterfall(self, pattern_key: str, migration_service: str, service_size: str, num_instances: int) -> Dict:
-        """Calculate realistic bandwidth waterfall with detailed infrastructure impact"""
+        """Calculate realistic bandwidth waterfall with detailed infrastructure impact (ORIGINAL METHOD PRESERVED)"""
         pattern = self.network_patterns[pattern_key]
         service = self.migration_services[migration_service]
         service_spec = service['sizes'][service_size]
@@ -712,7 +1130,7 @@ class EnhancedNetworkAnalyzer:
         }
     
     def assess_service_compatibility(self, pattern_key: str, migration_service: str, service_size: str) -> Dict:
-        """Assess service compatibility with network pattern"""
+        """Assess service compatibility with network pattern (ORIGINAL METHOD PRESERVED)"""
         pattern = self.network_patterns[pattern_key]
         service = self.migration_services[migration_service]
         
@@ -746,7 +1164,7 @@ class EnhancedNetworkAnalyzer:
         return compatibility_assessment
     
     def estimate_migration_time(self, data_size_gb: int, effective_throughput_mbps: int, migration_service: str) -> Dict:
-        """Estimate migration timing with service-specific considerations"""
+        """Estimate migration timing with service-specific considerations (ORIGINAL METHOD PRESERVED)"""
         data_size_gbits = data_size_gb * 8
         service = self.migration_services[migration_service]
         
@@ -773,7 +1191,7 @@ class EnhancedNetworkAnalyzer:
         }
     
     def generate_ai_recommendations(self, config: Dict, analysis_results: Dict) -> Dict:
-        """Generate AI-powered recommendations"""
+        """Generate AI-powered recommendations (ORIGINAL METHOD PRESERVED)"""
         migration_time = analysis_results['migration_time']
         waterfall_data = analysis_results['waterfall_data']
         service_compatibility = analysis_results.get('service_compatibility', {})
@@ -826,28 +1244,249 @@ class EnhancedNetworkAnalyzer:
             'migration_complexity': 'high' if priority_score > 40 else 'medium' if priority_score > 20 else 'low',
             'confidence_level': 'high' if len(recommendations) <= 3 else 'medium'
         }
+    
+    # NEW METHODS FOR AI AND COST ANALYSIS
+    def analyze_all_patterns(self, config: Dict) -> List[PatternAnalysis]:
+        """Analyze all available patterns for comparison"""
+        results = []
+        
+        for pattern_key, pattern in self.network_patterns.items():
+            # Skip patterns that don't match source location
+            if config['source_location'] not in pattern['name']:
+                continue
+            
+            try:
+                analysis = self._analyze_single_pattern(pattern_key, config)
+                results.append(analysis)
+            except Exception as e:
+                st.warning(f"Error analyzing pattern {pattern_key}: {e}")
+        
+        return sorted(results, key=lambda x: x.ai_recommendation_score, reverse=True)
+    
+    def _analyze_single_pattern(self, pattern_key: str, config: Dict) -> PatternAnalysis:
+        """Analyze a single pattern"""
+        pattern = self.network_patterns[pattern_key]
+        
+        # Calculate bandwidth and costs
+        waterfall_data = self.calculate_realistic_bandwidth_waterfall(
+            pattern_key, config['migration_service'], config['service_size'], config['num_instances']
+        )
+        
+        total_cost = self._calculate_total_cost(pattern_key, config, waterfall_data)
+        migration_time = self._estimate_migration_time(config, waterfall_data)
+        
+        # Calculate scores
+        reliability_score = pattern['reliability_score']
+        complexity_score = 1.0 - pattern['complexity_score']  # Invert for scoring
+        
+        # Database suitability
+        db_scenario = config.get('database_scenario', 'mysql_oltp')
+        db_workload = self.database_scenarios.get(db_scenario, {}).get('workload_type', 'oltp')
+        db_suitability = pattern['database_suitability'].get(db_workload, 0.8)
+        
+        # AI recommendation score (weighted combination)
+        ai_score = (
+            reliability_score * 0.3 +
+            complexity_score * 0.2 +
+            db_suitability * 0.3 +
+            (1.0 - min(total_cost / 10000, 1.0)) * 0.2  # Cost factor (normalized)
+        )
+        
+        # Generate use cases and pros/cons
+        use_cases, pros, cons = self._generate_pattern_details(pattern, config)
+        
+        return PatternAnalysis(
+            pattern_name=pattern['name'],
+            total_cost_usd=total_cost,
+            migration_time_hours=migration_time,
+            effective_bandwidth_mbps=waterfall_data['summary']['final_effective_mbps'],
+            reliability_score=reliability_score,
+            complexity_score=pattern['complexity_score'],
+            ai_recommendation_score=ai_score,
+            use_cases=use_cases,
+            pros=pros,
+            cons=cons
+        )
+    
+    def _calculate_total_cost(self, pattern_key: str, config: Dict, waterfall_data: Dict) -> float:
+        """Calculate total migration cost"""
+        pattern = self.network_patterns[pattern_key]
+        service_config = self.migration_services[config['migration_service']]['sizes'][config['service_size']]
+        
+        # Infrastructure costs
+        infrastructure_cost = 0
+        
+        # Direct Connect costs
+        if pattern['pattern_type'] == 'direct_connect':
+            dx_speed = '10Gbps'  # Default
+            if pattern['committed_bandwidth_mbps'] >= 50000:
+                dx_speed = '100Gbps'
+            elif pattern['committed_bandwidth_mbps'] >= 5000:
+                dx_speed = '10Gbps'
+            else:
+                dx_speed = '1Gbps'
+            
+            dx_pricing = self.pricing_client.get_direct_connect_pricing(dx_speed)
+            migration_hours = self._estimate_migration_time(config, waterfall_data)
+            infrastructure_cost += dx_pricing['port_hour'] * migration_hours
+            
+            # Data transfer costs
+            data_transfer_gb = config['data_size_gb']
+            infrastructure_cost += dx_pricing['data_transfer_gb'] * data_transfer_gb
+        
+        # Service instance costs
+        instance_type = service_config.get('instance_type', 'm5.xlarge')
+        instance_pricing = self.pricing_client.get_ec2_pricing(instance_type)
+        migration_hours = self._estimate_migration_time(config, waterfall_data)
+        service_cost = instance_pricing['hourly'] * migration_hours * config['num_instances']
+        
+        # Add operational overhead
+        operational_overhead = (infrastructure_cost + service_cost) * 0.2
+        
+        return infrastructure_cost + service_cost + operational_overhead
+    
+    def _estimate_migration_time(self, config: Dict, waterfall_data: Dict) -> float:
+        """Estimate migration time in hours"""
+        effective_bandwidth_mbps = waterfall_data['summary']['final_effective_mbps']
+        data_size_gb = config['data_size_gb']
+        
+        if effective_bandwidth_mbps > 0:
+            data_transfer_hours = (data_size_gb * 8) / (effective_bandwidth_mbps / 1000) / 3600
+        else:
+            data_transfer_hours = float('inf')
+        
+        # Add setup and validation time
+        setup_hours = 4 if config['migration_service'] == 'dms' else 2
+        validation_hours = max(2, data_size_gb / 1000)
+        
+        return data_transfer_hours + setup_hours + validation_hours
+    
+    def _generate_pattern_details(self, pattern: Dict, config: Dict) -> Tuple[List[str], List[str], List[str]]:
+        """Generate use cases, pros, and cons for a pattern"""
+        pattern_type = pattern['pattern_type']
+        
+        if pattern_type == 'vpc_endpoint':
+            use_cases = [
+                "Small to medium database migrations",
+                "Non-production environments",
+                "Cost-sensitive migrations",
+                "Services with VPC endpoint support"
+            ]
+            pros = [
+                "Lower cost structure",
+                "No Direct Connect setup required",
+                "Good for compatible services",
+                "AWS managed connectivity"
+            ]
+            cons = [
+                "Higher latency than Direct Connect",
+                "Limited service compatibility",
+                "Shared bandwidth",
+                "Internet routing dependencies"
+            ]
+        elif pattern_type == 'direct_connect':
+            use_cases = [
+                "Production database migrations",
+                "Large data volumes (>500GB)",
+                "Latency-sensitive applications",
+                "Enterprise-grade connectivity needs"
+            ]
+            pros = [
+                "Dedicated bandwidth",
+                "Lower, consistent latency",
+                "Higher reliability (99.9% SLA)",
+                "Better security posture"
+            ]
+            cons = [
+                "Higher setup costs",
+                "Longer provisioning time",
+                "Requires network expertise",
+                "Monthly recurring costs"
+            ]
+        else:  # multi_hop
+            use_cases = [
+                "Remote location connectivity",
+                "Complex network topologies",
+                "Phased migration approaches",
+                "Disaster recovery scenarios"
+            ]
+            pros = [
+                "Can reach remote locations",
+                "Flexible routing options",
+                "Can leverage existing infrastructure",
+                "Supports complex scenarios"
+            ]
+            cons = [
+                "Highest complexity",
+                "Multiple failure points",
+                "Variable performance",
+                "Difficult troubleshooting"
+            ]
+        
+        return use_cases, pros, cons
+    
+    def get_ai_recommendation(self, pattern_analyses: List[PatternAnalysis], config: Dict) -> Dict:
+        """Get AI recommendation for best pattern"""
+        analysis_data = {
+            'data_size_gb': config['data_size_gb'],
+            'migration_service': config['migration_service'],
+            'environment': config['environment'],
+            'max_downtime_hours': config['max_downtime_hours'],
+            'source_location': config['source_location'],
+            'database_scenario': config.get('database_scenario', 'mysql_oltp'),
+            'patterns': [
+                {
+                    'name': p.pattern_name,
+                    'cost': p.total_cost_usd,
+                    'time': p.migration_time_hours,
+                    'bandwidth': p.effective_bandwidth_mbps,
+                    'reliability': p.reliability_score
+                }
+                for p in pattern_analyses
+            ]
+        }
+        
+        return self.ai_client.get_pattern_recommendation(analysis_data)
 
 def render_header():
-    """Render application header"""
+    """Render enhanced application header"""
     st.markdown("""
     <div class="main-header">
-        <h1>🌐 Enhanced AWS Migration Network Analyzer</h1>
-        <p style="font-size: 1.2rem; margin-top: 0.5rem;">
-            Realistic Infrastructure Impact • OS/NIC/LAN/WAN/DX Analysis • Comprehensive Migration Services
+        <h1>🚀 AI-Enhanced AWS Migration Network Analyzer</h1>
+        <p style="font-size: 1.3rem; margin-top: 0.5rem;">
+            Complete Infrastructure Analysis • Real-Time AWS Pricing • Claude AI Recommendations
         </p>
-        <p style="font-size: 0.9rem; margin-top: 0.5rem; opacity: 0.9;">
-            DataSync • DMS • FSx • Storage Gateway • Real-World Bandwidth Calculations
+        <p style="font-size: 1rem; margin-top: 0.5rem; opacity: 0.9;">
+            Realistic Bandwidth Waterfall • Database Engineer Focused • Pattern Comparison
         </p>
     </div>
     """, unsafe_allow_html=True)
 
 def render_enhanced_sidebar_controls():
-    """Render comprehensive sidebar controls"""
+    """Render enhanced sidebar controls"""
     st.sidebar.header("🔧 Migration Configuration")
     
-    analyzer = EnhancedNetworkAnalyzer()
+    # API Configuration
+    with st.sidebar.expander("🔑 API Configuration", expanded=False):
+        aws_access_key = st.text_input("AWS Access Key (Optional)", type="password", help="For real-time pricing")
+        aws_secret_key = st.text_input("AWS Secret Key (Optional)", type="password", help="For real-time pricing")
+        claude_api_key = st.text_input("Claude AI API Key (Optional)", type="password", help="For AI recommendations")
     
-    # Source configuration
+    # Database Scenario Selection
+    st.sidebar.subheader("🗄️ Database Scenario")
+    database_scenario = st.sidebar.selectbox(
+        "Database Type & Workload",
+        ["mysql_oltp", "postgresql_analytics", "oracle_enterprise", "mongodb_cluster"],
+        format_func=lambda x: {
+            'mysql_oltp': '🔄 MySQL OLTP Database',
+            'postgresql_analytics': '📊 PostgreSQL Analytics',
+            'oracle_enterprise': '🏢 Oracle Enterprise DB',
+            'mongodb_cluster': '🍃 MongoDB Cluster'
+        }[x],
+        help="Select your database type and primary workload"
+    )
+    
+    # Source Environment
     st.sidebar.subheader("📍 Source Environment")
     source_location = st.sidebar.selectbox(
         "Data Center Location",
@@ -858,12 +1497,12 @@ def render_enhanced_sidebar_controls():
     environment = st.sidebar.selectbox(
         "Environment Type",
         ["non-production", "production"],
-        help="Production environments have higher-grade infrastructure"
+        help="Production environments require higher reliability"
     )
     
     # Infrastructure overrides
-    st.sidebar.subheader("🏗️ Infrastructure Overrides")
-    with st.sidebar.expander("Advanced Infrastructure Settings", expanded=False):
+    analyzer = EnhancedNetworkAnalyzer()
+    with st.sidebar.expander("🏗️ Advanced Infrastructure Settings", expanded=False):
         os_type = st.sidebar.selectbox(
             "Operating System",
             list(analyzer.os_characteristics.keys()),
@@ -878,7 +1517,7 @@ def render_enhanced_sidebar_controls():
             help="Override default NIC selection"
         )
     
-    # Migration service
+    # Migration Service
     st.sidebar.subheader("🚀 Migration Service")
     migration_service = st.sidebar.selectbox(
         "AWS Migration Service",
@@ -917,30 +1556,34 @@ def render_enhanced_sidebar_controls():
             help="Number of parallel instances"
         )
     
-    # Data configuration
+    # Data Configuration
     st.sidebar.subheader("💾 Data Configuration")
     data_size_gb = st.sidebar.number_input(
-        "Data Size (GB)",
-        min_value=100,
-        max_value=100000,
+        "Database Size (GB)",
+        min_value=10,
+        max_value=50000,
         value=1000,
         step=100,
-        help="Total data size to migrate"
+        help="Total database size to migrate"
     )
     
     max_downtime_hours = st.sidebar.number_input(
         "Maximum Downtime (hours)",
         min_value=1,
         max_value=168,
-        value=24,
-        help="Maximum acceptable downtime"
+        value=8,
+        help="Maximum acceptable downtime for migration"
     )
     
     return {
+        'aws_access_key': aws_access_key,
+        'aws_secret_key': aws_secret_key,
+        'claude_api_key': claude_api_key,
+        'database_scenario': database_scenario,
         'source_location': source_location,
         'environment': environment,
-        'os_type': locals().get('os_type'),
-        'nic_type': locals().get('nic_type'),
+        'os_type': os_type if 'os_type' in locals() else None,
+        'nic_type': nic_type if 'nic_type' in locals() else None,
         'migration_service': migration_service,
         'service_size': service_size,
         'num_instances': num_instances,
@@ -949,7 +1592,7 @@ def render_enhanced_sidebar_controls():
     }
 
 def create_realistic_waterfall_chart(waterfall_data: Dict):
-    """Create waterfall chart with layer-specific coloring"""
+    """Create waterfall chart with layer-specific coloring (ORIGINAL FUNCTION PRESERVED)"""
     steps = waterfall_data['steps']
     
     layer_colors = {
@@ -1013,7 +1656,7 @@ def create_realistic_waterfall_chart(waterfall_data: Dict):
     return fig
 
 def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyzer):
-    """Render realistic bandwidth analysis tab"""
+    """Render realistic bandwidth analysis tab (ORIGINAL FUNCTION PRESERVED)"""
     st.subheader("💧 Realistic Infrastructure Impact Analysis")
     
     # Determine pattern
@@ -1145,7 +1788,7 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
     return waterfall_data
 
 def render_migration_analysis_tab(config: Dict, waterfall_data: Dict, analyzer: EnhancedNetworkAnalyzer):
-    """Render migration timing and compatibility analysis"""
+    """Render migration timing and compatibility analysis (ORIGINAL FUNCTION PRESERVED)"""
     st.subheader("⏱️ Migration Analysis & Compatibility")
     
     # Service compatibility
@@ -1270,7 +1913,7 @@ def render_migration_analysis_tab(config: Dict, waterfall_data: Dict, analyzer: 
     }
 
 def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer: EnhancedNetworkAnalyzer):
-    """Render AI-powered recommendations"""
+    """Render AI-powered recommendations (ORIGINAL FUNCTION PRESERVED)"""
     st.subheader("🤖 AI-Powered Migration Recommendations")
     
     ai_recommendations = analyzer.generate_ai_recommendations(config, analysis_results)
@@ -1361,31 +2004,375 @@ def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer
     </div>
     """, unsafe_allow_html=True)
 
+def render_pattern_comparison_tab(analyzer: EnhancedNetworkAnalyzer, config: Dict):
+    """Render pattern comparison analysis (NEW)"""
+    st.subheader("🔄 Network Pattern Comparison")
+    
+    # Initialize clients with API keys if provided
+    if config.get('aws_access_key') and config.get('aws_secret_key'):
+        analyzer.pricing_client.initialize_client(config['aws_access_key'], config['aws_secret_key'])
+    
+    if config.get('claude_api_key'):
+        analyzer.ai_client.api_key = config['claude_api_key']
+    
+    # Analyze all patterns
+    with st.spinner("Analyzing network patterns..."):
+        pattern_analyses = analyzer.analyze_all_patterns(config)
+    
+    if not pattern_analyses:
+        st.error("No suitable patterns found for the selected configuration.")
+        return None, None
+    
+    # Get AI recommendation
+    with st.spinner("Getting AI recommendations..."):
+        ai_recommendation = analyzer.get_ai_recommendation(pattern_analyses, config)
+    
+    # Display best pattern recommendation
+    best_pattern = pattern_analyses[0]
+    st.markdown(f"""
+    <div class="best-pattern-highlight">
+        🏆 AI RECOMMENDED: {best_pattern.pattern_name}
+        <br>
+        Confidence: {ai_recommendation['confidence_score']*100:.0f}% | 
+        Cost: ${best_pattern.total_cost_usd:,.0f} | 
+        Time: {best_pattern.migration_time_hours:.1f}h
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Comparison metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.metric(
+            "💰 Best Cost",
+            f"${min(p.total_cost_usd for p in pattern_analyses):,.0f}",
+            delta=f"vs ${max(p.total_cost_usd for p in pattern_analyses):,.0f}"
+        )
+    
+    with col2:
+        st.metric(
+            "⚡ Best Speed",
+            f"{max(p.effective_bandwidth_mbps for p in pattern_analyses):,.0f} Mbps",
+            delta="Highest throughput"
+        )
+    
+    with col3:
+        st.metric(
+            "🕒 Fastest Migration",
+            f"{min(p.migration_time_hours for p in pattern_analyses):.1f}h",
+            delta="Minimum time"
+        )
+    
+    with col4:
+        st.metric(
+            "🛡️ Best Reliability",
+            f"{max(p.reliability_score for p in pattern_analyses)*100:.1f}%",
+            delta="Highest uptime"
+        )
+    
+    with col5:
+        st.metric(
+            "🎯 AI Score",
+            f"{best_pattern.ai_recommendation_score:.2f}",
+            delta="Recommended"
+        )
+    
+    # Detailed comparison table
+    st.markdown("**📊 Detailed Pattern Comparison:**")
+    
+    comparison_data = []
+    for pattern in pattern_analyses:
+        comparison_data.append({
+            'Pattern': pattern.pattern_name.split('→')[0].strip(),
+            'Cost ($)': f"{pattern.total_cost_usd:,.0f}",
+            'Time (h)': f"{pattern.migration_time_hours:.1f}",
+            'Bandwidth (Mbps)': f"{pattern.effective_bandwidth_mbps:,.0f}",
+            'Reliability': f"{pattern.reliability_score*100:.1f}%",
+            'Complexity': f"{pattern.complexity_score*100:.0f}%",
+            'AI Score': f"{pattern.ai_recommendation_score:.2f}"
+        })
+    
+    df_comparison = pd.DataFrame(comparison_data)
+    st.dataframe(df_comparison, use_container_width=True)
+    
+    # Cost vs Performance Chart
+    fig_scatter = go.Figure()
+    
+    for i, pattern in enumerate(pattern_analyses):
+        color = '#16a34a' if i == 0 else '#3b82f6'  # Green for best, blue for others
+        size = 20 if i == 0 else 15
+        
+        fig_scatter.add_trace(go.Scatter(
+            x=[pattern.total_cost_usd],
+            y=[pattern.migration_time_hours],
+            mode='markers+text',
+            marker=dict(size=size, color=color),
+            text=[pattern.pattern_name.split('→')[0].strip()],
+            textposition="top center",
+            name=pattern.pattern_name.split('→')[0].strip(),
+            hovertemplate=f"<b>{pattern.pattern_name}</b><br>" +
+                         f"Cost: ${pattern.total_cost_usd:,.0f}<br>" +
+                         f"Time: {pattern.migration_time_hours:.1f}h<br>" +
+                         f"Bandwidth: {pattern.effective_bandwidth_mbps:,.0f} Mbps<br>" +
+                         f"AI Score: {pattern.ai_recommendation_score:.2f}<extra></extra>"
+        ))
+    
+    fig_scatter.update_layout(
+        title="Migration Cost vs Time Analysis",
+        xaxis_title="Total Cost ($)",
+        yaxis_title="Migration Time (hours)",
+        showlegend=False,
+        template="plotly_white",
+        height=500
+    )
+    
+    st.plotly_chart(fig_scatter, use_container_width=True)
+    
+    return pattern_analyses, ai_recommendation
+
+def render_ai_insights_tab(pattern_analyses: List[PatternAnalysis], ai_recommendation: Dict, config: Dict):
+    """Render AI insights and recommendations (NEW)"""
+    st.subheader("🤖 AI-Powered Migration Insights")
+    
+    if not pattern_analyses or not ai_recommendation:
+        st.warning("Please run pattern comparison first to get AI insights.")
+        return
+    
+    # AI Recommendation Summary
+    st.markdown(f"""
+    <div class="ai-recommendation-card">
+        <h3>🎯 AI Recommendation: {ai_recommendation['recommended_pattern'].replace('_', ' ').title()}</h3>
+        <p><strong>Confidence Level:</strong> {ai_recommendation['confidence_score']*100:.0f}%</p>
+        <p><strong>Reasoning:</strong> {ai_recommendation['reasoning']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Database-Specific Insights
+    database_scenario = config.get('database_scenario', 'mysql_oltp')
+    db_name = {
+        'mysql_oltp': 'MySQL OLTP',
+        'postgresql_analytics': 'PostgreSQL Analytics',
+        'oracle_enterprise': 'Oracle Enterprise',
+        'mongodb_cluster': 'MongoDB Cluster'
+    }[database_scenario]
+    
+    st.markdown(f"""
+    <div class="database-scenario-card">
+        <h4>🗄️ Database-Specific Considerations for {db_name}</h4>
+        <p><strong>Database Insights:</strong> {ai_recommendation['database_considerations']}</p>
+        <p><strong>Risk Assessment:</strong> {ai_recommendation['risk_assessment']}</p>
+        <p><strong>Cost Justification:</strong> {ai_recommendation['cost_justification']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Pattern Deep Dive
+    best_pattern = pattern_analyses[0]
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**✅ Recommended Pattern Advantages:**")
+        for pro in best_pattern.pros:
+            st.success(f"• {pro}")
+        
+        st.markdown("**🎯 Best Use Cases:**")
+        for use_case in best_pattern.use_cases:
+            st.info(f"• {use_case}")
+    
+    with col2:
+        st.markdown("**⚠️ Considerations & Limitations:**")
+        for con in best_pattern.cons:
+            st.warning(f"• {con}")
+        
+        st.markdown("**💡 Optimization Recommendations:**")
+        if best_pattern.complexity_score > 0.7:
+            st.warning("• High complexity - consider professional services engagement")
+        if best_pattern.total_cost_usd > 5000:
+            st.info("• High cost - evaluate phased migration approach")
+        if best_pattern.migration_time_hours > config['max_downtime_hours']:
+            st.error("• Exceeds downtime SLA - consider incremental migration")
+        else:
+            st.success("• Meets downtime requirements")
+
+def render_database_guidance_tab(config: Dict):
+    """Render database engineer guidance (NEW)"""
+    st.subheader("📚 Database Engineer's Migration Guide")
+    
+    database_scenario = config.get('database_scenario', 'mysql_oltp')
+    
+    # Database-specific guidance
+    guidance_content = {
+        'mysql_oltp': {
+            'title': '🔄 MySQL OLTP Database Migration',
+            'key_considerations': [
+                "Binary log settings for replication consistency",
+                "InnoDB buffer pool warming strategies",
+                "Connection pool configuration",
+                "Read replica lag monitoring"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '500 Mbps',
+                'max_latency': '10ms',
+                'consistency': 'Strict (ACID compliance required)'
+            },
+            'recommended_approach': 'Use AWS DMS with full load + CDC for minimal downtime',
+            'testing_strategy': [
+                "Test replication lag under peak load",
+                "Validate foreign key constraints",
+                "Performance test critical queries",
+                "Failover/failback procedures"
+            ]
+        },
+        'postgresql_analytics': {
+            'title': '📊 PostgreSQL Analytics Migration',
+            'key_considerations': [
+                "Vacuum and analyze statistics",
+                "Extension compatibility (PostGIS, etc.)",
+                "Large table partitioning strategy",
+                "Query performance optimization"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '1000 Mbps',
+                'max_latency': '50ms',
+                'consistency': 'Eventual (some lag acceptable for analytics)'
+            },
+            'recommended_approach': 'Combination of DMS for initial load + DataSync for large data files',
+            'testing_strategy': [
+                "Validate complex analytical queries",
+                "Test ETL pipeline compatibility",
+                "Check data type conversions",
+                "Performance baseline comparison"
+            ]
+        },
+        'oracle_enterprise': {
+            'title': '🏢 Oracle Enterprise Database Migration',
+            'key_considerations': [
+                "Oracle-specific features compatibility",
+                "PL/SQL code conversion needs",
+                "Tablespace and datafile strategy",
+                "RAC to RDS conversion complexity"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '2000 Mbps',
+                'max_latency': '5ms',
+                'consistency': 'Strict (Enterprise SLA requirements)'
+            },
+            'recommended_approach': 'AWS DMS with SCT for schema conversion + careful testing',
+            'testing_strategy': [
+                "Schema conversion validation",
+                "Application compatibility testing",
+                "Performance regression testing",
+                "Disaster recovery validation"
+            ]
+        },
+        'mongodb_cluster': {
+            'title': '🍃 MongoDB Cluster Migration',
+            'key_considerations': [
+                "Sharding strategy preservation",
+                "Index optimization for AWS",
+                "Connection string updates",
+                "Replica set configuration"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '1500 Mbps',
+                'max_latency': '20ms',
+                'consistency': 'Configurable (adjust read/write concerns)'
+            },
+            'recommended_approach': 'Native MongoDB tools + DMS for validation',
+            'testing_strategy': [
+                "Shard balancing verification",
+                "Application driver compatibility",
+                "Performance under load",
+                "Backup and restore procedures"
+            ]
+        }
+    }
+    
+    selected_guidance = guidance_content[database_scenario]
+    
+    # Display guidance
+    st.markdown(f"""
+    <div class="database-scenario-card">
+        <h3>{selected_guidance['title']}</h3>
+        <p><strong>Recommended Approach:</strong> {selected_guidance['recommended_approach']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🔧 Key Technical Considerations:**")
+        for consideration in selected_guidance['key_considerations']:
+            st.info(f"• {consideration}")
+        
+        st.markdown("**📋 Testing Strategy:**")
+        for test in selected_guidance['testing_strategy']:
+            st.success(f"• {test}")
+    
+    with col2:
+        st.markdown("**🌐 Network Requirements:**")
+        requirements = selected_guidance['network_requirements']
+        
+        st.markdown(f"""
+        <div class="network-metric-card">
+            <h4>Minimum Bandwidth</h4>
+            <p style="font-size: 1.5em; color: #3b82f6;">{requirements['min_bandwidth']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="network-metric-card">
+            <h4>Maximum Latency</h4>
+            <p style="font-size: 1.5em; color: #f59e0b;">{requirements['max_latency']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="network-metric-card">
+            <h4>Consistency Model</h4>
+            <p style="font-size: 1.2em; color: #16a34a;">{requirements['consistency']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 # Main application
 def main():
     render_header()
     
-    # Initialize analyzer
-    analyzer = EnhancedNetworkAnalyzer()
-    
     # Sidebar configuration
     config = render_enhanced_sidebar_controls()
     
-    # Main tabs
-    tab1, tab2, tab3 = st.tabs([
-        "💧 Realistic Analysis", 
-        "⏱️ Migration Analysis",
-        "🤖 AI Recommendations"
+    # Initialize analyzer
+    analyzer = EnhancedNetworkAnalyzer()
+    
+    # Main tabs - NOW WITH 5 TABS PRESERVING ALL ORIGINAL FUNCTIONALITY + NEW FEATURES
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "💧 Realistic Analysis",  # ORIGINAL
+        "⏱️ Migration Analysis",   # ORIGINAL 
+        "🤖 Original AI Recommendations",  # ORIGINAL
+        "🔄 Pattern Comparison",    # NEW
+        "📚 Database Guide"        # NEW
     ])
     
     with tab1:
         waterfall_data = render_realistic_analysis_tab(config, analyzer)
     
     with tab2:
-        analysis_results = render_migration_analysis_tab(config, waterfall_data, analyzer)
+        if 'waterfall_data' in locals():
+            analysis_results = render_migration_analysis_tab(config, waterfall_data, analyzer)
+        else:
+            st.info("Please run Realistic Analysis first.")
     
     with tab3:
-        render_ai_recommendations_tab(config, analysis_results, analyzer)
+        if 'analysis_results' in locals():
+            render_ai_recommendations_tab(config, analysis_results, analyzer)
+        else:
+            st.info("Please run Migration Analysis first.")
+    
+    with tab4:
+        pattern_analyses, ai_recommendation = render_pattern_comparison_tab(analyzer, config)
+    
+    with tab5:
+        render_database_guidance_tab(config)
 
 if __name__ == "__main__":
     main()
