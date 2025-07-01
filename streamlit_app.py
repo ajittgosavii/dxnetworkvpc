@@ -94,17 +94,6 @@ st.markdown("""
         line-height: 1.6;
     }
     
-    .placement-card {
-        background: linear-gradient(135deg, #fef3f2 0%, #fecaca 100%);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        border-left: 4px solid #ef4444;
-        font-size: 14px;
-        line-height: 1.6;
-    }
     
     .decision-matrix {
         background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
@@ -265,48 +254,6 @@ st.markdown("""
         font-weight: 500;
     }
 
-    .placement-option {
-        background: white;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-    }
-
-    .placement-option:hover {
-        border-color: #3b82f6;
-        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
-    }
-
-    .placement-option.recommended {
-        border-color: #10b981;
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-    }
-
-    .placement-score {
-        display: inline-block;
-        background: #3b82f6;
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 14px;
-        margin-bottom: 1rem;
-    }
-
-    .placement-score.excellent {
-        background: #10b981;
-    }
-
-    .placement-score.good {
-        background: #f59e0b;
-    }
-
-    .placement-score.poor {
-        background: #ef4444;
-    }
 
     .sql-server-card {
         background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
@@ -1944,8 +1891,8 @@ def render_datasync_backup_configuration(config: Dict, agent_perf: Dict):
         """, unsafe_allow_html=True)
 
 def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_manager, claude_integration):
-    """Render comprehensive agent placement analysis"""
-    st.markdown("**🎯 Agent Placement Strategy Analysis**")
+    """Render comprehensive agent placement analysis using native Streamlit components"""
+    st.markdown("## 🎯 Agent Placement Strategy Analysis")
     
     # Initialize placement analyzer
     placement_analyzer = DatabasePlacementAnalyzer()
@@ -2001,12 +1948,125 @@ def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_mana
         
         st.plotly_chart(fig_placement, use_container_width=True)
         
+        # Display placement options using native Streamlit components
+        st.markdown("### 📋 Detailed Placement Analysis")
+        
+        for i, option in enumerate(placement_options):
+            is_recommended = i == 0
+            
+            # Use different Streamlit container types based on score
+            if option['placement_score'] >= 80:
+                container = st.success if is_recommended else st.info
+            elif option['placement_score'] >= 65:
+                container = st.info
+            else:
+                container = st.warning
+            
+            with st.container():
+                # Header with score
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.subheader(f"{'🏆 ' if is_recommended else ''}{option['strategy']['name']}")
+                    if is_recommended:
+                        st.success("Recommended Strategy")
+                with col2:
+                    st.metric("Score", f"{option['placement_score']:.1f}/100")
+                
+                # Description
+                st.write(option['strategy']['description'])
+                
+                # Key metrics in columns
+                col1, col2, col3, col4 = st.columns(4)
+                
+                with col1:
+                    st.metric(
+                        "Backup Access Performance",
+                        f"{option['throughput_mbps']:,.0f} Mbps",
+                        f"{option['backup_access_efficiency']*100:.0f}% efficiency"
+                    )
+                
+                with col2:
+                    cost_per_mbps = option['monthly_cost'] / option['throughput_mbps']
+                    st.metric(
+                        "Transfer Cost",
+                        f"${option['monthly_cost']:,.0f}/month",
+                        f"${cost_per_mbps:.2f}/Mbps"
+                    )
+                
+                with col3:
+                    st.metric(
+                        "Security",
+                        f"{option['security_score']*100:.0f}%",
+                        "rating"
+                    )
+                
+                with col4:
+                    st.metric(
+                        "Management",
+                        f"{option['management_complexity']*100:.0f}%",
+                        "complexity"
+                    )
+                
+                # Expandable details
+                with st.expander(f"📋 {option['strategy']['name']} - Implementation Details", expanded=is_recommended):
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.markdown("**✅ Advantages for Backup Scenarios:**")
+                        for pro in option['strategy']['pros']:
+                            st.markdown(f"• {pro}")
+                    
+                    with col2:
+                        st.markdown("**⚠️ Challenges:**")
+                        for con in option['strategy']['cons']:
+                            st.markdown(f"• {con}")
+                    
+                    # Implementation timeline using info box
+                    complexity = option['implementation_complexity']
+                    st.info(f"""
+                    **🔧 Implementation Details:**
+                    - **Setup Time:** {complexity['setup_time_days']} days
+                    - **Skill Level Required:** {complexity['skill_level']}
+                    - **Backup Coordination:** {complexity['backup_coordination']}
+                    """)
+                
+                st.divider()  # Add separator between options
+        
+        # Summary comparison table
+        st.markdown("### 📊 Strategy Comparison Summary")
+        
+        # Create a more readable comparison dataframe
+        comparison_data = []
+        for opt in placement_options:
+            comparison_data.append({
+                'Strategy': opt['strategy']['name'],
+                'Score': f"{opt['placement_score']:.1f}/100",
+                'Throughput': f"{opt['throughput_mbps']:,.0f} Mbps",
+                'Monthly Cost': f"${opt['monthly_cost']:,.0f}",
+                'Security': f"{opt['security_score']*100:.0f}%",
+                'Setup Time': f"{opt['implementation_complexity']['setup_time_days']} days",
+                'Backup Access': f"{opt['backup_access_efficiency']*100:.0f}%"
+            })
+        
+        comparison_df = pd.DataFrame(comparison_data)
+        st.dataframe(comparison_df, use_container_width=True)
+        
+        # Best option highlight
+        best_option = placement_options[0]
+        st.success(f"""
+        **🏆 Recommended: {best_option['strategy']['name']}**
+        
+        This strategy provides the best balance of performance ({best_option['placement_score']:.1f}/100), 
+        cost efficiency (${best_option['monthly_cost']:,.0f}/month), and backup access efficiency 
+        ({best_option['backup_access_efficiency']*100:.0f}%).
+        """)
+        
     except Exception as e:
-        st.error(f"Error creating placement chart: {str(e)}")
-        st.info("Placement analysis data is still available below.")
+        st.error(f"Error creating placement analysis: {str(e)}")
+        st.info("Placement analysis data is still available in the summary above.")
 
 def render_infrastructure_topology_with_placement(config: Dict, network_perf: Dict, agent_perf: Dict, placement_type: str):
-    """Render detailed infrastructure topology showing agent placement"""
+    """Render detailed infrastructure topology showing agent placement using native Streamlit"""
     st.markdown("### 🏗️ Infrastructure Topology with Agent Placement")
     
     # Create topology based on placement type
@@ -2089,7 +2149,7 @@ def render_infrastructure_topology_with_placement(config: Dict, network_perf: Di
         }
     ])
     
-    # Create visual topology
+    # Create visual topology using native Streamlit
     st.markdown("#### 🗺️ Network Topology with Agent Placement")
     
     # Group by tier
@@ -2100,31 +2160,46 @@ def render_infrastructure_topology_with_placement(config: Dict, network_perf: Di
             tiers[tier] = []
         tiers[tier].append(comp)
     
-    # Display tiers
+    # Display tiers using native Streamlit columns and containers
     for tier_name, components in tiers.items():
         st.markdown(f"**{tier_name} Tier:**")
         
-        cols = st.columns(len(components) if len(components) <= 4 else 4)
+        # Create columns for components
+        if len(components) <= 4:
+            cols = st.columns(len(components))
+        else:
+            cols = st.columns(4)
         
         for i, comp in enumerate(components):
-            col_idx = i % 4
+            col_idx = i % len(cols)
+            
             with cols[col_idx]:
-                agent_indicator = "🤖 AGENT DEPLOYED" if comp['has_agent'] else ""
-                border_color = "#10b981" if comp['has_agent'] else "#e2e8f0"
-                bg_color = "#f0fdf4" if comp['has_agent'] else "#ffffff"
-                
-                st.markdown(f"""
-                <div style="background: {bg_color}; border: 2px solid {border_color}; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; text-align: center;">
-                    <div style="font-size: 24px; margin-bottom: 0.5rem;">{comp['icon']}</div>
-                    <h6 style="font-size: 14px; font-weight: bold; margin: 0.5rem 0;">{comp['component']}</h6>
-                    <p style="font-size: 12px; color: #6b7280; margin: 0.5rem 0;">{comp['details']}</p>
-                    <p style="font-size: 12px; font-weight: bold; color: #059669; margin: 0;">{comp['status']}</p>
-                    {f'<p style="font-size: 11px; font-weight: bold; color: #dc2626; margin: 0.5rem 0;">{agent_indicator}</p>' if agent_indicator else ''}
-                </div>
-                """, unsafe_allow_html=True)
+                # Use appropriate Streamlit component based on agent deployment
+                if comp['has_agent']:
+                    with st.container():
+                        st.success(f"""
+                        {comp['icon']} **{comp['component']}**
+                        
+                        {comp['details']}
+                        
+                        Status: {comp['status']}
+                        
+                        🤖 **AGENT DEPLOYED**
+                        """)
+                else:
+                    with st.container():
+                        st.info(f"""
+                        {comp['icon']} **{comp['component']}**
+                        
+                        {comp['details']}
+                        
+                        Status: {comp['status']}
+                        """)
+        
+        st.divider()
 
 def render_placement_decision_matrix(config: Dict, placement_options: List[Dict]):
-    """Render decision matrix for placement options"""
+    """Render decision matrix for placement options using native Streamlit"""
     st.markdown("### 📊 Placement Decision Matrix")
     
     # Create decision matrix data
@@ -2149,7 +2224,7 @@ def render_placement_decision_matrix(config: Dict, placement_options: List[Dict]
             'Overall Score': option['placement_score']
         })
     
-    # Create heatmap visualization
+    # Create heatmap visualization (keep this as it's already native Plotly)
     df_matrix = pd.DataFrame(matrix_data)
     
     # Prepare data for heatmap
@@ -2180,14 +2255,39 @@ def render_placement_decision_matrix(config: Dict, placement_options: List[Dict]
     
     st.plotly_chart(fig_matrix, use_container_width=True)
     
-    # Summary table
+    # Summary table using native Streamlit dataframe
     st.markdown("**📋 Detailed Scoring Matrix:**")
     
-    styled_matrix = df_matrix.style.format({
-        col: '{:.1f}' for col in criteria + ['Overall Score']
-    }).background_gradient(subset=criteria + ['Overall Score'], cmap='RdYlGn')
+    # Format the dataframe for better display
+    formatted_df = df_matrix.copy()
+    for col in criteria + ['Overall Score']:
+        formatted_df[col] = formatted_df[col].round(1)
     
-    st.dataframe(styled_matrix, use_container_width=True)
+    # Use Streamlit's native dataframe with styling
+    st.dataframe(
+        formatted_df,
+        use_container_width=True,
+        column_config={
+            "Strategy": st.column_config.TextColumn("Strategy", width="medium"),
+            "Performance": st.column_config.ProgressColumn("Performance", min_value=0, max_value=100),
+            "Cost Efficiency": st.column_config.ProgressColumn("Cost Efficiency", min_value=0, max_value=100),
+            "Security": st.column_config.ProgressColumn("Security", min_value=0, max_value=100),
+            "Management": st.column_config.ProgressColumn("Management", min_value=0, max_value=100),
+            "Implementation": st.column_config.ProgressColumn("Implementation", min_value=0, max_value=100),
+            "Overall Score": st.column_config.ProgressColumn("Overall Score", min_value=0, max_value=100),
+        }
+    )
+    
+    # Highlight the best option
+    best_strategy = df_matrix.loc[df_matrix['Overall Score'].idxmax()]
+    st.success(f"""
+    **🏆 Best Strategy: {best_strategy['Strategy']}**
+    
+    Overall Score: {best_strategy['Overall Score']:.1f}/100
+    - Performance: {best_strategy['Performance']:.1f}/100
+    - Cost Efficiency: {best_strategy['Cost Efficiency']:.1f}/100
+    - Security: {best_strategy['Security']:.1f}/100
+    """)
 
 def render_network_path_visualization(network_perf: Dict, config: Dict, agent_perf: Dict):
     """Render comprehensive network path visualization with detailed infrastructure components"""
