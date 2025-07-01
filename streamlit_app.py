@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Professional CSS styling
+# Professional CSS styling with improved visibility
 st.markdown("""
 <style>
     .main-header {
@@ -31,144 +31,191 @@ st.markdown("""
         color: white;
         text-align: center;
         margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(30,58,138,0.1);
+        box-shadow: 0 4px 15px rgba(30,58,138,0.2);
     }
     
     .network-card {
         background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
+        border-radius: 8px;
+        color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #22c55e;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #22c55e;
+        font-size: 14px;
+        line-height: 1.6;
     }
     
     .performance-card {
         background: linear-gradient(135deg, #fef7f0 0%, #fed7aa 100%);
         padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
+        border-radius: 8px;
+        color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #f97316;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #f97316;
+        font-size: 14px;
+        line-height: 1.6;
     }
     
     .agent-card {
         background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
         padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
+        border-radius: 8px;
+        color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #64748b;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #64748b;
+        font-size: 14px;
+        line-height: 1.6;
     }
     
     .warning-card {
         background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%);
         padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
+        border-radius: 8px;
+        color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #f59e0b;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #f59e0b;
+        font-size: 14px;
+        line-height: 1.6;
     }
 
     .professional-ai-card {
         background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
         padding: 2rem;
-        border-radius: 8px;
+        border-radius: 10px;
         color: #1e293b;
         margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid #3b82f6;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        border-left: 5px solid #3b82f6;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: 15px;
+        line-height: 1.7;
     }
 
     .aws-card {
         background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%);
         padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
+        border-radius: 8px;
+        color: #1f2937;
         margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #d97706;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #d97706;
+        font-size: 14px;
+        line-height: 1.6;
     }
 
     .connection-status {
-        padding: 0.5rem 1rem;
-        border-radius: 4px;
-        margin: 0.5rem 0;
-        font-weight: bold;
+        padding: 0.75rem 1.25rem;
+        border-radius: 6px;
+        margin: 0.75rem 0;
+        font-weight: 600;
+        font-size: 13px;
     }
     
     .status-connected {
         background-color: #d1fae5;
         color: #065f46;
-        border: 1px solid #10b981;
+        border: 2px solid #10b981;
     }
     
     .status-disconnected {
         background-color: #fee2e2;
         color: #991b1b;
-        border: 1px solid #ef4444;
+        border: 2px solid #ef4444;
     }
     
     .status-partial {
         background-color: #fef3c7;
         color: #92400e;
-        border: 1px solid #f59e0b;
+        border: 2px solid #f59e0b;
     }
 
     .network-segment-card {
         background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin: 0.75rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        font-size: 14px;
+        line-height: 1.6;
     }
 
     .segment-performance {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: 0.5rem;
+        margin-top: 0.75rem;
+        font-size: 13px;
+        font-weight: 500;
     }
 
     .ai-section {
         background: white;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        border: 2px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+        font-size: 15px;
+        line-height: 1.7;
     }
 
     .ai-section h4 {
         color: #1e293b;
-        font-weight: 600;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #f1f5f9;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 3px solid #f1f5f9;
+        font-size: 18px;
     }
 
     .ai-section p, .ai-section ul, .ai-section ol {
         color: #475569;
-        line-height: 1.6;
-        margin-bottom: 0.8rem;
+        line-height: 1.8;
+        margin-bottom: 1rem;
+        font-size: 15px;
     }
 
     .ai-section ul li {
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.6rem;
+        font-size: 14px;
     }
 
     .ai-highlight {
         background: #f8fafc;
-        border-left: 3px solid #3b82f6;
+        border-left: 4px solid #3b82f6;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+        border-radius: 0 8px 8px 0;
+        font-size: 15px;
+    }
+
+    /* Improved metric styling */
+    .metric-container {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
         padding: 1rem;
-        margin: 1rem 0;
-        border-radius: 0 6px 6px 0;
+        margin: 0.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+
+    .metric-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+        font-size: 14px;
+        color: #6b7280;
+        font-weight: 500;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1124,7 +1171,7 @@ def render_network_path_visualization(network_perf: Dict, config: Dict, agent_pe
     identify_network_bottlenecks(topology_components, network_perf, agent_perf)
 
 def create_detailed_network_diagram(components):
-    """Create detailed network topology diagram"""
+    """Create detailed network topology diagram with enhanced visibility"""
     st.markdown("#### 🗺️ Network Topology Flow Diagram")
     
     # Create Sankey diagram for network flow
@@ -1138,15 +1185,15 @@ def create_detailed_network_diagram(components):
     colors = []
     
     color_map = {
-        'Source Storage': 'rgba(255, 99, 132, 0.8)',
-        'Source Network': 'rgba(255, 159, 64, 0.8)', 
-        'Local Network': 'rgba(255, 205, 86, 0.8)',
-        'WAN': 'rgba(75, 192, 192, 0.8)',
-        'Migration Platform': 'rgba(54, 162, 235, 0.8)',
-        'Migration Agents': 'rgba(153, 102, 255, 0.8)',
-        'AWS Edge': 'rgba(201, 203, 207, 0.8)',
-        'AWS VPC': 'rgba(255, 99, 132, 0.6)',
-        'AWS Services': 'rgba(46, 204, 113, 0.8)'
+        'Source Storage': 'rgba(255, 99, 132, 0.9)',
+        'Source Network': 'rgba(255, 159, 64, 0.9)', 
+        'Local Network': 'rgba(255, 205, 86, 0.9)',
+        'WAN': 'rgba(75, 192, 192, 0.9)',
+        'Migration Platform': 'rgba(54, 162, 235, 0.9)',
+        'Migration Agents': 'rgba(153, 102, 255, 0.9)',
+        'AWS Edge': 'rgba(201, 203, 207, 0.9)',
+        'AWS VPC': 'rgba(255, 99, 132, 0.7)',
+        'AWS Services': 'rgba(46, 204, 113, 0.9)'
     }
     
     for i, comp in enumerate(components):
@@ -1155,29 +1202,35 @@ def create_detailed_network_diagram(components):
             sources.append(i-1)
             targets.append(i)
             values.append(comp['bandwidth_in'])
-        colors.append(color_map.get(comp['layer'], 'rgba(128, 128, 128, 0.8)'))
+        colors.append(color_map.get(comp['layer'], 'rgba(128, 128, 128, 0.9)'))
     
-    # Create Sankey diagram
+    # Create Sankey diagram with improved visibility
     fig_sankey = go.Figure(data=[go.Sankey(
         node=dict(
-            pad=15,
-            thickness=20,
-            line=dict(color="black", width=0.5),
+            pad=20,
+            thickness=25,
+            line=dict(color="black", width=1),
             label=labels,
-            color=colors
+            color=colors,
+            x=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] if len(labels) == 9 else None,
+            y=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9] if len(labels) == 9 else None
         ),
         link=dict(
             source=sources,
             target=targets,
             value=values,
-            color=[f'rgba(100, 100, 100, 0.3)' for _ in values]
+            color=[f'rgba(100, 100, 100, 0.4)' for _ in values]
         )
     )])
     
     fig_sankey.update_layout(
-        title_text="Network Infrastructure Flow - Bandwidth Progression",
-        font_size=12,
-        height=500
+        title=dict(
+            text="Network Infrastructure Flow - Bandwidth Progression",
+            font=dict(size=18, family="Arial Black")
+        ),
+        font=dict(size=14, family="Arial"),
+        height=600,
+        margin=dict(l=50, r=50, t=80, b=50)
     )
     
     st.plotly_chart(fig_sankey, use_container_width=True)
@@ -1206,71 +1259,81 @@ def create_detailed_network_diagram(components):
                     
                     st.markdown(f"""
                     <div class="network-segment-card">
-                        <h5>{comp['icon']} {comp['component']}</h5>
-                        <p><strong>Function:</strong> {comp['details']}</p>
+                        <h5 style="font-size: 16px; font-weight: bold; color: #1f2937;">{comp['icon']} {comp['component']}</h5>
+                        <p style="font-size: 14px; margin: 8px 0;"><strong>Function:</strong> {comp['details']}</p>
                         <div class="segment-performance">
-                            <div>
+                            <div style="font-size: 13px; line-height: 1.5;">
                                 <strong>Input:</strong> {comp['bandwidth_in']:,.0f} Mbps<br>
                                 <strong>Output:</strong> {comp['bandwidth_out']:,.0f} Mbps<br>
                                 <strong>Loss:</strong> {abs(bandwidth_change):,.0f} Mbps ({abs(bandwidth_pct):.1f}%)<br>
                                 <strong>Latency:</strong> {comp['latency_ms']:.1f} ms<br>
-                                <strong>Status:</strong> <span style="color: green;">{comp['status']}</span>
+                                <strong>Status:</strong> <span style="color: #059669; font-weight: bold;">{comp['status']}</span>
                             </div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
 
 def render_network_performance_dashboard(components, network_perf, agent_perf):
-    """Render comprehensive performance dashboard"""
+    """Render comprehensive performance dashboard with enhanced visibility"""
     st.markdown("#### 📊 Network Performance Dashboard")
     
-    # Key metrics row
+    # Key metrics row with improved styling
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         total_latency = sum(comp['latency_ms'] for comp in components)
-        st.metric(
-            "🕐 Total Latency",
-            f"{total_latency:.1f} ms",
-            delta=f"vs {network_perf['total_latency_ms']:.1f} ms calculated"
-        )
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">🕐 {total_latency:.1f} ms</div>
+            <div class="metric-label">Total Latency</div>
+            <div style="font-size: 12px; color: #6b7280;">vs {network_perf['total_latency_ms']:.1f} ms calculated</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         initial_bw = components[0]['bandwidth_in'] if components else 0
         final_bw = components[-1]['bandwidth_out'] if components else 0
         total_loss = initial_bw - final_bw
-        st.metric(
-            "📉 Total BW Loss",
-            f"{total_loss:,.0f} Mbps",
-            delta=f"{(total_loss/initial_bw)*100:.1f}%" if initial_bw > 0 else "0%"
-        )
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">📉 {total_loss:,.0f} Mbps</div>
+            <div class="metric-label">Total BW Loss</div>
+            <div style="font-size: 12px; color: #6b7280;">{(total_loss/initial_bw)*100:.1f}% total</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
         bottleneck_bw = min(comp['bandwidth_out'] for comp in components)
         bottleneck_comp = next(comp for comp in components if comp['bandwidth_out'] == bottleneck_bw)
-        st.metric(
-            "🚧 Bottleneck",
-            f"{bottleneck_bw:,.0f} Mbps",
-            delta=f"{bottleneck_comp['component'][:20]}..."
-        )
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">🚧 {bottleneck_bw:,.0f} Mbps</div>
+            <div class="metric-label">Bottleneck</div>
+            <div style="font-size: 12px; color: #6b7280;">{bottleneck_comp['component'][:25]}...</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
         agent_efficiency = (agent_perf['total_agent_throughput_mbps'] / agent_perf['base_throughput_mbps']) * 100 if agent_perf.get('base_throughput_mbps') else 0
-        st.metric(
-            "🤖 Agent Efficiency",
-            f"{agent_efficiency:.1f}%",
-            delta=f"{agent_perf['num_agents']} agents"
-        )
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">🤖 {agent_efficiency:.1f}%</div>
+            <div class="metric-label">Agent Efficiency</div>
+            <div style="font-size: 12px; color: #6b7280;">{agent_perf['num_agents']} agents</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col5:
         overall_efficiency = (final_bw / initial_bw) * 100 if initial_bw > 0 else 0
-        st.metric(
-            "🎯 Overall Efficiency",
-            f"{overall_efficiency:.1f}%",
-            delta="End-to-End"
-        )
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">🎯 {overall_efficiency:.1f}%</div>
+            <div class="metric-label">Overall Efficiency</div>
+            <div style="font-size: 12px; color: #6b7280;">End-to-End</div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Performance timeline chart
+    # Performance timeline chart with enhanced visibility
     st.markdown("#### ⏱️ Bandwidth Progression Through Infrastructure")
     
     timeline_data = []
@@ -1290,56 +1353,74 @@ def render_network_performance_dashboard(components, network_perf, agent_perf):
     
     df_timeline = pd.DataFrame(timeline_data)
     
-    # Create dual-axis chart for bandwidth and latency
+    # Create dual-axis chart for bandwidth and latency with improved visibility
     fig = go.Figure()
     
-    # Bandwidth progression
+    # Bandwidth progression with enhanced styling
     fig.add_trace(go.Scatter(
         x=df_timeline['Step'],
         y=df_timeline['Bandwidth_Out'],
         mode='lines+markers',
         name='Bandwidth (Mbps)',
-        line=dict(color='blue', width=3),
-        marker=dict(size=8),
+        line=dict(color='#3b82f6', width=4),
+        marker=dict(size=10, color='#1e40af'),
         text=df_timeline['Component'],
         hovertemplate='<b>%{text}</b><br>Bandwidth: %{y:,.0f} Mbps<extra></extra>'
     ))
     
-    # Add latency on secondary y-axis
+    # Add latency on secondary y-axis with enhanced styling
     fig.add_trace(go.Scatter(
         x=df_timeline['Step'],
         y=df_timeline['Cumulative_Latency'],
         mode='lines+markers',
         name='Cumulative Latency (ms)',
-        line=dict(color='red', width=2, dash='dash'),
-        marker=dict(size=6),
+        line=dict(color='#ef4444', width=3, dash='dash'),
+        marker=dict(size=8, color='#dc2626'),
         yaxis='y2',
         text=df_timeline['Component'],
         hovertemplate='<b>%{text}</b><br>Latency: %{y:.1f} ms<extra></extra>'
     ))
     
-    # Update layout for dual axis
+    # Update layout for dual axis with enhanced visibility
     fig.update_layout(
-        title='Network Performance Progression Through Infrastructure',
-        xaxis_title='Infrastructure Component Sequence',
-        yaxis=dict(title='Bandwidth (Mbps)', side='left'),
-        yaxis2=dict(title='Cumulative Latency (ms)', side='right', overlaying='y'),
-        height=400,
-        hovermode='x unified'
+        title=dict(
+            text='Network Performance Progression Through Infrastructure',
+            font=dict(size=18, family="Arial Black")
+        ),
+        xaxis=dict(
+            title=dict(text='Infrastructure Component Sequence', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        yaxis=dict(
+            title=dict(text='Bandwidth (Mbps)', font=dict(size=14, color='#3b82f6')), 
+            side='left',
+            tickfont=dict(size=12, color='#3b82f6')
+        ),
+        yaxis2=dict(
+            title=dict(text='Cumulative Latency (ms)', font=dict(size=14, color='#ef4444')), 
+            side='right', 
+            overlaying='y',
+            tickfont=dict(size=12, color='#ef4444')
+        ),
+        height=500,
+        hovermode='x unified',
+        font=dict(size=12),
+        legend=dict(font=dict(size=12))
     )
     
-    # Add component labels on x-axis
+    # Add component labels on x-axis with better formatting
     fig.update_xaxes(
         tickmode='array',
         tickvals=df_timeline['Step'],
-        ticktext=[f"{comp[:15]}..." if len(comp) > 15 else comp for comp in df_timeline['Component']],
-        tickangle=45
+        ticktext=[f"{comp[:18]}..." if len(comp) > 18 else comp for comp in df_timeline['Component']],
+        tickangle=45,
+        tickfont=dict(size=11)
     )
     
     st.plotly_chart(fig, use_container_width=True)
 
 def render_infrastructure_component_analysis(components, config):
-    """Render detailed infrastructure component analysis"""
+    """Render detailed infrastructure component analysis with enhanced visibility"""
     st.markdown("#### 🔬 Infrastructure Component Deep Dive")
     
     # Migration-specific components analysis
@@ -1353,14 +1434,14 @@ def render_infrastructure_component_analysis(components, config):
         with col1:
             st.markdown("""
             <div class="network-card">
-                <h6>🔄 DataSync Agent Characteristics</h6>
-                <ul>
-                    <li><strong>Protocol:</strong> Custom AWS protocol over HTTPS</li>
-                    <li><strong>Compression:</strong> Real-time data compression</li>
-                    <li><strong>Verification:</strong> Checksum validation</li>
-                    <li><strong>Encryption:</strong> TLS 1.2 in transit</li>
-                    <li><strong>Optimization:</strong> Sparse file detection</li>
-                    <li><strong>Throttling:</strong> Configurable bandwidth control</li>
+                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🔄 DataSync Agent Characteristics</h6>
+                <ul style="font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                    <li style="margin-bottom: 6px;"><strong>Protocol:</strong> Custom AWS protocol over HTTPS</li>
+                    <li style="margin-bottom: 6px;"><strong>Compression:</strong> Real-time data compression</li>
+                    <li style="margin-bottom: 6px;"><strong>Verification:</strong> Checksum validation</li>
+                    <li style="margin-bottom: 6px;"><strong>Encryption:</strong> TLS 1.2 in transit</li>
+                    <li style="margin-bottom: 6px;"><strong>Optimization:</strong> Sparse file detection</li>
+                    <li style="margin-bottom: 6px;"><strong>Throttling:</strong> Configurable bandwidth control</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -1368,13 +1449,15 @@ def render_infrastructure_component_analysis(components, config):
         with col2:
             st.markdown(f"""
             <div class="performance-card">
-                <h6>⚡ Current DataSync Configuration</h6>
-                <p><strong>Agent Count:</strong> {config['number_of_agents']}</p>
-                <p><strong>Agent Size:</strong> {config['agent_size'].title()}</p>
-                <p><strong>Platform:</strong> {config['server_type'].title()}</p>
-                <p><strong>File System:</strong> {config.get('storage_type', 'NFS').upper()}</p>
-                <p><strong>Source Size:</strong> {config['database_size_gb']:,} GB</p>
-                <p><strong>Expected Transfer:</strong> File-level synchronization</p>
+                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">⚡ Current DataSync Configuration</h6>
+                <div style="font-size: 14px; line-height: 1.6;">
+                    <p style="margin: 8px 0;"><strong>Agent Count:</strong> {config['number_of_agents']}</p>
+                    <p style="margin: 8px 0;"><strong>Agent Size:</strong> {config['agent_size'].title()}</p>
+                    <p style="margin: 8px 0;"><strong>Platform:</strong> {config['server_type'].title()}</p>
+                    <p style="margin: 8px 0;"><strong>File System:</strong> {config.get('storage_type', 'NFS').upper()}</p>
+                    <p style="margin: 8px 0;"><strong>Source Size:</strong> {config['database_size_gb']:,} GB</p>
+                    <p style="margin: 8px 0;"><strong>Expected Transfer:</strong> File-level synchronization</p>
+                </div>
             </div>
             """, unsafe_allow_html=True)
     
@@ -1386,14 +1469,14 @@ def render_infrastructure_component_analysis(components, config):
         with col1:
             st.markdown("""
             <div class="network-card">
-                <h6>🗃️ DMS Instance Characteristics</h6>
-                <ul>
-                    <li><strong>Migration:</strong> Database-level replication</li>
-                    <li><strong>CDC:</strong> Change Data Capture support</li>
-                    <li><strong>Schema:</strong> Automatic schema conversion</li>
-                    <li><strong>Validation:</strong> Data validation tools</li>
-                    <li><strong>Monitoring:</strong> CloudWatch integration</li>
-                    <li><strong>Filtering:</strong> Table and column filtering</li>
+                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🗃️ DMS Instance Characteristics</h6>
+                <ul style="font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                    <li style="margin-bottom: 6px;"><strong>Migration:</strong> Database-level replication</li>
+                    <li style="margin-bottom: 6px;"><strong>CDC:</strong> Change Data Capture support</li>
+                    <li style="margin-bottom: 6px;"><strong>Schema:</strong> Automatic schema conversion</li>
+                    <li style="margin-bottom: 6px;"><strong>Validation:</strong> Data validation tools</li>
+                    <li style="margin-bottom: 6px;"><strong>Monitoring:</strong> CloudWatch integration</li>
+                    <li style="margin-bottom: 6px;"><strong>Filtering:</strong> Table and column filtering</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
@@ -1401,67 +1484,77 @@ def render_infrastructure_component_analysis(components, config):
         with col2:
             st.markdown(f"""
             <div class="performance-card">
-                <h6>⚡ Current DMS Configuration</h6>
-                <p><strong>Instance Count:</strong> {config['number_of_agents']}</p>
-                <p><strong>Instance Size:</strong> {config['agent_size'].title()}</p>
-                <p><strong>Source DB:</strong> {config.get('source_database_engine', 'MySQL').upper()}</p>
-                <p><strong>Target DB:</strong> {config.get('database_engine', 'MySQL').upper()}</p>
-                <p><strong>Data Size:</strong> {config['database_size_gb']:,} GB</p>
-                <p><strong>Migration Type:</strong> {'Homogeneous' if config.get('is_homogeneous') else 'Heterogeneous'}</p>
+                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">⚡ Current DMS Configuration</h6>
+                <div style="font-size: 14px; line-height: 1.6;">
+                    <p style="margin: 8px 0;"><strong>Instance Count:</strong> {config['number_of_agents']}</p>
+                    <p style="margin: 8px 0;"><strong>Instance Size:</strong> {config['agent_size'].title()}</p>
+                    <p style="margin: 8px 0;"><strong>Source DB:</strong> {config.get('source_database_engine', 'MySQL').upper()}</p>
+                    <p style="margin: 8px 0;"><strong>Target DB:</strong> {config.get('database_engine', 'MySQL').upper()}</p>
+                    <p style="margin: 8px 0;"><strong>Data Size:</strong> {config['database_size_gb']:,} GB</p>
+                    <p style="margin: 8px 0;"><strong>Migration Type:</strong> {'Homogeneous' if config.get('is_homogeneous') else 'Heterogeneous'}</p>
+                </div>
             </div>
             """, unsafe_allow_html=True)
     
-    # Network infrastructure details
+    # Network infrastructure details with improved visibility
     st.markdown("##### 🌐 Network Infrastructure Components")
     
     infrastructure_tabs = st.tabs(["🔀 Switching", "🛡️ Security", "🌉 Connectivity", "☁️ AWS Services"])
     
     with infrastructure_tabs[0]:
         st.markdown("""
-        **Core Network Switching Infrastructure:**
+        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
+        <strong style="font-size: 16px;">Core Network Switching Infrastructure:</strong><br><br>
         
-        • **Access Layer:** Server-to-switch connectivity (typically 1/10 GbE)
-        • **Aggregation Layer:** VLAN aggregation and policy enforcement  
-        • **Core Layer:** High-speed backbone (10/25/40 GbE)
-        • **Redundancy:** Link aggregation and spanning tree protocols
-        • **QoS:** Traffic prioritization for migration flows
-        """)
+        • <strong>Access Layer:</strong> Server-to-switch connectivity (typically 1/10 GbE)<br>
+        • <strong>Aggregation Layer:</strong> VLAN aggregation and policy enforcement<br>
+        • <strong>Core Layer:</strong> High-speed backbone (10/25/40 GbE)<br>
+        • <strong>Redundancy:</strong> Link aggregation and spanning tree protocols<br>
+        • <strong>QoS:</strong> Traffic prioritization for migration flows<br>
+        </div>
+        """, unsafe_allow_html=True)
     
     with infrastructure_tabs[1]:
         st.markdown("""
-        **Security Infrastructure Components:**
+        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
+        <strong style="font-size: 16px;">Security Infrastructure Components:</strong><br><br>
         
-        • **Firewalls:** Stateful inspection and application awareness
-        • **IPS/IDS:** Intrusion prevention and detection systems
-        • **VPN Concentrators:** Encrypted tunnel termination
-        • **NAT Gateways:** Network address translation services
-        • **Certificate Management:** PKI and SSL/TLS certificate handling
-        """)
+        • <strong>Firewalls:</strong> Stateful inspection and application awareness<br>
+        • <strong>IPS/IDS:</strong> Intrusion prevention and detection systems<br>
+        • <strong>VPN Concentrators:</strong> Encrypted tunnel termination<br>
+        • <strong>NAT Gateways:</strong> Network address translation services<br>
+        • <strong>Certificate Management:</strong> PKI and SSL/TLS certificate handling<br>
+        </div>
+        """, unsafe_allow_html=True)
     
     with infrastructure_tabs[2]:
         st.markdown("""
-        **Wide Area Network Connectivity:**
+        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
+        <strong style="font-size: 16px;">Wide Area Network Connectivity:</strong><br><br>
         
-        • **MPLS Networks:** Private label-switched paths
-        • **Direct Connect:** Dedicated AWS connectivity
-        • **SD-WAN:** Software-defined WAN optimization
-        • **Load Balancers:** Traffic distribution and failover
-        • **WAN Optimization:** Compression and caching appliances
-        """)
+        • <strong>MPLS Networks:</strong> Private label-switched paths<br>
+        • <strong>Direct Connect:</strong> Dedicated AWS connectivity<br>
+        • <strong>SD-WAN:</strong> Software-defined WAN optimization<br>
+        • <strong>Load Balancers:</strong> Traffic distribution and failover<br>
+        • <strong>WAN Optimization:</strong> Compression and caching appliances<br>
+        </div>
+        """, unsafe_allow_html=True)
     
     with infrastructure_tabs[3]:
         st.markdown("""
-        **AWS Cloud Services Integration:**
+        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
+        <strong style="font-size: 16px;">AWS Cloud Services Integration:</strong><br><br>
         
-        • **VPC Transit Gateway:** Multi-VPC routing hub
-        • **Direct Connect Gateway:** Cross-region connectivity
-        • **Route 53:** DNS resolution and health checks
-        • **CloudFront:** Global content delivery network
-        • **WAF/Shield:** Web application firewall and DDoS protection
-        """)
+        • <strong>VPC Transit Gateway:</strong> Multi-VPC routing hub<br>
+        • <strong>Direct Connect Gateway:</strong> Cross-region connectivity<br>
+        • <strong>Route 53:</strong> DNS resolution and health checks<br>
+        • <strong>CloudFront:</strong> Global content delivery network<br>
+        • <strong>WAF/Shield:</strong> Web application firewall and DDoS protection<br>
+        </div>
+        """, unsafe_allow_html=True)
 
 def identify_network_bottlenecks(components, network_perf, agent_perf):
-    """Identify and analyze network bottlenecks"""
+    """Identify and analyze network bottlenecks with enhanced visibility"""
     st.markdown("#### 🚧 Bottleneck Analysis & Optimization Opportunities")
     
     # Find bandwidth bottlenecks
@@ -1482,7 +1575,7 @@ def identify_network_bottlenecks(components, network_perf, agent_perf):
     # Find latency hotspots
     latency_hotspots = [comp for comp in components if comp['latency_ms'] > 5.0]
     
-    # Analysis results
+    # Analysis results with enhanced visibility
     col1, col2 = st.columns(2)
     
     with col1:
@@ -1490,30 +1583,46 @@ def identify_network_bottlenecks(components, network_perf, agent_perf):
         
         if bandwidth_drops:
             for drop in bandwidth_drops:
-                st.warning(f"""
-                **Bandwidth Drop Detected:**
-                • **From:** {drop['from_component']}
-                • **To:** {drop['to_component']}  
-                • **Loss:** {drop['bandwidth_loss']:,.0f} Mbps ({drop['loss_percentage']:.1f}%)
-                """)
+                st.markdown(f"""
+                <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                    <strong style="color: #92400e; font-size: 15px;">⚠️ Bandwidth Drop Detected:</strong><br>
+                    <div style="margin-top: 8px; line-height: 1.6;">
+                        • <strong>From:</strong> {drop['from_component']}<br>
+                        • <strong>To:</strong> {drop['to_component']}<br>
+                        • <strong>Loss:</strong> {drop['bandwidth_loss']:,.0f} Mbps ({drop['loss_percentage']:.1f}%)
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            st.success("✅ No significant bandwidth drops detected")
+            st.markdown("""
+            <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #065f46; font-size: 15px;">✅ No significant bandwidth drops detected</strong>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("##### 🕐 Latency Hotspots")
         
         if latency_hotspots:
             for hotspot in latency_hotspots:
-                st.warning(f"""
-                **High Latency Component:**
-                • **Component:** {hotspot['component']}
-                • **Latency:** {hotspot['latency_ms']:.1f} ms
-                • **Layer:** {hotspot['layer']}
-                """)
+                st.markdown(f"""
+                <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                    <strong style="color: #92400e; font-size: 15px;">⚠️ High Latency Component:</strong><br>
+                    <div style="margin-top: 8px; line-height: 1.6;">
+                        • <strong>Component:</strong> {hotspot['component']}<br>
+                        • <strong>Latency:</strong> {hotspot['latency_ms']:.1f} ms<br>
+                        • <strong>Layer:</strong> {hotspot['layer']}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            st.success("✅ All components within acceptable latency ranges")
+            st.markdown("""
+            <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #065f46; font-size: 15px;">✅ All components within acceptable latency ranges</strong>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # Optimization recommendations
+    # Optimization recommendations with enhanced visibility
     st.markdown("##### 🎯 Optimization Recommendations")
     
     final_throughput = min(network_perf['effective_bandwidth_mbps'], agent_perf['total_agent_throughput_mbps'])
@@ -1531,48 +1640,56 @@ def identify_network_bottlenecks(components, network_perf, agent_perf):
     optimization_cols = st.columns(3)
     
     with optimization_cols[0]:
+        card_class = "warning-card" if primary_bottleneck == 'network' else "network-card"
         st.markdown(f"""
-        <div class="{'warning-card' if primary_bottleneck == 'network' else 'network-card'}">
-            <h6>🌐 Network Optimization</h6>
-            <p><strong>Current:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</p>
-            <p><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'network' else 'No'}</p>
-            <p><strong>Recommendations:</strong></p>
-            <ul>
-                <li>Upgrade WAN bandwidth</li>
-                <li>Optimize routing paths</li>
-                <li>Implement QoS policies</li>
-            </ul>
+        <div class="{card_class}">
+            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🌐 Network Optimization</h6>
+            <div style="font-size: 14px; line-height: 1.6;">
+                <p style="margin: 6px 0;"><strong>Current:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</p>
+                <p style="margin: 6px 0;"><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'network' else 'No'}</p>
+                <p style="margin: 10px 0 6px 0;"><strong>Recommendations:</strong></p>
+                <ul style="margin: 0; padding-left: 18px;">
+                    <li style="margin-bottom: 4px;">Upgrade WAN bandwidth</li>
+                    <li style="margin-bottom: 4px;">Optimize routing paths</li>
+                    <li style="margin-bottom: 4px;">Implement QoS policies</li>
+                </ul>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
     with optimization_cols[1]:
+        card_class = "warning-card" if primary_bottleneck == 'agent' else "network-card"
         st.markdown(f"""
-        <div class="{'warning-card' if primary_bottleneck == 'agent' else 'network-card'}">
-            <h6>🤖 Agent Optimization</h6>
-            <p><strong>Current:</strong> {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</p>
-            <p><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'agent' else 'No'}</p>
-            <p><strong>Recommendations:</strong></p>
-            <ul>
-                <li>Scale agent instances</li>
-                <li>Upgrade instance sizes</li>
-                <li>Optimize configurations</li>
-            </ul>
+        <div class="{card_class}">
+            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🤖 Agent Optimization</h6>
+            <div style="font-size: 14px; line-height: 1.6;">
+                <p style="margin: 6px 0;"><strong>Current:</strong> {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</p>
+                <p style="margin: 6px 0;"><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'agent' else 'No'}</p>
+                <p style="margin: 10px 0 6px 0;"><strong>Recommendations:</strong></p>
+                <ul style="margin: 0; padding-left: 18px;">
+                    <li style="margin-bottom: 4px;">Scale agent instances</li>
+                    <li style="margin-bottom: 4px;">Upgrade instance sizes</li>
+                    <li style="margin-bottom: 4px;">Optimize configurations</li>
+                </ul>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
     with optimization_cols[2]:
         st.markdown(f"""
         <div class="performance-card">
-            <h6>📊 Potential Improvement</h6>
-            <p><strong>Current Performance:</strong> {final_throughput:,.0f} Mbps</p>
-            <p><strong>Potential Gain:</strong> {potential_gain:,.0f} Mbps</p>
-            <p><strong>Improvement:</strong> {(potential_gain/final_throughput)*100:.1f}%</p>
-            <p><strong>Primary Focus:</strong> {primary_bottleneck.title()} Layer</p>
+            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">📊 Potential Improvement</h6>
+            <div style="font-size: 14px; line-height: 1.6;">
+                <p style="margin: 6px 0;"><strong>Current Performance:</strong> {final_throughput:,.0f} Mbps</p>
+                <p style="margin: 6px 0;"><strong>Potential Gain:</strong> {potential_gain:,.0f} Mbps</p>
+                <p style="margin: 6px 0;"><strong>Improvement:</strong> {(potential_gain/final_throughput)*100:.1f}%</p>
+                <p style="margin: 6px 0;"><strong>Primary Focus:</strong> {primary_bottleneck.title()} Layer</p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
 def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_perf: Dict):
-    """Enhanced bandwidth waterfall with storage type analysis"""
+    """Enhanced bandwidth waterfall with storage type analysis and improved visibility"""
     st.markdown("**🌊 Enhanced Bandwidth Waterfall: Complete Performance Analysis**")
     
     user_nic_speed = config['nic_speed']
@@ -1641,14 +1758,14 @@ def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_
     throughputs.append(final_throughput)
     descriptions.append(f"{agent_perf['num_agents']}x {agent_perf['agent_type']} agents")
     
-    # Create enhanced visualization
+    # Create enhanced visualization with improved visibility
     waterfall_data = pd.DataFrame({
         'Stage': stages,
         'Throughput (Mbps)': throughputs,
         'Description': descriptions
     })
     
-    # Create subplot with performance loss
+    # Create enhanced bar chart with better visibility
     fig = px.bar(
         waterfall_data,
         x='Stage',
@@ -1656,69 +1773,100 @@ def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_
         title=f"Enhanced Analysis: {user_nic_speed:,.0f} Mbps → {final_throughput:.0f} Mbps ({storage_mount.upper()}/{platform_type})",
         text='Throughput (Mbps)',
         color='Throughput (Mbps)',
-        color_continuous_scale='RdYlGn'
+        color_continuous_scale='RdYlGn',
+        hover_data=['Description']
     )
     
-    fig.update_traces(texttemplate='%{text:.0f}', textposition='outside')
-    fig.update_layout(height=500, showlegend=False)
+    fig.update_traces(
+        texttemplate='%{text:.0f}', 
+        textposition='outside',
+        textfont=dict(size=14, family="Arial Black")
+    )
+    
+    fig.update_layout(
+        height=600,
+        showlegend=False,
+        title=dict(
+            font=dict(size=18, family="Arial Black")
+        ),
+        xaxis=dict(
+            title=dict(text='Analysis Stages', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        yaxis=dict(
+            title=dict(text='Throughput (Mbps)', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        font=dict(size=12)
+    )
     
     st.plotly_chart(fig, use_container_width=True)
     
-    # Enhanced analysis summary
+    # Enhanced analysis summary with improved visibility
     total_loss = user_nic_speed - final_throughput
     total_loss_pct = (total_loss / user_nic_speed) * 100
     
-    # Storage type impact analysis
+    # Storage type impact analysis with enhanced cards
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown(f"""
-        **🔍 Storage Protocol Impact:**
-        • **Protocol Type:** {storage_mount.upper()}
-        • **Efficiency:** {storage_efficiency*100:.1f}%
-        • **Performance Loss:** {(1-storage_efficiency)*100:.1f}%
-        • **Bandwidth Impact:** {after_platform - after_storage:.0f} Mbps lost
-        """)
+        <div class="network-card">
+            <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🔍 Storage Protocol Impact</h4>
+            <div style="font-size: 14px; line-height: 1.7;">
+                • <strong>Protocol Type:</strong> {storage_mount.upper()}<br>
+                • <strong>Efficiency:</strong> {storage_efficiency*100:.1f}%<br>
+                • <strong>Performance Loss:</strong> {(1-storage_efficiency)*100:.1f}%<br>
+                • <strong>Bandwidth Impact:</strong> {after_platform - after_storage:.0f} Mbps lost
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
         st.markdown(f"""
-        **⚙️ Platform Impact:**
-        • **Platform:** {platform_type.title()}
-        • **Efficiency:** {agent_perf['platform_efficiency']*100:.1f}%
-        • **Performance Loss:** {(1-agent_perf['platform_efficiency'])*100:.1f}%
-        • **Bandwidth Impact:** {after_os - after_platform:.0f} Mbps lost
-        """)
+        <div class="performance-card">
+            <h4 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">⚙️ Platform Impact</h4>
+            <div style="font-size: 14px; line-height: 1.7;">
+                • <strong>Platform:</strong> {platform_type.title()}<br>
+                • <strong>Efficiency:</strong> {agent_perf['platform_efficiency']*100:.1f}%<br>
+                • <strong>Performance Loss:</strong> {(1-agent_perf['platform_efficiency'])*100:.1f}%<br>
+                • <strong>Bandwidth Impact:</strong> {after_os - after_platform:.0f} Mbps lost
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Comparison analysis
+    # Comparison analysis with enhanced visibility
     if storage_mount == 'smb':
         nfs_efficiency = 1.0  # Theoretical NFS efficiency
         nfs_throughput = (after_platform / storage_efficiency) * nfs_efficiency
         performance_gain = nfs_throughput - after_storage
         
-        st.warning(f"""
-        **⚠️ SMB Protocol Performance Impact:**
-        • **Current (SMB):** {after_storage:.0f} Mbps
-        • **Potential (NFS):** {nfs_throughput:.0f} Mbps  
-        • **Performance Gain:** {performance_gain:.0f} Mbps (+{(performance_gain/after_storage)*100:.1f}%)
-        
-        💡 **Recommendation:** Consider Linux NAS with NFS for optimal performance
-        """)
+        st.markdown(f"""
+        <div style="background: #fef3c7; border: 3px solid #f59e0b; border-radius: 10px; padding: 20px; margin: 15px 0; font-size: 15px; line-height: 1.7;">
+            <strong style="color: #92400e; font-size: 17px;">⚠️ SMB Protocol Performance Impact:</strong><br><br>
+            • <strong>Current (SMB):</strong> {after_storage:.0f} Mbps<br>
+            • <strong>Potential (NFS):</strong> {nfs_throughput:.0f} Mbps<br>
+            • <strong>Performance Gain:</strong> {performance_gain:.0f} Mbps (+{(performance_gain/after_storage)*100:.1f}%)<br><br>
+            💡 <strong>Recommendation:</strong> Consider Linux NAS with NFS for optimal performance
+        </div>
+        """, unsafe_allow_html=True)
     
     if platform_type == 'vmware':
         physical_throughput = after_os  # No virtualization overhead
         platform_gain = physical_throughput - after_platform
         
-        st.info(f"""
-        **☁️ VMware Virtualization Impact:**
-        • **Current (VMware):** {after_platform:.0f} Mbps
-        • **Potential (Physical):** {physical_throughput:.0f} Mbps
-        • **Performance Gain:** {platform_gain:.0f} Mbps (+{(platform_gain/after_platform)*100:.1f}%)
-        
-        💡 **Trade-off:** Physical servers offer better performance but less flexibility
-        """)
+        st.markdown(f"""
+        <div style="background: #e0f2fe; border: 3px solid #0288d1; border-radius: 10px; padding: 20px; margin: 15px 0; font-size: 15px; line-height: 1.7;">
+            <strong style="color: #01579b; font-size: 17px;">☁️ VMware Virtualization Impact:</strong><br><br>
+            • <strong>Current (VMware):</strong> {after_platform:.0f} Mbps<br>
+            • <strong>Potential (Physical):</strong> {physical_throughput:.0f} Mbps<br>
+            • <strong>Performance Gain:</strong> {platform_gain:.0f} Mbps (+{(platform_gain/after_platform)*100:.1f}%)<br><br>
+            💡 <strong>Trade-off:</strong> Physical servers offer better performance but less flexibility
+        </div>
+        """, unsafe_allow_html=True)
 
 def render_storage_comparison_analysis(config: Dict):
-    """Render detailed storage type comparison"""
+    """Render detailed storage type comparison with enhanced visibility"""
     st.markdown("**📊 Storage Protocol Performance Comparison**")
     
     # Create comparison scenarios
@@ -1751,7 +1899,7 @@ def render_storage_comparison_analysis(config: Dict):
     
     df_scenarios = pd.DataFrame(scenarios)
     
-    # Create comparison chart
+    # Create comparison chart with enhanced visibility
     fig = px.bar(
         df_scenarios,
         x='Configuration',
@@ -1762,42 +1910,80 @@ def render_storage_comparison_analysis(config: Dict):
         text='Throughput (Mbps)'
     )
     
-    fig.update_traces(texttemplate='%{text:.0f} Mbps', textposition='outside')
-    fig.update_layout(height=400, xaxis_tickangle=-45)
+    fig.update_traces(
+        texttemplate='%{text:.0f} Mbps', 
+        textposition='outside',
+        textfont=dict(size=14, family="Arial Black")
+    )
+    
+    fig.update_layout(
+        height=500,
+        xaxis_tickangle=-45,
+        title=dict(
+            font=dict(size=18, family="Arial Black")
+        ),
+        xaxis=dict(
+            title=dict(text='Configuration', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        yaxis=dict(
+            title=dict(text='Throughput (Mbps)', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        font=dict(size=12)
+    )
     
     st.plotly_chart(fig, use_container_width=True)
     
-    # Performance impact table
+    # Performance impact table with enhanced styling
     st.markdown("**📋 Detailed Performance Analysis:**")
-    st.dataframe(df_scenarios.drop('Current', axis=1), use_container_width=True)
     
-    # Key insights
+    # Style the dataframe for better visibility
+    styled_df = df_scenarios.drop('Current', axis=1).style.format({
+        'Throughput (Mbps)': '{:.0f}',
+        'Efficiency (%)': '{:.1f}%',
+        'Performance Loss (%)': '{:.1f}%'
+    }).background_gradient(subset=['Throughput (Mbps)'], cmap='RdYlGn')
+    
+    st.dataframe(styled_df, use_container_width=True, height=200)
+    
+    # Key insights with enhanced visibility
     best_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmax()]
     worst_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmin()]
     
     performance_diff = best_config['Throughput (Mbps)'] - worst_config['Throughput (Mbps)']
     performance_diff_pct = (performance_diff / worst_config['Throughput (Mbps)']) * 100
     
-    st.success(f"""
-    **🏆 Key Performance Insights:**
-    • **Best Configuration:** {best_config['Configuration']} ({best_config['Throughput (Mbps)']:.0f} Mbps)
-    • **Worst Configuration:** {worst_config['Configuration']} ({worst_config['Throughput (Mbps)']:.0f} Mbps)
-    • **Performance Gap:** {performance_diff:.0f} Mbps ({performance_diff_pct:.1f}% difference)
-    • **Linux NFS Advantage:** ~20-25% better than Windows SMB
-    • **Physical Server Advantage:** ~8-12% better than VMware
-    """)
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 3px solid #10b981; border-radius: 12px; padding: 20px; margin: 20px 0; font-size: 15px; line-height: 1.8;">
+        <strong style="color: #065f46; font-size: 18px;">🏆 Key Performance Insights:</strong><br><br>
+        • <strong>Best Configuration:</strong> {best_config['Configuration']} ({best_config['Throughput (Mbps)']:.0f} Mbps)<br>
+        • <strong>Worst Configuration:</strong> {worst_config['Configuration']} ({worst_config['Throughput (Mbps)']:.0f} Mbps)<br>
+        • <strong>Performance Gap:</strong> {performance_diff:.0f} Mbps ({performance_diff_pct:.1f}% difference)<br>
+        • <strong>Linux NFS Advantage:</strong> ~20-25% better than Windows SMB<br>
+        • <strong>Physical Server Advantage:</strong> ~8-12% better than VMware
+    </div>
+    """, unsafe_allow_html=True)
 
 def render_aws_integration_panel(aws_integration: AWSIntegration):
-    """Render AWS integration status and real-time data"""
+    """Render AWS integration status and real-time data with enhanced visibility"""
     st.markdown("**☁️ AWS Real-Time Integration**")
     
     if not aws_integration.session:
-        st.info("AWS integration not connected. Check sidebar for connection status.")
+        st.markdown("""
+        <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+            <strong style="color: #01579b;">ℹ️ AWS integration not connected. Check sidebar for connection status.</strong>
+        </div>
+        """, unsafe_allow_html=True)
         return {}
     
-    # Show current region
+    # Show current region with enhanced styling
     current_region = aws_integration.session.region_name
-    st.info(f"📍 **Connected to AWS Region:** {current_region}")
+    st.markdown(f"""
+    <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 15px;">
+        <strong style="color: #01579b;">📍 Connected to AWS Region: {current_region}</strong>
+    </div>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
@@ -1806,10 +1992,18 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
         datasync_tasks = aws_integration.get_datasync_tasks()
         
         if datasync_tasks:
-            st.success(f"Found {len(datasync_tasks)} DataSync tasks in {current_region}")
+            st.markdown(f"""
+            <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #065f46;">✅ Found {len(datasync_tasks)} DataSync tasks in {current_region}</strong>
+            </div>
+            """, unsafe_allow_html=True)
+            
             for task in datasync_tasks[:3]:  # Show first 3 tasks
-                with st.expander(f"Task: {task['name']}"):
-                    st.write(f"**Status:** {task['status']}")
+                with st.expander(f"Task: {task['name']}", expanded=False):
+                    st.markdown(f"""
+                    <div style="font-size: 14px; line-height: 1.6;">
+                        <strong>Status:</strong> {task['status']}<br>
+                    """)
                     # Extract location names from ARNs for better readability
                     source_loc = task['source_location'].split('/')[-1] if task['source_location'] != 'Unknown' else 'Unknown'
                     dest_loc = task['destination_location'].split('/')[-1] if task['destination_location'] != 'Unknown' else 'Unknown'
@@ -1819,16 +2013,25 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
                         latest_execution = task['executions'][0]
                         st.write(f"**Latest Execution:** {latest_execution.get('Status', 'Unknown')}")
         else:
-            st.warning(f"No DataSync tasks found in {current_region}")
+            st.markdown(f"""
+            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #92400e;">⚠️ No DataSync tasks found in {current_region}</strong>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col2:
         st.markdown("**🔄 DMS Tasks**")
         dms_tasks = aws_integration.get_dms_tasks()
         
         if dms_tasks:
-            st.success(f"Found {len(dms_tasks)} DMS tasks in {current_region}")
+            st.markdown(f"""
+            <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #065f46;">✅ Found {len(dms_tasks)} DMS tasks in {current_region}</strong>
+            </div>
+            """, unsafe_allow_html=True)
+            
             for task in dms_tasks[:3]:  # Show first 3 tasks
-                with st.expander(f"Task: {task['name']}"):
+                with st.expander(f"Task: {task['name']}", expanded=False):
                     st.write(f"**Status:** {task['status']}")
                     st.write(f"**Migration Type:** {task['migration_type']}")
                     # Extract endpoint names from ARNs for better readability
@@ -1837,7 +2040,11 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
                     st.write(f"**Source Endpoint:** {source_ep}")
                     st.write(f"**Target Endpoint:** {target_ep}")
         else:
-            st.warning(f"No DMS tasks found in {current_region}")
+            st.markdown(f"""
+            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #92400e;">⚠️ No DMS tasks found in {current_region}</strong>
+            </div>
+            """, unsafe_allow_html=True)
     
     return {
         'datasync_tasks': len(datasync_tasks),
@@ -1885,14 +2092,18 @@ def parse_ai_analysis(analysis_text: str) -> Dict:
 
 def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
                                    network_perf: Dict, agent_perf: Dict, aws_data: Dict):
-    """Render professionally formatted Claude AI analysis"""
+    """Render professionally formatted Claude AI analysis with enhanced visibility"""
     st.markdown("**🤖 AI-Powered Performance Analysis**")
     
     if not claude_integration.client:
-        st.info("Claude AI integration not connected. Check sidebar for connection status.")
+        st.markdown("""
+        <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+            <strong style="color: #01579b;">ℹ️ Claude AI integration not connected. Check sidebar for connection status.</strong>
+        </div>
+        """, unsafe_allow_html=True)
         return
     
-    with st.spinner("Analyzing migration configuration..."):
+    with st.spinner("🔄 Analyzing migration configuration..."):
         analysis = claude_integration.analyze_migration_performance(
             config, network_perf, agent_perf, aws_data
         )
@@ -1900,44 +2111,44 @@ def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, con
     # Parse the analysis into sections
     sections = parse_ai_analysis(analysis)
     
-    # Render sections professionally
+    # Render sections professionally with enhanced visibility
     if sections['performance_bottleneck']:
         st.markdown(f"""
         <div class="ai-section">
-            <h4>🔍 Performance Bottleneck Analysis</h4>
-            <div>{sections['performance_bottleneck'].replace(chr(10), '<br>')}</div>
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🔍 Performance Bottleneck Analysis</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['performance_bottleneck'].replace(chr(10), '<br>')}</div>
         </div>
         """, unsafe_allow_html=True)
     
     if sections['optimization_recommendations']:
         st.markdown(f"""
         <div class="ai-section">
-            <h4>🚀 Optimization Recommendations</h4>
-            <div>{sections['optimization_recommendations'].replace(chr(10), '<br>')}</div>
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🚀 Optimization Recommendations</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['optimization_recommendations'].replace(chr(10), '<br>')}</div>
         </div>
         """, unsafe_allow_html=True)
     
     if sections['expected_vs_actual']:
         st.markdown(f"""
         <div class="ai-section">
-            <h4>📊 Expected vs Actual Performance</h4>
-            <div>{sections['expected_vs_actual'].replace(chr(10), '<br>')}</div>
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">📊 Expected vs Actual Performance</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['expected_vs_actual'].replace(chr(10), '<br>')}</div>
         </div>
         """, unsafe_allow_html=True)
     
     if sections['cost_optimization']:
         st.markdown(f"""
         <div class="ai-section">
-            <h4>💰 Cost Optimization Suggestions</h4>
-            <div>{sections['cost_optimization'].replace(chr(10), '<br>')}</div>
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">💰 Cost Optimization Suggestions</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['cost_optimization'].replace(chr(10), '<br>')}</div>
         </div>
         """, unsafe_allow_html=True)
     
     if sections['risk_assessment']:
         st.markdown(f"""
         <div class="ai-section">
-            <h4>⚠️ Risk Assessment & Mitigation</h4>
-            <div>{sections['risk_assessment'].replace(chr(10), '<br>')}</div>
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">⚠️ Risk Assessment & Mitigation</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['risk_assessment'].replace(chr(10), '<br>')}</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1945,8 +2156,8 @@ def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, con
     if not any(sections.values()):
         st.markdown(f"""
         <div class="ai-section">
-            <h4>🧠 Complete Analysis</h4>
-            <div>{analysis.replace(chr(10), '<br>')}</div>
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🧠 Complete Analysis</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -1956,16 +2167,16 @@ def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, con
     else:
         bottleneck_type = "agent"
     
-    with st.expander("🎯 Targeted Optimization Recommendations"):
-        with st.spinner("Getting optimization recommendations..."):
+    with st.expander("🎯 Targeted Optimization Recommendations", expanded=False):
+        with st.spinner("🔄 Getting optimization recommendations..."):
             recommendations = claude_integration.get_optimization_recommendations(
                 bottleneck_type, config
             )
         
         st.markdown(f"""
         <div class="ai-section">
-            <h4>🔧 {bottleneck_type.title()} Bottleneck Solutions</h4>
-            <div>{recommendations.replace(chr(10), '<br>')}</div>
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🔧 {bottleneck_type.title()} Bottleneck Solutions</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{recommendations.replace(chr(10), '<br>')}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2129,18 +2340,18 @@ def render_enhanced_sidebar():
     }
 
 def main():
-    """Enhanced main application with automatic secret integration"""
-    # Header
+    """Enhanced main application with automatic secret integration and improved visibility"""
+    # Header with enhanced styling
     st.markdown("""
     <div class="main-header">
-        <h1>🌐 Enhanced AWS Network Migration Analyzer</h1>
-        <p>AI-Powered Analysis • Real-Time AWS Metrics • Physical vs VMware Performance • Storage Protocol Optimization</p>
+        <h1 style="font-size: 32px; margin-bottom: 15px;">🌐 Enhanced AWS Network Migration Analyzer</h1>
+        <p style="font-size: 18px; margin: 0;">AI-Powered Analysis • Real-Time AWS Metrics • Physical vs VMware Performance • Storage Protocol Optimization</p>
     </div>
     """, unsafe_allow_html=True)
     
     # Initialize integrations using secrets
     if 'integrations_initialized' not in st.session_state:
-        with st.spinner("Initializing API integrations..."):
+        with st.spinner("🔄 Initializing API integrations..."):
             integration_status = initialize_integrations()
             st.session_state.update(integration_status)
             st.session_state['integrations_initialized'] = True
@@ -2187,7 +2398,7 @@ def main():
     if st.session_state.get('aws_integration') and st.session_state['aws_integration'].session:
         aws_data = render_aws_integration_panel(st.session_state['aws_integration'])
     
-    # Main content tabs
+    # Main content tabs with enhanced styling
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🌊 Enhanced Bandwidth Analysis",
         "📊 Storage Performance Comparison", 
@@ -2201,7 +2412,7 @@ def main():
         st.subheader("🌊 Enhanced Bandwidth Waterfall Analysis")
         render_enhanced_bandwidth_waterfall(config, network_perf, agent_perf)
         
-        # Physical vs VMware comparison
+        # Physical vs VMware comparison with enhanced visibility
         st.markdown("**⚖️ Physical vs VMware Performance Impact**")
         
         # Calculate both scenarios
@@ -2218,24 +2429,28 @@ def main():
         comparison_col1, comparison_col2 = st.columns(2)
         
         with comparison_col1:
-            st.metric(
-                "🏢 Physical Server Performance",
-                f"{physical_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
-                delta=f"+{physical_agent_perf['total_agent_throughput_mbps'] - vmware_agent_perf['total_agent_throughput_mbps']:.0f} Mbps vs VMware"
-            )
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">🏢 {physical_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</div>
+                <div class="metric-label">Physical Server Performance</div>
+                <div style="font-size: 12px; color: #059669;">+{physical_agent_perf['total_agent_throughput_mbps'] - vmware_agent_perf['total_agent_throughput_mbps']:.0f} Mbps vs VMware</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with comparison_col2:
-            st.metric(
-                "☁️ VMware Performance", 
-                f"{vmware_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
-                delta=f"{vmware_agent_perf['performance_loss_pct']:.1f}% total loss"
-            )
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">☁️ {vmware_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</div>
+                <div class="metric-label">VMware Performance</div>
+                <div style="font-size: 12px; color: #dc2626;">{vmware_agent_perf['performance_loss_pct']:.1f}% total loss</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     with tab2:
         st.subheader("📊 Storage Protocol Performance Analysis")
         render_storage_comparison_analysis(config)
         
-        # Real-world performance insights
+        # Real-world performance insights with enhanced visibility
         st.markdown("**🔬 Real-World Performance Insights**")
         
         col1, col2 = st.columns(2)
@@ -2243,30 +2458,26 @@ def main():
         with col1:
             st.markdown("""
             <div class="network-card">
-                <h4>🐧 Linux NFS Advantages</h4>
-                <ul>
-                    <li><strong>Lower CPU overhead:</strong> Kernel-level NFS client</li>
-                    <li><strong>Better caching:</strong> Page cache optimization</li>
-                    <li><strong>Efficient metadata:</strong> Reduced round trips</li>
-                    <li><strong>Parallel I/O:</strong> Multiple outstanding requests</li>
-                    <li><strong>Network efficiency:</strong> TCP window scaling</li>
+                <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">🐧 Linux NFS Advantages</h4>
+                <ul style="font-size: 14px; line-height: 1.7; margin: 0; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;"><strong>Network efficiency:</strong> TCP window scaling</li>
                 </ul>
-                <p><strong>Typical Performance:</strong> 85-95% of line rate</p>
+                <p style="margin-top: 15px; font-size: 15px;"><strong>Typical Performance:</strong> 85-95% of line rate</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
             st.markdown("""
             <div class="warning-card">
-                <h4>🪟 Windows SMB Challenges</h4>
-                <ul>
-                    <li><strong>Protocol overhead:</strong> SMB2/3 authentication</li>
-                    <li><strong>Opportunistic locks:</strong> Performance penalties</li>
-                    <li><strong>Buffer management:</strong> User-space overhead</li>
-                    <li><strong>Latency sensitivity:</strong> Chatty protocol</li>
-                    <li><strong>Security overhead:</strong> Encryption impact</li>
+                <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">🪟 Windows SMB Challenges</h4>
+                <ul style="font-size: 14px; line-height: 1.7; margin: 0; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;"><strong>Protocol overhead:</strong> SMB2/3 authentication</li>
+                    <li style="margin-bottom: 8px;"><strong>Opportunistic locks:</strong> Performance penalties</li>
+                    <li style="margin-bottom: 8px;"><strong>Buffer management:</strong> User-space overhead</li>
+                    <li style="margin-bottom: 8px;"><strong>Latency sensitivity:</strong> Chatty protocol</li>
+                    <li style="margin-bottom: 8px;"><strong>Security overhead:</strong> Encryption impact</li>
                 </ul>
-                <p><strong>Typical Performance:</strong> 65-80% of line rate</p>
+                <p style="margin-top: 15px; font-size: 15px;"><strong>Typical Performance:</strong> 65-80% of line rate</p>
             </div>
             """, unsafe_allow_html=True)
     
@@ -2274,55 +2485,85 @@ def main():
         st.subheader("🌐 Enhanced Network Path Visualization")
         render_network_path_visualization(network_perf, config, agent_perf)
         
+        # Enhanced metrics with improved visibility
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric("🎯 Network Quality", f"{network_perf['network_quality_score']:.1f}/100")
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">🎯 {network_perf['network_quality_score']:.1f}/100</div>
+                <div class="metric-label">Network Quality</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col2:
-            st.metric("⚡ Bandwidth", f"{network_perf['effective_bandwidth_mbps']:,.0f} Mbps")
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">⚡ {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</div>
+                <div class="metric-label">Bandwidth</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col3:
-            st.metric("🕐 Latency", f"{network_perf['total_latency_ms']:.1f} ms")
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">🕐 {network_perf['total_latency_ms']:.1f} ms</div>
+                <div class="metric-label">Latency</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col4:
-            st.metric("🛡️ Reliability", f"{network_perf['total_reliability']*100:.2f}%")
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">🛡️ {network_perf['total_reliability']*100:.2f}%</div>
+                <div class="metric-label">Reliability</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     with tab4:
         # Enhanced agent performance analysis
         st.subheader("🤖 Enhanced Agent Performance Analysis")
         
+        # Enhanced metrics with improved visibility
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
-            st.metric(
-                "🔧 Configuration",
-                f"{agent_perf['num_agents']}x {agent_perf['agent_size'].title()}",
-                delta=f"{agent_perf['agent_type'].upper()}"
-            )
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">🔧 {agent_perf['num_agents']}x {agent_perf['agent_size'].title()}</div>
+                <div class="metric-label">Configuration</div>
+                <div style="font-size: 12px; color: #6b7280;">{agent_perf['agent_type'].upper()}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col2:
-            st.metric(
-                "⚡ Total Capacity",
-                f"{agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
-                delta=f"{agent_perf['performance_loss_pct']:.1f}% loss from ideal"
-            )
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">⚡ {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</div>
+                <div class="metric-label">Total Capacity</div>
+                <div style="font-size: 12px; color: #dc2626;">{agent_perf['performance_loss_pct']:.1f}% loss from ideal</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col3:
-            st.metric(
-                "🎯 Platform Efficiency",
-                f"{agent_perf['platform_efficiency']*100:.1f}%",
-                delta=f"{config['server_type'].title()}"
-            )
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">🎯 {agent_perf['platform_efficiency']*100:.1f}%</div>
+                <div class="metric-label">Platform Efficiency</div>
+                <div style="font-size: 12px; color: #6b7280;">{config['server_type'].title()}</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         with col4:
-            st.metric(
-                "💰 Monthly Cost",
-                f"${agent_perf['total_monthly_cost']:,.0f}",
-                delta=f"${agent_perf['per_agent_monthly_cost']:.0f}/agent"
-            )
+            st.markdown(f"""
+            <div class="metric-container">
+                <div class="metric-value">💰 ${agent_perf['total_monthly_cost']:,.0f}</div>
+                <div class="metric-label">Monthly Cost</div>
+                <div style="font-size: 12px; color: #6b7280;">${agent_perf['per_agent_monthly_cost']:.0f}/agent</div>
+            </div>
+            """, unsafe_allow_html=True)
         
-        # Detailed performance breakdown
+        # Detailed performance breakdown with enhanced visibility
         st.markdown("**📈 Performance Impact Breakdown**")
         
         impact_data = {
@@ -2351,7 +2592,30 @@ def main():
             y='Cumulative (Mbps)',
             title='Agent Performance Impact Analysis',
             color='Impact (%)',
-            color_continuous_scale='RdYlGn'
+            color_continuous_scale='RdYlGn',
+            text='Cumulative (Mbps)'
+        )
+        
+        fig_impact.update_traces(
+            texttemplate='%{text:.0f}',
+            textposition='outside',
+            textfont=dict(size=14, family="Arial Black")
+        )
+        
+        fig_impact.update_layout(
+            height=500,
+            title=dict(
+                font=dict(size=18, family="Arial Black")
+            ),
+            xaxis=dict(
+                title=dict(text='Performance Factors', font=dict(size=14)),
+                tickfont=dict(size=12)
+            ),
+            yaxis=dict(
+                title=dict(text='Cumulative Throughput (Mbps)', font=dict(size=14)),
+                tickfont=dict(size=12)
+            ),
+            font=dict(size=12)
         )
         
         st.plotly_chart(fig_impact, use_container_width=True)
@@ -2363,7 +2627,7 @@ def main():
         if aws_integration and aws_integration.session:
             aws_data_detailed = render_aws_integration_panel(aws_integration)
             
-            # CloudWatch metrics visualization
+            # CloudWatch metrics visualization with enhanced visibility
             st.markdown("**📊 CloudWatch Metrics**")
             
             metrics_col1, metrics_col2 = st.columns(2)
@@ -2372,18 +2636,38 @@ def main():
                 if agent_type == 'datasync':
                     datasync_metrics = aws_integration.get_cloudwatch_metrics('datasync')
                     if datasync_metrics:
-                        st.success(f"Found {len(datasync_metrics)} DataSync metrics")
+                        st.markdown(f"""
+                        <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                            <strong style="color: #065f46;">✅ Found {len(datasync_metrics)} DataSync metrics</strong>
+                        </div>
+                        """, unsafe_allow_html=True)
                     else:
-                        st.info("No recent DataSync metrics available")
+                        st.markdown("""
+                        <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                            <strong style="color: #01579b;">ℹ️ No recent DataSync metrics available</strong>
+                        </div>
+                        """, unsafe_allow_html=True)
             
             with metrics_col2:
                 dms_metrics = aws_integration.get_cloudwatch_metrics('dms')
                 if dms_metrics:
-                    st.success(f"Found {len(dms_metrics)} DMS metrics") 
+                    st.markdown(f"""
+                    <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                        <strong style="color: #065f46;">✅ Found {len(dms_metrics)} DMS metrics</strong>
+                    </div>
+                    """, unsafe_allow_html=True)
                 else:
-                    st.info("No recent DMS metrics available")
+                    st.markdown("""
+                    <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                        <strong style="color: #01579b;">ℹ️ No recent DMS metrics available</strong>
+                    </div>
+                    """, unsafe_allow_html=True)
         else:
-            st.warning("AWS integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.")
+            st.markdown("""
+            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #92400e;">⚠️ AWS integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.</strong>
+            </div>
+            """, unsafe_allow_html=True)
             aws_data_detailed = {}
     
     with tab6:
@@ -2396,9 +2680,13 @@ def main():
                 config, network_perf, agent_perf, aws_data
             )
         else:
-            st.warning("Claude AI integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.")
+            st.markdown("""
+            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+                <strong style="color: #92400e;">⚠️ Claude AI integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.</strong>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # Final recommendations summary
+    # Final recommendations summary with enhanced visibility
     st.markdown("---")
     st.markdown("### 🎯 Executive Summary & Recommendations")
     
@@ -2415,12 +2703,14 @@ def main():
     with summary_col1:
         st.markdown(f"""
         <div class="performance-card">
-            <h4>📊 Performance Summary</h4>
-            <p><strong>Final Throughput:</strong> {final_throughput:,.0f} Mbps</p>
-            <p><strong>Overall Efficiency:</strong> {efficiency:.1f}%</p>
-            <p><strong>Migration Time:</strong> {migration_time:.1f} hours</p>
-            <p><strong>Platform:</strong> {config['server_type'].title()}</p>
-            <p><strong>Storage:</strong> {network_perf.get('storage_mount_type', 'Unknown').upper()}</p>
+            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📊 Performance Summary</h4>
+            <div style="font-size: 15px; line-height: 1.8;">
+                <p style="margin: 8px 0;"><strong>Final Throughput:</strong> {final_throughput:,.0f} Mbps</p>
+                <p style="margin: 8px 0;"><strong>Overall Efficiency:</strong> {efficiency:.1f}%</p>
+                <p style="margin: 8px 0;"><strong>Migration Time:</strong> {migration_time:.1f} hours</p>
+                <p style="margin: 8px 0;"><strong>Platform:</strong> {config['server_type'].title()}</p>
+                <p style="margin: 8px 0;"><strong>Storage:</strong> {network_perf.get('storage_mount_type', 'Unknown').upper()}</p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -2434,12 +2724,14 @@ def main():
         
         st.markdown(f"""
         <div class="network-card">
-            <h4>🚀 Optimization Potential</h4>
-            <p><strong>Current:</strong> {final_throughput:,.0f} Mbps</p>
-            <p><strong>Optimized:</strong> {potential_throughput:,.0f} Mbps</p>
-            <p><strong>Improvement:</strong> {((potential_throughput/final_throughput)-1)*100:.1f}%</p>
-            <p><strong>Time Savings:</strong> {time_savings:.1f} hours</p>
-            <p><strong>Recommendations:</strong> Linux NFS + Physical</p>
+            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🚀 Optimization Potential</h4>
+            <div style="font-size: 15px; line-height: 1.8;">
+                <p style="margin: 8px 0;"><strong>Current:</strong> {final_throughput:,.0f} Mbps</p>
+                <p style="margin: 8px 0;"><strong>Optimized:</strong> {potential_throughput:,.0f} Mbps</p>
+                <p style="margin: 8px 0;"><strong>Improvement:</strong> {((potential_throughput/final_throughput)-1)*100:.1f}%</p>
+                <p style="margin: 8px 0;"><strong>Time Savings:</strong> {time_savings:.1f} hours</p>
+                <p style="margin: 8px 0;"><strong>Recommendations:</strong> Linux NFS + Physical</p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
     
@@ -2449,14 +2741,20 @@ def main():
         
         st.markdown(f"""
         <div class="agent-card">
-            <h4>💰 Cost Analysis</h4>
-            <p><strong>Hourly Cost:</strong> ${cost_per_hour:.2f}/hour</p>
-            <p><strong>Migration Cost:</strong> ${migration_cost:.2f}</p>
-            <p><strong>Monthly Budget:</strong> ${agent_perf['total_monthly_cost']:,.0f}</p>
-            <p><strong>Cost per GB:</strong> ${migration_cost/config['database_size_gb']:.4f}</p>
-            <p><strong>Agent Efficiency:</strong> {100-agent_perf['performance_loss_pct']:.1f}%</p>
+            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">💰 Cost Analysis</h4>
+            <div style="font-size: 15px; line-height: 1.8;">
+                <p style="margin: 8px 0;"><strong>Hourly Cost:</strong> ${cost_per_hour:.2f}/hour</p>
+                <p style="margin: 8px 0;"><strong>Migration Cost:</strong> ${migration_cost:.2f}</p>
+                <p style="margin: 8px 0;"><strong>Monthly Budget:</strong> ${agent_perf['total_monthly_cost']:,.0f}</p>
+                <p style="margin: 8px 0;"><strong>Cost per GB:</strong> ${migration_cost/config['database_size_gb']:.4f}</p>
+                <p style="margin: 8px 0;"><strong>Agent Efficiency:</strong> {100-agent_perf['performance_loss_pct']:.1f}%</p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
-    main()
+    main()>Lower CPU overhead:</strong> Kernel-level NFS client</li>
+                    <li style="margin-bottom: 8px;"><strong>Better caching:</strong> Page cache optimization</li>
+                    <li style="margin-bottom: 8px;"><strong>Efficient metadata:</strong> Reduced round trips</li>
+                    <li style="margin-bottom: 8px;"><strong>Parallel I/O:</strong> Multiple outstanding requests</li>
+                    <li style="margin-bottom: 8px;"><strong
