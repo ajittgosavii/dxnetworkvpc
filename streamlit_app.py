@@ -275,38 +275,96 @@ st.markdown("""
         font-weight: 500;
     }
     
-    /* Progress Indicators */
-    .progress-step {
-        display: flex;
-        align-items: center;
-        margin: 1rem 0;
-        padding: 1rem;
+    /* Enhanced Progress Steps */
+    .flow-step {
         background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin: 0.75rem 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e5e7eb;
+        position: relative;
+        transition: all 0.3s ease;
     }
     
-    .progress-number {
+    .flow-step:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        transform: translateX(4px);
+    }
+    
+    .flow-step-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .flow-step-number {
         background: var(--secondary-blue);
         color: white;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 600;
+        font-weight: 700;
+        font-size: 0.9rem;
         margin-right: 1rem;
+        flex-shrink: 0;
     }
     
-    .progress-content {
+    .flow-step-title {
+        font-weight: 600;
+        color: var(--primary-blue);
+        font-size: 1.1rem;
         flex: 1;
     }
     
-    .progress-value {
-        font-size: 1.1rem;
+    .flow-step-details {
+        margin-left: 3rem;
+    }
+    
+    .flow-step-value {
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+    }
+    
+    .flow-step-description {
+        color: var(--medium-gray);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .flow-step-remaining {
+        color: var(--success-green);
         font-weight: 600;
-        color: var(--primary-blue);
+        font-size: 1rem;
+    }
+    
+    .flow-step-reduction {
+        color: var(--error-red);
+    }
+    
+    .flow-step-starting {
+        border-left: 4px solid var(--success-green);
+    }
+    
+    .flow-step-reduction-type {
+        border-left: 4px solid var(--warning-orange);
+    }
+    
+    .flow-step-final {
+        border-left: 4px solid var(--primary-blue);
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+    }
+    
+    .flow-arrow {
+        text-align: center;
+        margin: 0.5rem 0;
+        color: var(--medium-gray);
+        font-size: 1.5rem;
+        font-weight: 700;
     }
     
     /* Responsive Design */
@@ -321,6 +379,21 @@ st.markdown("""
         
         .metric-grid {
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+        
+        .flow-step-details {
+            margin-left: 0;
+            margin-top: 1rem;
+        }
+        
+        .flow-step-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .flow-step-number {
+            margin-right: 0;
+            margin-bottom: 0.5rem;
         }
     }
 </style>
@@ -564,8 +637,6 @@ class EnhancedNetworkAnalyzer:
     """Comprehensive network analyzer with realistic infrastructure modeling and migration services + AI enhancements"""
     
     def __init__(self):
-        # PRESERVING ALL ORIGINAL CHARACTERISTICS
-        
         # Operating System Network Stack Characteristics
         self.os_characteristics = {
             'windows_server_2019': {
@@ -882,6 +953,122 @@ class EnhancedNetworkAnalyzer:
             }
         }
         
+        # Enhanced Database Scenarios with AWS targets
+        self.database_scenarios = {
+            'mysql_oltp_rds': {
+                'name': 'MySQL OLTP Database → RDS MySQL',
+                'workload_type': 'oltp',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for MySQL',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'medium',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 500,
+                'max_tolerable_latency_ms': 10,
+                'migration_complexity': 'low',
+                'downtime_sensitivity': 'high'
+            },
+            'postgresql_analytics_rds': {
+                'name': 'PostgreSQL Analytics → RDS PostgreSQL',
+                'workload_type': 'olap',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for PostgreSQL',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'eventual',
+                'recommended_services': ['dms', 'datasync'],
+                'min_bandwidth_mbps': 1000,
+                'max_tolerable_latency_ms': 50,
+                'migration_complexity': 'medium',
+                'downtime_sensitivity': 'medium'
+            },
+            'oracle_enterprise_rds': {
+                'name': 'Oracle Enterprise → RDS Oracle',
+                'workload_type': 'mixed',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for Oracle',
+                'latency_sensitivity': 'very_high',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 2000,
+                'max_tolerable_latency_ms': 5,
+                'migration_complexity': 'high',
+                'downtime_sensitivity': 'very_high'
+            },
+            'sqlserver_enterprise_ec2': {
+                'name': 'SQL Server Enterprise → EC2',
+                'workload_type': 'mixed',
+                'aws_target': 'ec2',
+                'target_service': 'SQL Server on Amazon EC2',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms', 'datasync'],
+                'min_bandwidth_mbps': 1500,
+                'max_tolerable_latency_ms': 8,
+                'migration_complexity': 'high',
+                'downtime_sensitivity': 'high'
+            },
+            'mongodb_cluster_documentdb': {
+                'name': 'MongoDB Cluster → DocumentDB',
+                'workload_type': 'mixed',
+                'aws_target': 'documentdb',
+                'target_service': 'Amazon DocumentDB',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'eventual',
+                'recommended_services': ['dms', 'datasync'],
+                'min_bandwidth_mbps': 1500,
+                'max_tolerable_latency_ms': 20,
+                'migration_complexity': 'medium',
+                'downtime_sensitivity': 'medium'
+            },
+            'mysql_analytics_aurora': {
+                'name': 'MySQL Analytics → Aurora MySQL',
+                'workload_type': 'olap',
+                'aws_target': 'aurora',
+                'target_service': 'Amazon Aurora MySQL',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'eventual',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 1200,
+                'max_tolerable_latency_ms': 25,
+                'migration_complexity': 'medium',
+                'downtime_sensitivity': 'low'
+            },
+            'postgresql_oltp_aurora': {
+                'name': 'PostgreSQL OLTP → Aurora PostgreSQL',
+                'workload_type': 'oltp',
+                'aws_target': 'aurora',
+                'target_service': 'Amazon Aurora PostgreSQL',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'medium',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 800,
+                'max_tolerable_latency_ms': 12,
+                'migration_complexity': 'low',
+                'downtime_sensitivity': 'high'
+            },
+            'mariadb_oltp_rds': {
+                'name': 'MariaDB OLTP → RDS MariaDB',
+                'workload_type': 'oltp',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for MariaDB',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'medium',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 600,
+                'max_tolerable_latency_ms': 10,
+                'migration_complexity': 'low',
+                'downtime_sensitivity': 'high'
+            }
+        }
+        
         # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
         self.migration_services = {
             'datasync': {
@@ -1078,55 +1265,10 @@ class EnhancedNetworkAnalyzer:
             }
         }
         
-        # Database-specific migration scenarios (NEW)
-        self.database_scenarios = {
-            'mysql_oltp': {
-                'name': 'MySQL OLTP Database',
-                'workload_type': 'oltp',
-                'latency_sensitivity': 'high',
-                'bandwidth_requirement': 'medium',
-                'consistency_requirement': 'strict',
-                'recommended_services': ['dms'],
-                'min_bandwidth_mbps': 500,
-                'max_tolerable_latency_ms': 10
-            },
-            'postgresql_analytics': {
-                'name': 'PostgreSQL Analytics',
-                'workload_type': 'olap',
-                'latency_sensitivity': 'medium',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'eventual',
-                'recommended_services': ['dms', 'datasync'],
-                'min_bandwidth_mbps': 1000,
-                'max_tolerable_latency_ms': 50
-            },
-            'oracle_enterprise': {
-                'name': 'Oracle Enterprise Database',
-                'workload_type': 'mixed',
-                'latency_sensitivity': 'very_high',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'strict',
-                'recommended_services': ['dms'],
-                'min_bandwidth_mbps': 2000,
-                'max_tolerable_latency_ms': 5
-            },
-            'mongodb_cluster': {
-                'name': 'MongoDB Cluster',
-                'workload_type': 'mixed',
-                'latency_sensitivity': 'medium',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'eventual',
-                'recommended_services': ['dms', 'datasync'],
-                'min_bandwidth_mbps': 1500,
-                'max_tolerable_latency_ms': 20
-            }
-        }
-        
         # Initialize new clients
         self.pricing_client = AWSPricingClient()
         self.ai_client = ClaudeAIClient()
     
-    # PRESERVING ALL ORIGINAL METHODS
     def determine_optimal_pattern(self, source_location: str, environment: str, migration_service: str) -> str:
         """Determine optimal network pattern based on requirements"""
         if source_location == 'San Jose':
@@ -1142,7 +1284,7 @@ class EnhancedNetworkAnalyzer:
         return 'sj_nonprod_direct_connect'
     
     def calculate_realistic_bandwidth_waterfall(self, pattern_key: str, migration_service: str, service_size: str, num_instances: int) -> Dict:
-        """Calculate realistic bandwidth waterfall with detailed infrastructure impact (ORIGINAL METHOD PRESERVED)"""
+        """Calculate realistic bandwidth waterfall with detailed infrastructure impact"""
         pattern = self.network_patterns[pattern_key]
         service = self.migration_services[migration_service]
         service_spec = service['sizes'][service_size]
@@ -1358,7 +1500,7 @@ class EnhancedNetworkAnalyzer:
         }
     
     def assess_service_compatibility(self, pattern_key: str, migration_service: str, service_size: str) -> Dict:
-        """Assess service compatibility with network pattern (ORIGINAL METHOD PRESERVED)"""
+        """Assess service compatibility with network pattern"""
         pattern = self.network_patterns[pattern_key]
         service = self.migration_services[migration_service]
         
@@ -1392,7 +1534,7 @@ class EnhancedNetworkAnalyzer:
         return compatibility_assessment
     
     def estimate_migration_time(self, data_size_gb: int, effective_throughput_mbps: int, migration_service: str) -> Dict:
-        """Estimate migration timing with service-specific considerations (ORIGINAL METHOD PRESERVED)"""
+        """Estimate migration timing with service-specific considerations"""
         data_size_gbits = data_size_gb * 8
         service = self.migration_services[migration_service]
         
@@ -1419,7 +1561,7 @@ class EnhancedNetworkAnalyzer:
         }
     
     def generate_ai_recommendations(self, config: Dict, analysis_results: Dict) -> Dict:
-        """Generate AI-powered recommendations (ORIGINAL METHOD PRESERVED)"""
+        """Generate AI-powered recommendations"""
         migration_time = analysis_results['migration_time']
         waterfall_data = analysis_results['waterfall_data']
         service_compatibility = analysis_results.get('service_compatibility', {})
@@ -1508,7 +1650,7 @@ class EnhancedNetworkAnalyzer:
         complexity_score = 1.0 - pattern['complexity_score']  # Invert for scoring
         
         # Database suitability
-        db_scenario = config.get('database_scenario', 'mysql_oltp')
+        db_scenario = config.get('database_scenario', 'mysql_oltp_rds')
         db_workload = self.database_scenarios.get(db_scenario, {}).get('workload_type', 'oltp')
         db_suitability = pattern['database_suitability'].get(db_workload, 0.8)
         
@@ -1661,7 +1803,7 @@ class EnhancedNetworkAnalyzer:
             'environment': config['environment'],
             'max_downtime_hours': config['max_downtime_hours'],
             'source_location': config['source_location'],
-            'database_scenario': config.get('database_scenario', 'mysql_oltp'),
+            'database_scenario': config.get('database_scenario', 'mysql_oltp_rds'),
             'patterns': [
                 {
                     'name': p.pattern_name,
@@ -1728,17 +1870,26 @@ def render_enhanced_sidebar_controls():
     
     # Database Scenario Selection
     st.sidebar.subheader("🗄️ Database Scenario")
+    
+    # Get analyzer instance to access database scenarios
+    analyzer = EnhancedNetworkAnalyzer()
+    database_scenarios = list(analyzer.database_scenarios.keys())
+    
     database_scenario = st.sidebar.selectbox(
-        "Database Type & Workload",
-        ["mysql_oltp", "postgresql_analytics", "oracle_enterprise", "mongodb_cluster"],
-        format_func=lambda x: {
-            'mysql_oltp': '🔄 MySQL OLTP Database',
-            'postgresql_analytics': '📊 PostgreSQL Analytics',
-            'oracle_enterprise': '🏢 Oracle Enterprise DB',
-            'mongodb_cluster': '🍃 MongoDB Cluster'
-        }[x],
-        help="Select your database type and primary workload"
+        "Database Type & AWS Target",
+        database_scenarios,
+        format_func=lambda x: analyzer.database_scenarios[x]['name'],
+        help="Select your database type and target AWS service"
     )
+    
+    # Display scenario details
+    selected_scenario = analyzer.database_scenarios[database_scenario]
+    
+    st.sidebar.markdown(f"""
+    **Target Service:** {selected_scenario['target_service']}  
+    **Migration Complexity:** {selected_scenario['migration_complexity'].title()}  
+    **Workload Type:** {selected_scenario['workload_type'].upper()}
+    """)
     
     # Source Environment
     st.sidebar.subheader("📍 Source Environment")
@@ -1755,7 +1906,6 @@ def render_enhanced_sidebar_controls():
     )
     
     # Infrastructure overrides
-    analyzer = EnhancedNetworkAnalyzer()
     with st.sidebar.expander("🏗️ Advanced Infrastructure Settings", expanded=False):
         os_type = st.sidebar.selectbox(
             "Operating System",
@@ -1773,18 +1923,27 @@ def render_enhanced_sidebar_controls():
     
     # Migration Service
     st.sidebar.subheader("🚀 Migration Service")
+    
+    # Filter migration services based on database scenario recommendations
+    recommended_services = selected_scenario.get('recommended_services', ['datasync', 'dms'])
+    all_services = ["datasync", "dms", "fsx_windows", "fsx_lustre", "storage_gateway"]
+    
     migration_service = st.sidebar.selectbox(
         "AWS Migration Service",
-        ["datasync", "dms", "fsx_windows", "fsx_lustre", "storage_gateway"],
+        all_services,
+        index=all_services.index(recommended_services[0]) if recommended_services[0] in all_services else 0,
         format_func=lambda x: {
             'datasync': '📁 AWS DataSync',
-            'dms': '🗄️ AWS DMS',
+            'dms': '🗄️ AWS DMS (Recommended)',
             'fsx_windows': '🪟 FSx for Windows',
             'fsx_lustre': '⚡ FSx for Lustre',
             'storage_gateway': '🔗 Storage Gateway'
         }[x],
         help="Select AWS migration service"
     )
+    
+    if migration_service not in recommended_services:
+        st.sidebar.warning(f"⚠️ {migration_service.upper()} not recommended for {selected_scenario['name']}")
     
     service_info = analyzer.migration_services[migration_service]
     service_sizes = list(service_info['sizes'].keys())
@@ -1828,6 +1987,14 @@ def render_enhanced_sidebar_controls():
         value=8,
         help="Maximum acceptable downtime for migration"
     )
+    
+    # Show scenario requirements
+    st.sidebar.markdown("### 📋 Scenario Requirements")
+    st.sidebar.markdown(f"""
+    **Min Bandwidth:** {selected_scenario['min_bandwidth_mbps']} Mbps  
+    **Max Latency:** {selected_scenario['max_tolerable_latency_ms']}ms  
+    **Downtime Sensitivity:** {selected_scenario['downtime_sensitivity'].title()}
+    """)
     
     # Combine with API credentials
     config = {
@@ -1962,7 +2129,7 @@ def create_enhanced_waterfall_chart(waterfall_data: Dict):
     return fig
 
 def create_sequential_flow_diagram(waterfall_data: Dict):
-    """Create a visual flow diagram showing the sequential bandwidth reduction"""
+    """Create a visual flow diagram showing the sequential bandwidth reduction with enhanced styling"""
     steps = waterfall_data['steps']
     
     # Filter and prepare steps
@@ -1970,61 +2137,79 @@ def create_sequential_flow_diagram(waterfall_data: Dict):
     
     st.markdown("### 📊 Sequential Infrastructure Flow")
     
-    # Create columns for each step
-    cols = st.columns(len(flow_steps))
-    
-    for i, (step, col) in enumerate(zip(flow_steps, cols)):
-        with col:
-            step_num = step.get('step_number', i + 1)
-            
-            if step['type'] == 'starting':
-                st.markdown(f"""
-                <div class="progress-step">
-                    <div class="progress-number">{step_num}</div>
-                    <div class="progress-content">
-                        <div style="font-weight: 600; color: var(--primary-blue);">{step['name']}</div>
-                        <div class="progress-value">{step['value']:,.0f} Mbps</div>
-                    </div>
+    for i, step in enumerate(flow_steps):
+        step_num = step.get('step_number', i + 1)
+        
+        if step['type'] == 'starting':
+            st.markdown(f"""
+            <div class="flow-step flow-step-starting">
+                <div class="flow-step-header">
+                    <div class="flow-step-number">{step_num}</div>
+                    <div class="flow-step-title">{step['name']}</div>
                 </div>
-                """, unsafe_allow_html=True)
-            
-            elif step['type'] == 'reduction':
-                reduction_pct = (abs(step['value']) / flow_steps[0]['value']) * 100
-                st.markdown(f"""
-                <div class="progress-step">
-                    <div class="progress-number">{step_num}</div>
-                    <div class="progress-content">
-                        <div style="font-weight: 600; color: var(--warning-orange);">{step['name']}</div>
-                        <div style="color: var(--error-red);">-{abs(step['value']):,.0f} Mbps ({reduction_pct:.1f}%)</div>
-                        <div class="progress-value">{step['cumulative']:,.0f} Mbps remaining</div>
-                    </div>
+                <div class="flow-step-details">
+                    <div class="flow-step-value" style="color: var(--success-green);">{step['value']:,.0f} Mbps</div>
+                    <div class="flow-step-description">Starting theoretical maximum bandwidth</div>
                 </div>
-                """, unsafe_allow_html=True)
+            </div>
+            """, unsafe_allow_html=True)
+        
+        elif step['type'] == 'reduction':
+            reduction_pct = (abs(step['value']) / flow_steps[0]['value']) * 100 if flow_steps[0]['value'] > 0 else 0
             
-            elif step['type'] == 'final':
-                efficiency = (step['value'] / flow_steps[0]['value']) * 100
-                st.markdown(f"""
-                <div class="progress-step">
-                    <div class="progress-number">{step_num}</div>
-                    <div class="progress-content">
-                        <div style="font-weight: 600; color: var(--success-green);">{step['name']}</div>
-                        <div class="progress-value">{step['value']:,.0f} Mbps</div>
-                        <div style="color: var(--success-green);">({efficiency:.1f}% efficiency)</div>
-                    </div>
+            st.markdown(f"""
+            <div class="flow-step flow-step-reduction-type">
+                <div class="flow-step-header">
+                    <div class="flow-step-number">{step_num}</div>
+                    <div class="flow-step-title">{step['name']}</div>
                 </div>
-                """, unsafe_allow_html=True)
+                <div class="flow-step-details">
+                    <div class="flow-step-value flow-step-reduction">-{abs(step['value']):,.0f} Mbps ({reduction_pct:.1f}%)</div>
+                    <div class="flow-step-description">Infrastructure layer overhead and limitations</div>
+                    <div class="flow-step-remaining">{step['cumulative']:,.0f} Mbps remaining</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        elif step['type'] == 'final':
+            efficiency = (step['value'] / flow_steps[0]['value']) * 100 if flow_steps[0]['value'] > 0 else 0
             
-            # Add arrow between steps (except for last step)
-            if i < len(flow_steps) - 1:
-                st.markdown("""
-                <div style="text-align: center; color: var(--medium-gray); font-size: 1.5rem; margin: 0.5rem 0;">
-                    ↓
+            st.markdown(f"""
+            <div class="flow-step flow-step-final">
+                <div class="flow-step-header">
+                    <div class="flow-step-number">{step_num}</div>
+                    <div class="flow-step-title">{step['name']}</div>
                 </div>
-                """, unsafe_allow_html=True)
+                <div class="flow-step-details">
+                    <div class="flow-step-value" style="color: var(--primary-blue);">{step['value']:,.0f} Mbps</div>
+                    <div class="flow-step-description">Final effective bandwidth after all reductions</div>
+                    <div class="flow-step-remaining">Overall efficiency: {efficiency:.1f}%</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Add arrow between steps (except for last step)
+        if i < len(flow_steps) - 1:
+            st.markdown("""
+            <div class="flow-arrow">↓</div>
+            """, unsafe_allow_html=True)
 
 def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyzer):
     """Render realistic bandwidth analysis tab with enhanced corporate styling"""
     st.subheader("💧 Infrastructure Impact Analysis")
+    
+    # Show database scenario info
+    db_scenario = analyzer.database_scenarios[config['database_scenario']]
+    
+    st.markdown(f"""
+    <div class="corporate-card status-card-info">
+        <h3>🗄️ Database Migration Scenario</h3>
+        <p><strong>Source Database:</strong> {db_scenario['name']}</p>
+        <p><strong>Target Service:</strong> {db_scenario['target_service']}</p>
+        <p><strong>Workload Type:</strong> {db_scenario['workload_type'].upper()}</p>
+        <p><strong>Migration Complexity:</strong> {db_scenario['migration_complexity'].title()}</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Determine pattern
     pattern_key = analyzer.determine_optimal_pattern(
@@ -2108,6 +2293,29 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
         """ % f"{summary['service_utilization_percent']:.1f}", unsafe_allow_html=True)
     
     st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Check if requirements are met
+    meets_bandwidth = summary['final_effective_mbps'] >= db_scenario['min_bandwidth_mbps']
+    meets_latency = summary['baseline_latency_ms'] <= db_scenario['max_tolerable_latency_ms']
+    
+    if not meets_bandwidth or not meets_latency:
+        st.markdown(f"""
+        <div class="corporate-card status-card-warning">
+            <h3>⚠️ Database Requirements Check</h3>
+            <p><strong>Bandwidth Requirement:</strong> {'✅ Met' if meets_bandwidth else '❌ Not Met'} 
+               ({summary['final_effective_mbps']:,.0f} Mbps vs {db_scenario['min_bandwidth_mbps']} Mbps required)</p>
+            <p><strong>Latency Requirement:</strong> {'✅ Met' if meets_latency else '❌ Not Met'} 
+               ({summary['baseline_latency_ms']}ms vs {db_scenario['max_tolerable_latency_ms']}ms required)</p>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="corporate-card status-card-success">
+            <h3>✅ Database Requirements Satisfied</h3>
+            <p><strong>Bandwidth:</strong> {summary['final_effective_mbps']:,.0f} Mbps (Required: {db_scenario['min_bandwidth_mbps']} Mbps)</p>
+            <p><strong>Latency:</strong> {summary['baseline_latency_ms']}ms (Max: {db_scenario['max_tolerable_latency_ms']}ms)</p>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Sequential flow diagram
     create_sequential_flow_diagram(waterfall_data)
@@ -2619,17 +2827,16 @@ def render_ai_insights_tab(pattern_analyses: List[PatternAnalysis], ai_recommend
     """, unsafe_allow_html=True)
     
     # Database-Specific Insights
-    database_scenario = config.get('database_scenario', 'mysql_oltp')
-    db_name = {
-        'mysql_oltp': 'MySQL OLTP',
-        'postgresql_analytics': 'PostgreSQL Analytics',
-        'oracle_enterprise': 'Oracle Enterprise',
-        'mongodb_cluster': 'MongoDB Cluster'
-    }[database_scenario]
+    database_scenario = config.get('database_scenario', 'mysql_oltp_rds')
+    
+    # Get analyzer instance to access database scenarios
+    analyzer = EnhancedNetworkAnalyzer()
+    db_info = analyzer.database_scenarios[database_scenario]
     
     st.markdown(f"""
     <div class="corporate-card status-card-info">
-        <h3>🗄️ Database-Specific Considerations for {db_name}</h3>
+        <h3>🗄️ Database-Specific Considerations for {db_info['name']}</h3>
+        <p><strong>Target Service:</strong> {db_info['target_service']}</p>
         <p><strong>Database Insights:</strong> {ai_recommendation['database_considerations']}</p>
         <p><strong>Risk Assessment:</strong> {ai_recommendation['risk_assessment']}</p>
         <p><strong>Cost Justification:</strong> {ai_recommendation['cost_justification']}</p>
@@ -2699,17 +2906,22 @@ def render_database_guidance_tab(config: Dict):
     """Render database engineer guidance with corporate styling"""
     st.subheader("📚 Database Engineer's Migration Guide")
     
-    database_scenario = config.get('database_scenario', 'mysql_oltp')
+    database_scenario = config.get('database_scenario', 'mysql_oltp_rds')
     
-    # Database-specific guidance
+    # Get analyzer instance to access database scenarios
+    analyzer = EnhancedNetworkAnalyzer()
+    selected_db = analyzer.database_scenarios[database_scenario]
+    
+    # Enhanced Database-specific guidance
     guidance_content = {
-        'mysql_oltp': {
-            'title': '🔄 MySQL OLTP Database Migration',
+        'mysql_oltp_rds': {
+            'title': '🔄 MySQL OLTP Database → RDS MySQL',
             'key_considerations': [
                 "Binary log settings for replication consistency",
                 "InnoDB buffer pool warming strategies",
                 "Connection pool configuration",
-                "Read replica lag monitoring"
+                "Read replica lag monitoring",
+                "Parameter group optimization for RDS"
             ],
             'network_requirements': {
                 'min_bandwidth': '500 Mbps',
@@ -2721,16 +2933,26 @@ def render_database_guidance_tab(config: Dict):
                 "Test replication lag under peak load",
                 "Validate foreign key constraints",
                 "Performance test critical queries",
-                "Failover/failback procedures"
+                "Failover/failback procedures",
+                "RDS monitoring and alerting setup"
+            ],
+            'migration_steps': [
+                "Setup DMS replication instance",
+                "Create source and target endpoints",
+                "Configure CDC for ongoing replication",
+                "Perform initial data load",
+                "Monitor lag and validate data",
+                "Cut over during maintenance window"
             ]
         },
-        'postgresql_analytics': {
-            'title': '📊 PostgreSQL Analytics Migration',
+        'postgresql_analytics_rds': {
+            'title': '📊 PostgreSQL Analytics → RDS PostgreSQL',
             'key_considerations': [
                 "Vacuum and analyze statistics",
                 "Extension compatibility (PostGIS, etc.)",
                 "Large table partitioning strategy",
-                "Query performance optimization"
+                "Query performance optimization",
+                "RDS parameter tuning for analytics workloads"
             ],
             'network_requirements': {
                 'min_bandwidth': '1000 Mbps',
@@ -2742,16 +2964,26 @@ def render_database_guidance_tab(config: Dict):
                 "Validate complex analytical queries",
                 "Test ETL pipeline compatibility",
                 "Check data type conversions",
-                "Performance baseline comparison"
+                "Performance baseline comparison",
+                "Extension functionality validation"
+            ],
+            'migration_steps': [
+                "Assess extension compatibility",
+                "Export/import custom functions",
+                "Migrate schema using DMS SCT",
+                "Bulk load historical data",
+                "Setup incremental analytics refresh",
+                "Validate query performance"
             ]
         },
-        'oracle_enterprise': {
-            'title': '🏢 Oracle Enterprise Database Migration',
+        'oracle_enterprise_rds': {
+            'title': '🏢 Oracle Enterprise → RDS Oracle',
             'key_considerations': [
                 "Oracle-specific features compatibility",
                 "PL/SQL code conversion needs",
                 "Tablespace and datafile strategy",
-                "RAC to RDS conversion complexity"
+                "RAC to RDS conversion complexity",
+                "License considerations for RDS Oracle"
             ],
             'network_requirements': {
                 'min_bandwidth': '2000 Mbps',
@@ -2763,16 +2995,57 @@ def render_database_guidance_tab(config: Dict):
                 "Schema conversion validation",
                 "Application compatibility testing",
                 "Performance regression testing",
-                "Disaster recovery validation"
+                "Disaster recovery validation",
+                "Oracle-specific feature testing"
+            ],
+            'migration_steps': [
+                "Run AWS SCT assessment",
+                "Convert schema and procedures",
+                "Setup DMS replication",
+                "Migrate data with full load + CDC",
+                "Application connection string updates",
+                "Performance tuning and optimization"
             ]
         },
-        'mongodb_cluster': {
-            'title': '🍃 MongoDB Cluster Migration',
+        'sqlserver_enterprise_ec2': {
+            'title': '🪟 SQL Server Enterprise → EC2',
             'key_considerations': [
-                "Sharding strategy preservation",
-                "Index optimization for AWS",
-                "Connection string updates",
-                "Replica set configuration"
+                "Windows licensing on EC2",
+                "AlwaysOn Availability Groups setup",
+                "Storage configuration (EBS optimization)",
+                "Security group and network configuration",
+                "Backup strategy for EC2 environment"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '1500 Mbps',
+                'max_latency': '8ms',
+                'consistency': 'Strict (Enterprise requirements)'
+            },
+            'recommended_approach': 'Native SQL Server tools + DMS for validation',
+            'testing_strategy': [
+                "AlwaysOn configuration testing",
+                "Application driver compatibility",
+                "Performance under load testing",
+                "Backup and restore procedures",
+                "Disaster recovery validation"
+            ],
+            'migration_steps': [
+                "Setup EC2 instances with SQL Server",
+                "Configure storage and networking",
+                "Setup native replication or log shipping",
+                "Migrate databases using native backup/restore",
+                "Configure AlwaysOn if required",
+                "Application cutover and validation"
+            ]
+        },
+        'mongodb_cluster_documentdb': {
+            'title': '🍃 MongoDB Cluster → DocumentDB',
+            'key_considerations': [
+                "DocumentDB API compatibility assessment",
+                "Index strategy optimization for DocumentDB",
+                "Connection string and driver updates",
+                "Aggregation pipeline compatibility",
+                "Change streams configuration"
             ],
             'network_requirements': {
                 'min_bandwidth': '1500 Mbps',
@@ -2781,21 +3054,125 @@ def render_database_guidance_tab(config: Dict):
             },
             'recommended_approach': 'Native MongoDB tools + DMS for validation',
             'testing_strategy': [
-                "Shard balancing verification",
-                "Application driver compatibility",
-                "Performance under load",
-                "Backup and restore procedures"
+                "API compatibility verification",
+                "Application driver testing",
+                "Performance comparison testing",
+                "Aggregation pipeline validation",
+                "Change streams functionality"
+            ],
+            'migration_steps': [
+                "Assess DocumentDB compatibility",
+                "Setup DocumentDB cluster",
+                "Use mongodump/mongorestore for migration",
+                "Validate data integrity",
+                "Update application connection strings",
+                "Performance testing and optimization"
+            ]
+        },
+        'mysql_analytics_aurora': {
+            'title': '📊 MySQL Analytics → Aurora MySQL',
+            'key_considerations': [
+                "Aurora MySQL engine version compatibility",
+                "Parallel query optimization for analytics",
+                "Aurora Serverless for variable workloads",
+                "Global database for multi-region analytics",
+                "Aurora ML integration opportunities"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '1200 Mbps',
+                'max_latency': '25ms',
+                'consistency': 'Eventual (analytics workloads)'
+            },
+            'recommended_approach': 'AWS DMS for continuous replication',
+            'testing_strategy': [
+                "Parallel query performance testing",
+                "Analytics workload validation",
+                "Aurora Serverless scaling testing",
+                "Cross-region replication testing",
+                "Performance baseline comparison"
+            ],
+            'migration_steps': [
+                "Setup Aurora MySQL cluster",
+                "Configure DMS for initial load + CDC",
+                "Enable parallel query for analytics",
+                "Optimize for analytical workloads",
+                "Setup read replicas if needed",
+                "Application cutover and validation"
+            ]
+        },
+        'postgresql_oltp_aurora': {
+            'title': '🔄 PostgreSQL OLTP → Aurora PostgreSQL',
+            'key_considerations': [
+                "Aurora PostgreSQL compatibility",
+                "Connection pooling optimization",
+                "Aurora Serverless for variable OLTP loads",
+                "Point-in-time recovery configuration",
+                "Performance Insights setup"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '800 Mbps',
+                'max_latency': '12ms',
+                'consistency': 'Strict (OLTP requirements)'
+            },
+            'recommended_approach': 'AWS DMS with minimal downtime',
+            'testing_strategy': [
+                "OLTP transaction testing",
+                "Connection pooling optimization",
+                "Failover testing",
+                "Performance monitoring validation",
+                "Application compatibility testing"
+            ],
+            'migration_steps': [
+                "Setup Aurora PostgreSQL cluster",
+                "Configure DMS replication",
+                "Test application connectivity",
+                "Optimize for OLTP workloads",
+                "Setup monitoring and alerting",
+                "Planned cutover execution"
+            ]
+        },
+        'mariadb_oltp_rds': {
+            'title': '🗄️ MariaDB OLTP → RDS MariaDB',
+            'key_considerations': [
+                "MariaDB version compatibility",
+                "Storage engine considerations",
+                "Connection handling optimization",
+                "Replication configuration",
+                "Parameter group optimization"
+            ],
+            'network_requirements': {
+                'min_bandwidth': '600 Mbps',
+                'max_latency': '10ms',
+                'consistency': 'Strict (OLTP requirements)'
+            },
+            'recommended_approach': 'AWS DMS for live migration',
+            'testing_strategy': [
+                "MariaDB-specific feature testing",
+                "Storage engine validation",
+                "Replication lag monitoring",
+                "Performance comparison",
+                "Application compatibility verification"
+            ],
+            'migration_steps': [
+                "Setup RDS MariaDB instance",
+                "Configure DMS endpoints",
+                "Initialize replication",
+                "Monitor and validate data",
+                "Application connection updates",
+                "Cutover and post-migration validation"
             ]
         }
     }
     
-    selected_guidance = guidance_content[database_scenario]
+    selected_guidance = guidance_content.get(database_scenario, guidance_content['mysql_oltp_rds'])
     
     # Display guidance
     st.markdown(f"""
     <div class="corporate-card">
         <h3>{selected_guidance['title']}</h3>
         <p><strong>Recommended Approach:</strong> {selected_guidance['recommended_approach']}</p>
+        <p><strong>Migration Complexity:</strong> {selected_db['migration_complexity'].title()}</p>
+        <p><strong>Downtime Sensitivity:</strong> {selected_db['downtime_sensitivity'].title()}</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -2845,6 +3222,18 @@ def render_database_guidance_tab(config: Dict):
                 <div class="metric-value" style="color: var(--success-green); font-size: 1.2em;">{requirements['consistency']}</div>
                 <div class="metric-label">Consistency Model</div>
             </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Migration steps
+        steps_content = ""
+        for i, step in enumerate(selected_guidance['migration_steps'], 1):
+            steps_content += f"<p><strong>{i}.</strong> {step}</p>"
+        
+        st.markdown(f"""
+        <div class="corporate-card status-card-warning">
+            <h3>📝 Migration Steps</h3>
+            {steps_content}
         </div>
         """, unsafe_allow_html=True)
 
