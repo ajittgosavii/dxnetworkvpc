@@ -9,108 +9,319 @@ import requests
 import boto3
 from typing import Dict, List, Tuple, Optional
 import asyncio
-#import aiohttp
 from dataclasses import dataclass
 import numpy as np
 
 # Page configuration
 st.set_page_config(
-    page_title="Enhanced AWS Migration Network Analyzer",
-    page_icon="🚀",
+    page_title="AWS Migration Network Analyzer | Enterprise Edition",
+    page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Enhanced CSS styling (preserving original + new styles)
+# Enhanced Corporate CSS styling
 st.markdown("""
 <style>
-    .main-header {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
-        padding: 2rem;
-        border-radius: 12px;
+    /* Corporate Color Scheme */
+    :root {
+        --primary-blue: #1e3a8a;
+        --secondary-blue: #3b82f6;
+        --accent-blue: #60a5fa;
+        --dark-gray: #1f2937;
+        --medium-gray: #6b7280;
+        --light-gray: #f3f4f6;
+        --success-green: #059669;
+        --warning-orange: #d97706;
+        --error-red: #dc2626;
+        --corporate-gradient: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #60a5fa 100%);
+    }
+    
+    /* Hide Streamlit branding */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Main container styling */
+    .main .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        max-width: 1400px;
+    }
+    
+    /* Corporate Header */
+    .corporate-header {
+        background: var(--corporate-gradient);
+        padding: 3rem 2rem;
+        border-radius: 16px;
         color: white;
         text-align: center;
         margin-bottom: 2rem;
-        box-shadow: 0 4px 20px rgba(15,23,42,0.3);
-        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 8px 32px rgba(30, 58, 138, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        position: relative;
+        overflow: hidden;
     }
     
-    .pattern-card, .service-warning-card, .network-path-card, .recommendation-card, .waterfall-card, .service-card, .infrastructure-card {
-        background: #ffffff;
-        padding: 1.5rem;
-        border-radius: 6px;
-        margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #3b82f6;
-        border: 1px solid #e5e7eb;
+    .corporate-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><defs><pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)"/></svg>');
+        opacity: 0.3;
     }
     
-    .service-warning-card {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        border-left: 3px solid #f59e0b;
+    .corporate-header h1 {
+        font-size: 2.8rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        position: relative;
+        z-index: 1;
     }
     
-    .infrastructure-card {
-        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-        border-left: 3px solid #16a34a;
+    .corporate-header .subtitle {
+        font-size: 1.4rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.95;
+        position: relative;
+        z-index: 1;
     }
     
-    .pattern-comparison-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid #3b82f6;
-        border: 1px solid #e2e8f0;
+    .corporate-header .tagline {
+        font-size: 1rem;
+        opacity: 0.85;
+        position: relative;
+        z-index: 1;
     }
     
-    .ai-recommendation-card {
-        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid #f59e0b;
-        border: 1px solid #f3f4f6;
-    }
-    
-    .cost-analysis-card {
-        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid #16a34a;
-        border: 1px solid #f3f4f6;
-    }
-    
-    .database-scenario-card {
-        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-        padding: 1.5rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid #6366f1;
-        border: 1px solid #f3f4f6;
-    }
-    
-    .network-metric-card {
+    /* Corporate Cards */
+    .corporate-card {
         background: white;
-        padding: 1rem;
-        border-radius: 6px;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 2rem;
+        border-radius: 12px;
+        margin: 1.5rem 0;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
         border: 1px solid #e5e7eb;
+        border-left: 4px solid var(--secondary-blue);
+        transition: all 0.3s ease;
     }
     
-    .best-pattern-highlight {
-        background: linear-gradient(135deg, #065f46 0%, #047857 100%);
-        color: white;
-        padding: 1rem;
+    .corporate-card:hover {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+    }
+    
+    .corporate-card h3, .corporate-card h4 {
+        color: var(--primary-blue);
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+    
+    /* Status Cards */
+    .status-card-success {
+        background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        border-left: 4px solid var(--success-green);
+    }
+    
+    .status-card-warning {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-left: 4px solid var(--warning-orange);
+    }
+    
+    .status-card-error {
+        background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+        border-left: 4px solid var(--error-red);
+    }
+    
+    .status-card-info {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border-left: 4px solid var(--secondary-blue);
+    }
+    
+    /* Metric Cards */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+    
+    .metric-card {
+        background: white;
+        padding: 1.5rem;
         border-radius: 8px;
         text-align: center;
-        font-weight: bold;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e5e7eb;
+        transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-blue);
+        margin-bottom: 0.5rem;
+    }
+    
+    .metric-label {
+        font-size: 0.9rem;
+        color: var(--medium-gray);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Best Pattern Highlight */
+    .best-pattern-highlight {
+        background: var(--corporate-gradient);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin: 2rem 0;
+        box-shadow: 0 8px 24px rgba(30, 58, 138, 0.3);
+    }
+    
+    /* Waterfall Chart Container */
+    .waterfall-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        border: 1px solid #e5e7eb;
+        margin: 1.5rem 0;
+    }
+    
+    /* Data Tables */
+    .dataframe {
+        border: none !important;
+    }
+    
+    .dataframe th {
+        background-color: var(--light-gray) !important;
+        color: var(--primary-blue) !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        font-size: 0.8rem !important;
+        letter-spacing: 0.5px !important;
+    }
+    
+    .dataframe td {
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+    
+    /* Sidebar Styling */
+    .css-1d391kg {
+        background-color: #f8fafc;
+    }
+    
+    .sidebar .sidebar-content {
+        background-color: #f8fafc;
+    }
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
+        background-color: var(--light-gray);
+        border-radius: 8px;
+        padding: 4px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background-color: transparent;
+        border-radius: 6px;
+        color: var(--medium-gray);
+        font-weight: 500;
+        padding: 12px 24px;
+        transition: all 0.3s ease;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background-color: white !important;
+        color: var(--primary-blue) !important;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Buttons */
+    .stButton > button {
+        background: var(--corporate-gradient);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 2rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+        transform: translateY(-1px);
+    }
+    
+    /* Expanders */
+    .streamlit-expanderHeader {
+        background-color: var(--light-gray);
+        border-radius: 8px;
+        color: var(--primary-blue);
+        font-weight: 500;
+    }
+    
+    /* Progress Indicators */
+    .progress-step {
+        display: flex;
+        align-items: center;
+        margin: 1rem 0;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .progress-number {
+        background: var(--secondary-blue);
+        color: white;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        margin-right: 1rem;
+    }
+    
+    .progress-content {
+        flex: 1;
+    }
+    
+    .progress-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--primary-blue);
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .corporate-header h1 {
+            font-size: 2rem;
+        }
+        
+        .corporate-header .subtitle {
+            font-size: 1.1rem;
+        }
+        
+        .metric-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -951,30 +1162,33 @@ class EnhancedNetworkAnalyzer:
             'name': f'NIC Theoretical ({nic_char["name"]})',
             'value': theoretical_max,
             'cumulative': theoretical_max,
-            'type': 'positive',
-            'layer': 'nic'
+            'type': 'starting',
+            'layer': 'nic',
+            'step_number': 1
         })
         
         # Step 2: NIC Real-World Efficiency
         nic_efficient_bandwidth = theoretical_max * nic_char['real_world_efficiency']
         nic_reduction = theoretical_max - nic_efficient_bandwidth
         steps.append({
-            'name': f'NIC Efficiency ({nic_char["real_world_efficiency"]*100:.1f}%)',
+            'name': f'NIC Efficiency Loss ({(1-nic_char["real_world_efficiency"])*100:.1f}%)',
             'value': -nic_reduction,
             'cumulative': nic_efficient_bandwidth,
-            'type': 'negative',
-            'layer': 'nic'
+            'type': 'reduction',
+            'layer': 'nic',
+            'step_number': 2
         })
         
         # Step 3: Operating System Network Stack
         os_efficient_bandwidth = nic_efficient_bandwidth * os_char['tcp_stack_efficiency']
         os_reduction = nic_efficient_bandwidth - os_efficient_bandwidth
         steps.append({
-            'name': f'OS Stack ({os_char["name"]})',
+            'name': f'OS Stack Overhead ({os_char["name"]})',
             'value': -os_reduction,
             'cumulative': os_efficient_bandwidth,
-            'type': 'negative',
-            'layer': 'os'
+            'type': 'reduction',
+            'layer': 'os',
+            'step_number': 3
         })
         
         # Step 4: CPU Utilization Impact
@@ -983,11 +1197,12 @@ class EnhancedNetworkAnalyzer:
         cpu_adjusted_bandwidth = os_efficient_bandwidth * cpu_impact_factor
         cpu_reduction = os_efficient_bandwidth - cpu_adjusted_bandwidth
         steps.append({
-            'name': f'CPU Impact ({cpu_utilization*100:.1f}% util)',
+            'name': f'CPU Utilization Impact ({cpu_utilization*100:.1f}%)',
             'value': -cpu_reduction,
             'cumulative': cpu_adjusted_bandwidth,
-            'type': 'negative',
-            'layer': 'os'
+            'type': 'reduction',
+            'layer': 'os',
+            'step_number': 4
         })
         
         # Step 5: LAN Infrastructure
@@ -1001,8 +1216,9 @@ class EnhancedNetworkAnalyzer:
             'name': f'LAN Infrastructure ({lan_char["name"]})',
             'value': -lan_reduction,
             'cumulative': lan_limited_bandwidth,
-            'type': 'negative',
-            'layer': 'lan'
+            'type': 'reduction',
+            'layer': 'lan',
+            'step_number': 5
         })
         
         # Step 6: WAN Provider
@@ -1013,24 +1229,28 @@ class EnhancedNetworkAnalyzer:
             'name': f'WAN Provider ({wan_char["name"]})',
             'value': -wan_reduction,
             'cumulative': wan_efficient_bandwidth,
-            'type': 'negative',
-            'layer': 'wan'
+            'type': 'reduction',
+            'layer': 'wan',
+            'step_number': 6
         })
         
         # Step 7: Direct Connect (if applicable)
         dx_adjusted_bandwidth = wan_efficient_bandwidth
         dx_reduction = 0
+        step_number = 7
         if dx_char:
             dx_overhead = wan_efficient_bandwidth * (dx_char['aws_edge_processing_overhead'] + dx_char['virtual_interface_overhead'])
             dx_adjusted_bandwidth = wan_efficient_bandwidth - dx_overhead
             dx_reduction = dx_overhead
             steps.append({
-                'name': f'Direct Connect ({dx_char["name"]})',
+                'name': f'Direct Connect Overhead ({dx_char["name"]})',
                 'value': -dx_reduction,
                 'cumulative': dx_adjusted_bandwidth,
-                'type': 'negative',
-                'layer': 'dx'
+                'type': 'reduction',
+                'layer': 'dx',
+                'step_number': step_number
             })
+            step_number += 1
         
         # Step 8: VPC Endpoint (if applicable)
         vpc_adjusted_bandwidth = dx_adjusted_bandwidth
@@ -1043,12 +1263,14 @@ class EnhancedNetworkAnalyzer:
             vpc_adjusted_bandwidth = dx_adjusted_bandwidth * (1 - vpc_overhead)
             vpc_reduction = dx_adjusted_bandwidth - vpc_adjusted_bandwidth
             steps.append({
-                'name': f'VPC Endpoint Overhead',
+                'name': f'VPC Endpoint Overhead ({vpc_overhead*100:.1f}%)',
                 'value': -vpc_reduction,
                 'cumulative': vpc_adjusted_bandwidth,
-                'type': 'negative',
-                'layer': 'vpc'
+                'type': 'reduction',
+                'layer': 'vpc',
+                'step_number': step_number
             })
+            step_number += 1
         
         # Step 9: Protocol Overhead
         protocol_efficiency = service.get('protocol_efficiency', 0.95)
@@ -1058,9 +1280,11 @@ class EnhancedNetworkAnalyzer:
             'name': f'Protocol Overhead ({", ".join(service["protocols"])})',
             'value': -protocol_reduction,
             'cumulative': protocol_adjusted_bandwidth,
-            'type': 'negative',
-            'layer': 'protocol'
+            'type': 'reduction',
+            'layer': 'protocol',
+            'step_number': step_number
         })
+        step_number += 1
         
         # Step 10: Service Capacity
         service_capacity = service_spec['throughput_mbps'] * num_instances
@@ -1070,9 +1294,11 @@ class EnhancedNetworkAnalyzer:
             'name': f'{service["name"]} Capacity',
             'value': -service_reduction,
             'cumulative': service_limited_bandwidth,
-            'type': 'negative',
-            'layer': 'service'
+            'type': 'reduction',
+            'layer': 'service',
+            'step_number': step_number
         })
+        step_number += 1
         
         # Step 11: Application Efficiency
         app_efficiency = service.get('application_efficiency', 0.9)
@@ -1082,17 +1308,19 @@ class EnhancedNetworkAnalyzer:
             'name': f'Application Efficiency ({app_efficiency*100:.1f}%)',
             'value': -app_reduction,
             'cumulative': final_bandwidth,
-            'type': 'negative',
-            'layer': 'service'
+            'type': 'reduction',
+            'layer': 'service',
+            'step_number': step_number
         })
         
         # Final effective bandwidth
         steps.append({
-            'name': 'Final Effective',
+            'name': 'Final Effective Bandwidth',
             'value': final_bandwidth,
             'cumulative': final_bandwidth,
-            'type': 'total',
-            'layer': 'final'
+            'type': 'final',
+            'layer': 'final',
+            'step_number': step_number + 1
         })
         
         # Calculate summary
@@ -1101,7 +1329,7 @@ class EnhancedNetworkAnalyzer:
         
         # Identify primary bottleneck
         reductions = [(step['name'], abs(step['value']), step['layer']) 
-                     for step in steps if step['type'] == 'negative' and step['value'] < 0]
+                     for step in steps if step['type'] == 'reduction' and step['value'] < 0]
         primary_bottleneck = max(reductions, key=lambda x: x[1]) if reductions else ('None', 0, 'none')
         
         return {
@@ -1448,29 +1676,55 @@ class EnhancedNetworkAnalyzer:
         
         return self.ai_client.get_pattern_recommendation(analysis_data)
 
-def render_header():
-    """Render enhanced application header"""
+def render_corporate_header():
+    """Render enhanced corporate header"""
     st.markdown("""
-    <div class="main-header">
-        <h1>🚀 AI-Enhanced AWS Migration Network Analyzer</h1>
-        <p style="font-size: 1.3rem; margin-top: 0.5rem;">
-            Complete Infrastructure Analysis • Real-Time AWS Pricing • Claude AI Recommendations
-        </p>
-        <p style="font-size: 1rem; margin-top: 0.5rem; opacity: 0.9;">
-            Realistic Bandwidth Waterfall • Database Engineer Focused • Pattern Comparison
-        </p>
+    <div class="corporate-header">
+        <h1>🏢 AWS Migration Network Analyzer</h1>
+        <div class="subtitle">Enterprise Infrastructure Analysis Platform</div>
+        <div class="tagline">Real-time AWS Pricing • AI-Powered Recommendations • Database-Optimized Migration Patterns</div>
     </div>
     """, unsafe_allow_html=True)
+
+def get_api_credentials():
+    """Get API credentials from Streamlit secrets"""
+    try:
+        aws_access_key = st.secrets.get("aws_access_key", "")
+        aws_secret_key = st.secrets.get("aws_secret_key", "")
+        claude_api_key = st.secrets.get("claude_api_key", "")
+        
+        # Show status in sidebar
+        st.sidebar.markdown("### 🔐 API Status")
+        if aws_access_key and aws_secret_key:
+            st.sidebar.success("✅ AWS Credentials: Connected")
+        else:
+            st.sidebar.info("ℹ️ AWS Credentials: Using Mock Data")
+        
+        if claude_api_key:
+            st.sidebar.success("✅ Claude AI: Connected")
+        else:
+            st.sidebar.info("ℹ️ Claude AI: Using Mock Responses")
+        
+        return {
+            'aws_access_key': aws_access_key,
+            'aws_secret_key': aws_secret_key,
+            'claude_api_key': claude_api_key
+        }
+    
+    except Exception as e:
+        st.sidebar.warning(f"Error accessing secrets: {e}")
+        return {
+            'aws_access_key': "",
+            'aws_secret_key': "",
+            'claude_api_key': ""
+        }
 
 def render_enhanced_sidebar_controls():
     """Render enhanced sidebar controls"""
     st.sidebar.header("🔧 Migration Configuration")
     
-    # API Configuration
-    with st.sidebar.expander("🔑 API Configuration", expanded=False):
-        aws_access_key = st.text_input("AWS Access Key (Optional)", type="password", help="For real-time pricing")
-        aws_secret_key = st.text_input("AWS Secret Key (Optional)", type="password", help="For real-time pricing")
-        claude_api_key = st.text_input("Claude AI API Key (Optional)", type="password", help="For AI recommendations")
+    # Get API credentials from secrets
+    api_credentials = get_api_credentials()
     
     # Database Scenario Selection
     st.sidebar.subheader("🗄️ Database Scenario")
@@ -1575,10 +1829,8 @@ def render_enhanced_sidebar_controls():
         help="Maximum acceptable downtime for migration"
     )
     
-    return {
-        'aws_access_key': aws_access_key,
-        'aws_secret_key': aws_secret_key,
-        'claude_api_key': claude_api_key,
+    # Combine with API credentials
+    config = {
         'database_scenario': database_scenario,
         'source_location': source_location,
         'environment': environment,
@@ -1590,74 +1842,189 @@ def render_enhanced_sidebar_controls():
         'data_size_gb': data_size_gb,
         'max_downtime_hours': max_downtime_hours
     }
+    
+    # Add API credentials
+    config.update(api_credentials)
+    
+    return config
 
-def create_realistic_waterfall_chart(waterfall_data: Dict):
-    """Create waterfall chart with layer-specific coloring (ORIGINAL FUNCTION PRESERVED)"""
+def create_enhanced_waterfall_chart(waterfall_data: Dict):
+    """Create enhanced sequential waterfall chart showing proper infrastructure flow"""
     steps = waterfall_data['steps']
     
+    # Layer colors for corporate theme
     layer_colors = {
-        'nic': '#3b82f6',      # Blue
-        'os': '#8b5cf6',       # Purple  
-        'lan': '#10b981',      # Green
-        'wan': '#f59e0b',      # Orange
-        'dx': '#ef4444',       # Red
-        'vpc': '#f97316',      # Orange-red
-        'protocol': '#06b6d4', # Cyan
-        'service': '#84cc16',  # Lime
+        'nic': '#1e3a8a',      # Primary blue
+        'os': '#3b82f6',       # Secondary blue  
+        'lan': '#059669',      # Success green
+        'wan': '#d97706',      # Warning orange
+        'dx': '#dc2626',       # Error red
+        'vpc': '#7c3aed',      # Purple
+        'protocol': '#0891b2', # Cyan
+        'service': '#16a34a',  # Dark green
         'final': '#1e40af'     # Dark blue
     }
     
+    # Prepare data for waterfall chart
+    x_labels = []
+    y_values = []
+    colors = []
+    text_labels = []
+    
+    # Starting point
+    starting_step = next(step for step in steps if step['type'] == 'starting')
+    x_labels.append(f"1. {starting_step['name']}")
+    y_values.append(starting_step['value'])
+    colors.append(layer_colors.get(starting_step['layer'], '#6b7280'))
+    text_labels.append(f"{starting_step['value']:,.0f} Mbps")
+    
+    # Running total for waterfall effect
+    running_total = starting_step['value']
+    
+    # Reduction steps
+    reduction_steps = [step for step in steps if step['type'] == 'reduction']
+    for step in reduction_steps:
+        step_num = step.get('step_number', 0)
+        x_labels.append(f"{step_num}. {step['name']}")
+        y_values.append(abs(step['value']))  # Use absolute value for bar height
+        colors.append(layer_colors.get(step['layer'], '#6b7280'))
+        text_labels.append(f"-{abs(step['value']):,.0f} Mbps\n({step['cumulative']:,.0f} remaining)")
+        running_total += step['value']  # step['value'] is negative
+    
+    # Final result
+    final_step = next(step for step in steps if step['type'] == 'final')
+    step_num = final_step.get('step_number', len(steps))
+    x_labels.append(f"{step_num}. {final_step['name']}")
+    y_values.append(final_step['value'])
+    colors.append(layer_colors.get(final_step['layer'], '#1e40af'))
+    text_labels.append(f"{final_step['value']:,.0f} Mbps")
+    
+    # Create waterfall chart
     fig = go.Figure()
     
-    for step in steps:
-        color = layer_colors.get(step.get('layer', 'default'), '#6b7280')
+    # Add bars
+    for i, (x, y, color, text) in enumerate(zip(x_labels, y_values, colors, text_labels)):
+        # Determine if this is a reduction step
+        is_reduction = i > 0 and i < len(x_labels) - 1
         
-        if step['type'] == 'positive':
-            fig.add_trace(go.Bar(
-                x=[step['name']],
-                y=[step['value']],
-                marker_color=color,
-                name=step['name'],
-                text=[f"{step['value']:.0f} Mbps"],
-                textposition='outside',
-                hovertemplate=f"<b>{step['name']}</b><br>Bandwidth: {step['value']:.0f} Mbps<extra></extra>"
-            ))
-        elif step['type'] == 'total':
-            fig.add_trace(go.Bar(
-                x=[step['name']],
-                y=[step['value']],
-                marker_color=color,
-                name=step['name'],
-                text=[f"{step['value']:.0f} Mbps"],
-                textposition='outside',
-                hovertemplate=f"<b>{step['name']}</b><br>Final: {step['value']:.0f} Mbps<extra></extra>"
-            ))
-        else:
-            fig.add_trace(go.Bar(
-                x=[step['name']],
-                y=[abs(step['value'])],
-                marker_color=color,
-                name=step['name'],
-                text=[f"{step['value']:.0f} Mbps"],
-                textposition='outside',
-                hovertemplate=f"<b>{step['name']}</b><br>Reduction: {abs(step['value']):.0f} Mbps<br>Remaining: {step['cumulative']:.0f} Mbps<extra></extra>"
-            ))
+        fig.add_trace(go.Bar(
+            x=[x],
+            y=[y],
+            marker_color=color,
+            text=[text],
+            textposition='outside' if not is_reduction else 'inside',
+            textfont=dict(color='white' if is_reduction else 'black', size=10),
+            name=x,
+            hovertemplate=f"<b>{x}</b><br>Impact: {y:,.0f} Mbps<extra></extra>",
+            opacity=0.8 if is_reduction else 1.0
+        ))
+    
+    # Add connecting lines to show flow
+    for i in range(len(x_labels) - 1):
+        if i == 0:
+            continue  # Skip first connection
+        
+        # Calculate positions for connecting lines
+        start_y = sum(y_values[:i+1]) if i < len(x_labels) - 1 else y_values[i]
+        end_y = sum(y_values[:i+2]) if i+1 < len(x_labels) - 1 else y_values[i+1]
+        
+        fig.add_shape(
+            type="line",
+            x0=i, y0=start_y,
+            x1=i+1, y1=end_y,
+            line=dict(color="rgba(128,128,128,0.5)", width=1, dash="dot")
+        )
     
     fig.update_layout(
-        title="Realistic Infrastructure Impact Analysis",
+        title={
+            'text': "Infrastructure Impact Waterfall Analysis",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 20, 'color': '#1e3a8a'}
+        },
         xaxis_title="Infrastructure Components",
         yaxis_title="Bandwidth (Mbps)",
         showlegend=False,
         height=600,
-        xaxis=dict(tickangle=45),
-        template="plotly_white"
+        xaxis=dict(
+            tickangle=45,
+            tickfont=dict(size=10)
+        ),
+        yaxis=dict(
+            tickformat=",.0f"
+        ),
+        template="plotly_white",
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=80, b=120, l=80, r=80)
     )
     
     return fig
 
+def create_sequential_flow_diagram(waterfall_data: Dict):
+    """Create a visual flow diagram showing the sequential bandwidth reduction"""
+    steps = waterfall_data['steps']
+    
+    # Filter and prepare steps
+    flow_steps = [step for step in steps if step['type'] in ['starting', 'reduction', 'final']]
+    
+    st.markdown("### 📊 Sequential Infrastructure Flow")
+    
+    # Create columns for each step
+    cols = st.columns(len(flow_steps))
+    
+    for i, (step, col) in enumerate(zip(flow_steps, cols)):
+        with col:
+            step_num = step.get('step_number', i + 1)
+            
+            if step['type'] == 'starting':
+                st.markdown(f"""
+                <div class="progress-step">
+                    <div class="progress-number">{step_num}</div>
+                    <div class="progress-content">
+                        <div style="font-weight: 600; color: var(--primary-blue);">{step['name']}</div>
+                        <div class="progress-value">{step['value']:,.0f} Mbps</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            elif step['type'] == 'reduction':
+                reduction_pct = (abs(step['value']) / flow_steps[0]['value']) * 100
+                st.markdown(f"""
+                <div class="progress-step">
+                    <div class="progress-number">{step_num}</div>
+                    <div class="progress-content">
+                        <div style="font-weight: 600; color: var(--warning-orange);">{step['name']}</div>
+                        <div style="color: var(--error-red);">-{abs(step['value']):,.0f} Mbps ({reduction_pct:.1f}%)</div>
+                        <div class="progress-value">{step['cumulative']:,.0f} Mbps remaining</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            elif step['type'] == 'final':
+                efficiency = (step['value'] / flow_steps[0]['value']) * 100
+                st.markdown(f"""
+                <div class="progress-step">
+                    <div class="progress-number">{step_num}</div>
+                    <div class="progress-content">
+                        <div style="font-weight: 600; color: var(--success-green);">{step['name']}</div>
+                        <div class="progress-value">{step['value']:,.0f} Mbps</div>
+                        <div style="color: var(--success-green);">({efficiency:.1f}% efficiency)</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Add arrow between steps (except for last step)
+            if i < len(flow_steps) - 1:
+                st.markdown("""
+                <div style="text-align: center; color: var(--medium-gray); font-size: 1.5rem; margin: 0.5rem 0;">
+                    ↓
+                </div>
+                """, unsafe_allow_html=True)
+
 def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyzer):
-    """Render realistic bandwidth analysis tab (ORIGINAL FUNCTION PRESERVED)"""
-    st.subheader("💧 Realistic Infrastructure Impact Analysis")
+    """Render realistic bandwidth analysis tab with enhanced corporate styling"""
+    st.subheader("💧 Infrastructure Impact Analysis")
     
     # Determine pattern
     pattern_key = analyzer.determine_optimal_pattern(
@@ -1685,100 +2052,122 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
     
     summary = waterfall_data['summary']
     
-    # Summary metrics
+    # Summary metrics in corporate style
+    st.markdown("""
+    <div class="metric-grid">
+    """, unsafe_allow_html=True)
+    
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     
     with col1:
-        st.metric(
-            "🏁 Theoretical Max",
-            f"{summary['theoretical_max_mbps']:,.0f} Mbps",
-            delta="NIC capacity"
-        )
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-value">%s</div>
+            <div class="metric-label">Theoretical Max (Mbps)</div>
+        </div>
+        """ % f"{summary['theoretical_max_mbps']:,.0f}", unsafe_allow_html=True)
     
     with col2:
-        st.metric(
-            "🎯 Final Effective",
-            f"{summary['final_effective_mbps']:,.0f} Mbps", 
-            delta=f"{summary['efficiency_percentage']:.1f}% efficient"
-        )
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-value">%s</div>
+            <div class="metric-label">Final Effective (Mbps)</div>
+        </div>
+        """ % f"{summary['final_effective_mbps']:,.0f}", unsafe_allow_html=True)
     
     with col3:
-        st.metric(
-            "📉 Total Reduction",
-            f"{summary['total_reduction_mbps']:,.0f} Mbps",
-            delta="Infrastructure overhead"
-        )
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-value">%s%%</div>
+            <div class="metric-label">Efficiency</div>
+        </div>
+        """ % f"{summary['efficiency_percentage']:.1f}", unsafe_allow_html=True)
     
     with col4:
-        st.metric(
-            "🔍 Primary Bottleneck",
-            summary['primary_bottleneck_layer'].title(),
-            delta=f"{summary['primary_bottleneck_impact_mbps']:,.0f} Mbps impact"
-        )
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-value">%s</div>
+            <div class="metric-label">Primary Bottleneck</div>
+        </div>
+        """ % summary['primary_bottleneck_layer'].title(), unsafe_allow_html=True)
     
     with col5:
-        st.metric(
-            "🌐 Network Utilization",
-            f"{summary['network_utilization_percent']:.1f}%",
-            delta="Bandwidth usage"
-        )
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-value">%s%%</div>
+            <div class="metric-label">Network Utilization</div>
+        </div>
+        """ % f"{summary['network_utilization_percent']:.1f}", unsafe_allow_html=True)
     
     with col6:
-        st.metric(
-            "⚙️ Service Utilization", 
-            f"{summary['service_utilization_percent']:.1f}%",
-            delta=summary['bottleneck'].title() + " bound"
-        )
+        st.markdown("""
+        <div class="metric-card">
+            <div class="metric-value">%s%%</div>
+            <div class="metric-label">Service Utilization</div>
+        </div>
+        """ % f"{summary['service_utilization_percent']:.1f}", unsafe_allow_html=True)
     
-    # Waterfall chart
-    st.markdown("**📊 Infrastructure Impact Waterfall:**")
-    waterfall_chart = create_realistic_waterfall_chart(waterfall_data)
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Sequential flow diagram
+    create_sequential_flow_diagram(waterfall_data)
+    
+    # Enhanced waterfall chart
+    st.markdown("""
+    <div class="waterfall-container">
+    """, unsafe_allow_html=True)
+    
+    waterfall_chart = create_enhanced_waterfall_chart(waterfall_data)
     st.plotly_chart(waterfall_chart, use_container_width=True)
     
-    # Detailed breakdown
+    st.markdown("</div>", unsafe_allow_html=True)
+    
+    # Detailed breakdown in corporate cards
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**🏗️ Infrastructure Component Details:**")
-        
         infrastructure = waterfall_data['infrastructure_details']
         
         st.markdown(f"""
-        <div class="infrastructure-card">
-            <h4>Server Infrastructure</h4>
-            <p><strong>OS:</strong> {infrastructure['os']['name']}</p>
+        <div class="corporate-card status-card-info">
+            <h3>🏗️ Infrastructure Component Details</h3>
+            <p><strong>Operating System:</strong> {infrastructure['os']['name']}</p>
             <p><strong>TCP Efficiency:</strong> {infrastructure['os']['tcp_stack_efficiency']*100:.1f}%</p>
-            <p><strong>NIC:</strong> {infrastructure['nic']['name']}</p>
+            <p><strong>Network Interface:</strong> {infrastructure['nic']['name']}</p>
             <p><strong>NIC Efficiency:</strong> {infrastructure['nic']['real_world_efficiency']*100:.1f}%</p>
-            <p><strong>LAN:</strong> {infrastructure['lan']['name']}</p>
-            <p><strong>Oversubscription:</strong> {infrastructure['lan']['oversubscription_ratio']}</p>
-            <p><strong>WAN:</strong> {infrastructure['wan']['name']}</p>
+            <p><strong>LAN Infrastructure:</strong> {infrastructure['lan']['name']}</p>
+            <p><strong>Oversubscription Ratio:</strong> {infrastructure['lan']['oversubscription_ratio']}</p>
+            <p><strong>WAN Provider:</strong> {infrastructure['wan']['name']}</p>
             <p><strong>WAN Efficiency:</strong> {infrastructure['wan']['bandwidth_efficiency']*100:.1f}%</p>
         </div>
         """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("**🎯 Optimization Recommendations:**")
-        
         primary_bottleneck = summary['primary_bottleneck_layer']
         
         if primary_bottleneck == 'nic':
             recommendation = "Upgrade to higher bandwidth NIC (25/100 Gbps)"
+            card_type = "status-card-warning"
         elif primary_bottleneck == 'os':
             recommendation = "Optimize OS network stack, enable kernel bypass"
+            card_type = "status-card-warning"
         elif primary_bottleneck == 'lan':
             recommendation = "Reduce oversubscription, increase switch capacity"
+            card_type = "status-card-warning"
         elif primary_bottleneck == 'wan':
             recommendation = "Upgrade WAN bandwidth or provider tier"
+            card_type = "status-card-error"
         elif primary_bottleneck == 'service':
             recommendation = "Scale service instances or upgrade instance size"
+            card_type = "status-card-success"
         else:
             recommendation = "Review overall infrastructure architecture"
+            card_type = "status-card-info"
         
         st.markdown(f"""
-        <div class="recommendation-card">
-            <h4>Primary Optimization Target</h4>
-            <p><strong>Bottleneck:</strong> {summary['primary_bottleneck']}</p>
+        <div class="corporate-card {card_type}">
+            <h3>🎯 Optimization Recommendations</h3>
+            <p><strong>Primary Bottleneck:</strong> {summary['primary_bottleneck']}</p>
             <p><strong>Impact:</strong> {summary['primary_bottleneck_impact_mbps']:,.0f} Mbps reduction</p>
             <p><strong>Recommendation:</strong> {recommendation}</p>
             <p><strong>Expected Improvement:</strong> Up to {summary['primary_bottleneck_impact_mbps']:,.0f} Mbps</p>
@@ -1788,7 +2177,7 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
     return waterfall_data
 
 def render_migration_analysis_tab(config: Dict, waterfall_data: Dict, analyzer: EnhancedNetworkAnalyzer):
-    """Render migration timing and compatibility analysis (ORIGINAL FUNCTION PRESERVED)"""
+    """Render migration timing and compatibility analysis with corporate styling"""
     st.subheader("⏱️ Migration Analysis & Compatibility")
     
     # Service compatibility
@@ -1809,81 +2198,105 @@ def render_migration_analysis_tab(config: Dict, waterfall_data: Dict, analyzer: 
         config['migration_service']
     )
     
-    # Compatibility and timing metrics
+    # Compatibility and timing metrics in corporate style
+    st.markdown('<div class="metric-grid">', unsafe_allow_html=True)
+    
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     
     with col1:
-        st.metric(
-            "🚀 Migration Service",
-            config['migration_service'].upper(),
-            delta=service_compatibility['service_name']
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{config['migration_service'].upper()}</div>
+            <div class="metric-label">Migration Service</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        vpc_compatible = "✅ Yes" if service_compatibility['vpc_endpoint_compatible'] else "❌ No"
-        st.metric(
-            "🔗 VPC Endpoint Support",
-            vpc_compatible,
-            delta="Compatibility check"
-        )
+        vpc_status = "✅ Yes" if service_compatibility['vpc_endpoint_compatible'] else "❌ No"
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{vpc_status}</div>
+            <div class="metric-label">VPC Endpoint Support</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        st.metric(
-            "📊 Data Size",
-            f"{config['data_size_gb']:,} GB",
-            delta=f"{config['data_size_gb'] * 8:,} Gbits"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{config['data_size_gb']:,}</div>
+            <div class="metric-label">Data Size (GB)</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
-        st.metric(
-            "⚡ Effective Speed",
-            f"{waterfall_data['summary']['final_effective_mbps']:,.0f} Mbps",
-            delta=f"{waterfall_data['summary']['final_effective_mbps']/8:.0f} MB/s"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{waterfall_data['summary']['final_effective_mbps']:,.0f}</div>
+            <div class="metric-label">Effective Speed (Mbps)</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col5:
-        st.metric(
-            "🕒 Transfer Time",
-            f"{migration_time['data_transfer_hours']:.1f} hours",
-            delta=f"{migration_time['data_transfer_hours']/24:.1f} days"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{migration_time['data_transfer_hours']:.1f}h</div>
+            <div class="metric-label">Transfer Time</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col6:
         meets_requirement = migration_time['total_hours'] <= config['max_downtime_hours']
-        delta_text = "✅ Meets SLA" if meets_requirement else "❌ Exceeds SLA"
-        st.metric(
-            "⏰ Total vs SLA",
-            f"{migration_time['total_hours']:.1f}h / {config['max_downtime_hours']}h",
-            delta=delta_text
-        )
+        status_text = "✅ Meets SLA" if meets_requirement else "❌ Exceeds SLA"
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{status_text}</div>
+            <div class="metric-label">SLA Compliance</div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Detailed analysis
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Detailed analysis in corporate cards
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**📋 Service Compatibility Analysis:**")
+        # Determine card type based on compatibility issues
+        if service_compatibility['warnings']:
+            card_type = "status-card-error"
+        elif service_compatibility['requirements']:
+            card_type = "status-card-warning"
+        else:
+            card_type = "status-card-success"
+        
+        compatibility_content = ""
         
         if service_compatibility['warnings']:
-            st.markdown("**🚨 Warnings:**")
+            compatibility_content += "<h4>🚨 Warnings:</h4>"
             for warning in service_compatibility['warnings']:
-                st.warning(f"• {warning}")
+                compatibility_content += f"<p>• {warning}</p>"
         
         if service_compatibility['requirements']:
-            st.markdown("**📋 Requirements:**")
+            compatibility_content += "<h4>📋 Requirements:</h4>"
             for requirement in service_compatibility['requirements']:
-                st.info(f"• {requirement}")
+                compatibility_content += f"<p>• {requirement}</p>"
         
         if service_compatibility['recommendations']:
-            st.markdown("**💡 Recommendations:**")
+            compatibility_content += "<h4>💡 Recommendations:</h4>"
             for recommendation in service_compatibility['recommendations']:
-                st.success(f"• {recommendation}")
+                compatibility_content += f"<p>• {recommendation}</p>"
         
         if not any([service_compatibility['warnings'], service_compatibility['requirements'], service_compatibility['recommendations']]):
-            st.success("✅ No compatibility issues detected")
+            compatibility_content = "<p>✅ No compatibility issues detected</p>"
+        
+        st.markdown(f"""
+        <div class="corporate-card {card_type}">
+            <h3>📋 Service Compatibility Analysis</h3>
+            {compatibility_content}
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("**⏱️ Migration Timeline Breakdown:**")
-        
+        # Timeline analysis
         timeline_data = [
             {"Phase": "Setup & Config", "Hours": migration_time['setup_hours']},
             {"Phase": "Data Transfer", "Hours": migration_time['data_transfer_hours']},
@@ -1891,20 +2304,26 @@ def render_migration_analysis_tab(config: Dict, waterfall_data: Dict, analyzer: 
         ]
         
         df_timeline = pd.DataFrame(timeline_data)
-        st.dataframe(df_timeline, use_container_width=True)
         
-        if migration_time.get('supports_incremental'):
-            st.success(f"✅ {migration_time['service_name']} supports incremental migration")
+        # Migration timeline card
+        meets_sla = migration_time['total_hours'] <= config['max_downtime_hours']
+        timeline_card_type = "status-card-success" if meets_sla else "status-card-error"
+        
+        incremental_support = "✅ Supports incremental migration" if migration_time.get('supports_incremental') else "❌ Full migration required"
         
         st.markdown(f"""
-        <div class="service-card">
-            <h4>Migration Summary</h4>
+        <div class="corporate-card {timeline_card_type}">
+            <h3>⏱️ Migration Timeline Analysis</h3>
             <p><strong>Service:</strong> {migration_time['service_name']}</p>
             <p><strong>Total Time:</strong> {migration_time['total_hours']:.1f} hours</p>
             <p><strong>Recommended Window:</strong> {migration_time['recommended_window_hours']:.1f} hours</p>
-            <p><strong>SLA Compliance:</strong> {'✅ Pass' if meets_requirement else '❌ Fail'}</p>
+            <p><strong>SLA Compliance:</strong> {'✅ Pass' if meets_sla else '❌ Fail'}</p>
+            <p><strong>Incremental Support:</strong> {incremental_support}</p>
         </div>
         """, unsafe_allow_html=True)
+        
+        st.markdown("**Timeline Breakdown:**")
+        st.dataframe(df_timeline, use_container_width=True, hide_index=True)
     
     return {
         'migration_time': migration_time,
@@ -1913,46 +2332,66 @@ def render_migration_analysis_tab(config: Dict, waterfall_data: Dict, analyzer: 
     }
 
 def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer: EnhancedNetworkAnalyzer):
-    """Render AI-powered recommendations (ORIGINAL FUNCTION PRESERVED)"""
+    """Render AI-powered recommendations with corporate styling"""
     st.subheader("🤖 AI-Powered Migration Recommendations")
     
     ai_recommendations = analyzer.generate_ai_recommendations(config, analysis_results)
     
-    # Overview metrics
+    # Overview metrics in corporate style
+    st.markdown('<div class="metric-grid">', unsafe_allow_html=True)
+    
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.metric(
-            "🎯 Migration Complexity",
-            ai_recommendations['migration_complexity'].title(),
-            delta=f"Score: {ai_recommendations['overall_priority_score']}"
-        )
+        complexity_color = {
+            'low': 'var(--success-green)',
+            'medium': 'var(--warning-orange)',
+            'high': 'var(--error-red)'
+        }.get(ai_recommendations['migration_complexity'], 'var(--medium-gray)')
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value" style="color: {complexity_color};">{ai_recommendations['migration_complexity'].title()}</div>
+            <div class="metric-label">Migration Complexity</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.metric(
-            "🤖 AI Confidence",
-            ai_recommendations['confidence_level'].title(),
-            delta=f"{len(ai_recommendations['recommendations'])} recommendations"
-        )
+        confidence_color = {
+            'high': 'var(--success-green)',
+            'medium': 'var(--warning-orange)',
+            'low': 'var(--error-red)'
+        }.get(ai_recommendations['confidence_level'], 'var(--medium-gray)')
+        
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value" style="color: {confidence_color};">{ai_recommendations['confidence_level'].title()}</div>
+            <div class="metric-label">AI Confidence</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
         waterfall_summary = analysis_results['waterfall_data']['summary']
-        st.metric(
-            "🔍 Primary Bottleneck",
-            waterfall_summary['primary_bottleneck_layer'].title(),
-            delta=f"{waterfall_summary['primary_bottleneck_impact_mbps']:,.0f} Mbps"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{waterfall_summary['primary_bottleneck_layer'].title()}</div>
+            <div class="metric-label">Primary Bottleneck</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
         migration_time = analysis_results['migration_time']
-        st.metric(
-            "⏰ Migration Window",
-            f"{migration_time['recommended_window_hours']:.1f}h",
-            delta=f"{migration_time['total_days']:.1f} days"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{migration_time['recommended_window_hours']:.1f}h</div>
+            <div class="metric-label">Migration Window</div>
+        </div>
+        """, unsafe_allow_html=True)
     
-    # Recommendations by priority
-    st.markdown("**💡 Prioritized Recommendations:**")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Recommendations by priority in corporate cards
+    st.markdown("### 💡 Prioritized Recommendations")
     
     # Group by priority
     critical_recs = [rec for rec in ai_recommendations['recommendations'] if rec['priority'] == 'critical']
@@ -1961,40 +2400,56 @@ def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer
     low_recs = [rec for rec in ai_recommendations['recommendations'] if rec['priority'] == 'low']
     
     if critical_recs:
-        st.markdown("### 🚨 Critical Issues")
+        st.markdown("#### 🚨 Critical Issues")
         for i, rec in enumerate(critical_recs, 1):
-            with st.expander(f"🔴 {rec['type'].replace('_', ' ').title()}", expanded=True):
-                st.error(f"**Description:** {rec['description']}")
-                st.write(f"**Expected Impact:** {rec['impact']}")
+            st.markdown(f"""
+            <div class="corporate-card status-card-error">
+                <h4>🔴 {rec['type'].replace('_', ' ').title()}</h4>
+                <p><strong>Description:</strong> {rec['description']}</p>
+                <p><strong>Expected Impact:</strong> {rec['impact']}</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     if high_recs:
-        st.markdown("### ⚠️ High Priority")
+        st.markdown("#### ⚠️ High Priority")
         for i, rec in enumerate(high_recs, 1):
-            with st.expander(f"🟠 {rec['type'].replace('_', ' ').title()}", expanded=True):
-                st.warning(f"**Description:** {rec['description']}")
-                st.write(f"**Expected Impact:** {rec['impact']}")
+            st.markdown(f"""
+            <div class="corporate-card status-card-warning">
+                <h4>🟠 {rec['type'].replace('_', ' ').title()}</h4>
+                <p><strong>Description:</strong> {rec['description']}</p>
+                <p><strong>Expected Impact:</strong> {rec['impact']}</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     if medium_recs:
-        st.markdown("### 📋 Medium Priority")
+        st.markdown("#### 📋 Medium Priority")
         for i, rec in enumerate(medium_recs, 1):
-            with st.expander(f"🟡 {rec['type'].replace('_', ' ').title()}", expanded=False):
-                st.info(f"**Description:** {rec['description']}")
-                st.write(f"**Expected Impact:** {rec['impact']}")
+            st.markdown(f"""
+            <div class="corporate-card status-card-info">
+                <h4>🟡 {rec['type'].replace('_', ' ').title()}</h4>
+                <p><strong>Description:</strong> {rec['description']}</p>
+                <p><strong>Expected Impact:</strong> {rec['impact']}</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     if low_recs:
-        st.markdown("### ✅ Low Priority")
+        st.markdown("#### ✅ Low Priority")
         for i, rec in enumerate(low_recs, 1):
-            with st.expander(f"🟢 {rec['type'].replace('_', ' ').title()}", expanded=False):
-                st.success(f"**Description:** {rec['description']}")
-                st.write(f"**Expected Impact:** {rec['impact']}")
+            st.markdown(f"""
+            <div class="corporate-card status-card-success">
+                <h4>🟢 {rec['type'].replace('_', ' ').title()}</h4>
+                <p><strong>Description:</strong> {rec['description']}</p>
+                <p><strong>Expected Impact:</strong> {rec['impact']}</p>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # Summary
+    # Summary card
     waterfall_summary = analysis_results['waterfall_data']['summary']
     migration_time = analysis_results['migration_time']
     
     st.markdown(f"""
-    <div class="recommendation-card">
-        <h4>🎯 Migration Strategy Summary</h4>
+    <div class="corporate-card">
+        <h3>🎯 Migration Strategy Summary</h3>
         <p><strong>Service:</strong> {waterfall_summary['service_name']}</p>
         <p><strong>Complexity:</strong> {ai_recommendations['migration_complexity'].title()}</p>
         <p><strong>Confidence:</strong> {ai_recommendations['confidence_level'].title()}</p>
@@ -2005,7 +2460,7 @@ def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer
     """, unsafe_allow_html=True)
 
 def render_pattern_comparison_tab(analyzer: EnhancedNetworkAnalyzer, config: Dict):
-    """Render pattern comparison analysis (NEW)"""
+    """Render pattern comparison analysis with corporate styling"""
     st.subheader("🔄 Network Pattern Comparison")
     
     # Initialize clients with API keys if provided
@@ -2039,46 +2494,55 @@ def render_pattern_comparison_tab(analyzer: EnhancedNetworkAnalyzer, config: Dic
     </div>
     """, unsafe_allow_html=True)
     
-    # Comparison metrics
+    # Comparison metrics in corporate style
+    st.markdown('<div class="metric-grid">', unsafe_allow_html=True)
+    
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
-        st.metric(
-            "💰 Best Cost",
-            f"${min(p.total_cost_usd for p in pattern_analyses):,.0f}",
-            delta=f"vs ${max(p.total_cost_usd for p in pattern_analyses):,.0f}"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">${min(p.total_cost_usd for p in pattern_analyses):,.0f}</div>
+            <div class="metric-label">Best Cost</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.metric(
-            "⚡ Best Speed",
-            f"{max(p.effective_bandwidth_mbps for p in pattern_analyses):,.0f} Mbps",
-            delta="Highest throughput"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{max(p.effective_bandwidth_mbps for p in pattern_analyses):,.0f}</div>
+            <div class="metric-label">Best Speed (Mbps)</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        st.metric(
-            "🕒 Fastest Migration",
-            f"{min(p.migration_time_hours for p in pattern_analyses):.1f}h",
-            delta="Minimum time"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{min(p.migration_time_hours for p in pattern_analyses):.1f}h</div>
+            <div class="metric-label">Fastest Migration</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
-        st.metric(
-            "🛡️ Best Reliability",
-            f"{max(p.reliability_score for p in pattern_analyses)*100:.1f}%",
-            delta="Highest uptime"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{max(p.reliability_score for p in pattern_analyses)*100:.1f}%</div>
+            <div class="metric-label">Best Reliability</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col5:
-        st.metric(
-            "🎯 AI Score",
-            f"{best_pattern.ai_recommendation_score:.2f}",
-            delta="Recommended"
-        )
+        st.markdown(f"""
+        <div class="metric-card">
+            <div class="metric-value">{best_pattern.ai_recommendation_score:.2f}</div>
+            <div class="metric-label">AI Score</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Detailed comparison table
-    st.markdown("**📊 Detailed Pattern Comparison:**")
+    st.markdown("### 📊 Detailed Pattern Comparison")
     
     comparison_data = []
     for pattern in pattern_analyses:
@@ -2093,13 +2557,13 @@ def render_pattern_comparison_tab(analyzer: EnhancedNetworkAnalyzer, config: Dic
         })
     
     df_comparison = pd.DataFrame(comparison_data)
-    st.dataframe(df_comparison, use_container_width=True)
+    st.dataframe(df_comparison, use_container_width=True, hide_index=True)
     
-    # Cost vs Performance Chart
+    # Cost vs Performance Chart with corporate styling
     fig_scatter = go.Figure()
     
     for i, pattern in enumerate(pattern_analyses):
-        color = '#16a34a' if i == 0 else '#3b82f6'  # Green for best, blue for others
+        color = '#059669' if i == 0 else '#3b82f6'  # Green for best, blue for others
         size = 20 if i == 0 else 15
         
         fig_scatter.add_trace(go.Scatter(
@@ -2118,12 +2582,19 @@ def render_pattern_comparison_tab(analyzer: EnhancedNetworkAnalyzer, config: Dic
         ))
     
     fig_scatter.update_layout(
-        title="Migration Cost vs Time Analysis",
+        title={
+            'text': "Migration Cost vs Time Analysis",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 18, 'color': '#1e3a8a'}
+        },
         xaxis_title="Total Cost ($)",
         yaxis_title="Migration Time (hours)",
         showlegend=False,
         template="plotly_white",
-        height=500
+        height=500,
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)'
     )
     
     st.plotly_chart(fig_scatter, use_container_width=True)
@@ -2131,7 +2602,7 @@ def render_pattern_comparison_tab(analyzer: EnhancedNetworkAnalyzer, config: Dic
     return pattern_analyses, ai_recommendation
 
 def render_ai_insights_tab(pattern_analyses: List[PatternAnalysis], ai_recommendation: Dict, config: Dict):
-    """Render AI insights and recommendations (NEW)"""
+    """Render AI insights and recommendations with corporate styling"""
     st.subheader("🤖 AI-Powered Migration Insights")
     
     if not pattern_analyses or not ai_recommendation:
@@ -2140,7 +2611,7 @@ def render_ai_insights_tab(pattern_analyses: List[PatternAnalysis], ai_recommend
     
     # AI Recommendation Summary
     st.markdown(f"""
-    <div class="ai-recommendation-card">
+    <div class="corporate-card">
         <h3>🎯 AI Recommendation: {ai_recommendation['recommended_pattern'].replace('_', ' ').title()}</h3>
         <p><strong>Confidence Level:</strong> {ai_recommendation['confidence_score']*100:.0f}%</p>
         <p><strong>Reasoning:</strong> {ai_recommendation['reasoning']}</p>
@@ -2157,8 +2628,8 @@ def render_ai_insights_tab(pattern_analyses: List[PatternAnalysis], ai_recommend
     }[database_scenario]
     
     st.markdown(f"""
-    <div class="database-scenario-card">
-        <h4>🗄️ Database-Specific Considerations for {db_name}</h4>
+    <div class="corporate-card status-card-info">
+        <h3>🗄️ Database-Specific Considerations for {db_name}</h3>
         <p><strong>Database Insights:</strong> {ai_recommendation['database_considerations']}</p>
         <p><strong>Risk Assessment:</strong> {ai_recommendation['risk_assessment']}</p>
         <p><strong>Cost Justification:</strong> {ai_recommendation['cost_justification']}</p>
@@ -2171,31 +2642,61 @@ def render_ai_insights_tab(pattern_analyses: List[PatternAnalysis], ai_recommend
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**✅ Recommended Pattern Advantages:**")
+        pros_content = ""
         for pro in best_pattern.pros:
-            st.success(f"• {pro}")
+            pros_content += f"<p>• {pro}</p>"
         
-        st.markdown("**🎯 Best Use Cases:**")
+        use_cases_content = ""
         for use_case in best_pattern.use_cases:
-            st.info(f"• {use_case}")
+            use_cases_content += f"<p>• {use_case}</p>"
+        
+        st.markdown(f"""
+        <div class="corporate-card status-card-success">
+            <h3>✅ Recommended Pattern Advantages</h3>
+            {pros_content}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="corporate-card status-card-info">
+            <h3>🎯 Best Use Cases</h3>
+            {use_cases_content}
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("**⚠️ Considerations & Limitations:**")
+        cons_content = ""
         for con in best_pattern.cons:
-            st.warning(f"• {con}")
+            cons_content += f"<p>• {con}</p>"
         
-        st.markdown("**💡 Optimization Recommendations:**")
+        optimization_content = ""
         if best_pattern.complexity_score > 0.7:
-            st.warning("• High complexity - consider professional services engagement")
+            optimization_content += "<p>• High complexity - consider professional services engagement</p>"
         if best_pattern.total_cost_usd > 5000:
-            st.info("• High cost - evaluate phased migration approach")
+            optimization_content += "<p>• High cost - evaluate phased migration approach</p>"
         if best_pattern.migration_time_hours > config['max_downtime_hours']:
-            st.error("• Exceeds downtime SLA - consider incremental migration")
+            optimization_content += "<p>• Exceeds downtime SLA - consider incremental migration</p>"
         else:
-            st.success("• Meets downtime requirements")
+            optimization_content += "<p>• Meets downtime requirements</p>"
+        
+        st.markdown(f"""
+        <div class="corporate-card status-card-warning">
+            <h3>⚠️ Considerations & Limitations</h3>
+            {cons_content}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        optimization_card_type = "status-card-error" if best_pattern.migration_time_hours > config['max_downtime_hours'] else "status-card-success"
+        
+        st.markdown(f"""
+        <div class="corporate-card {optimization_card_type}">
+            <h3>💡 Optimization Recommendations</h3>
+            {optimization_content}
+        </div>
+        """, unsafe_allow_html=True)
 
 def render_database_guidance_tab(config: Dict):
-    """Render database engineer guidance (NEW)"""
+    """Render database engineer guidance with corporate styling"""
     st.subheader("📚 Database Engineer's Migration Guide")
     
     database_scenario = config.get('database_scenario', 'mysql_oltp')
@@ -2292,7 +2793,7 @@ def render_database_guidance_tab(config: Dict):
     
     # Display guidance
     st.markdown(f"""
-    <div class="database-scenario-card">
+    <div class="corporate-card">
         <h3>{selected_guidance['title']}</h3>
         <p><strong>Recommended Approach:</strong> {selected_guidance['recommended_approach']}</p>
     </div>
@@ -2301,42 +2802,55 @@ def render_database_guidance_tab(config: Dict):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("**🔧 Key Technical Considerations:**")
+        considerations_content = ""
         for consideration in selected_guidance['key_considerations']:
-            st.info(f"• {consideration}")
+            considerations_content += f"<p>• {consideration}</p>"
         
-        st.markdown("**📋 Testing Strategy:**")
+        testing_content = ""
         for test in selected_guidance['testing_strategy']:
-            st.success(f"• {test}")
+            testing_content += f"<p>• {test}</p>"
+        
+        st.markdown(f"""
+        <div class="corporate-card status-card-info">
+            <h3>🔧 Key Technical Considerations</h3>
+            {considerations_content}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.markdown(f"""
+        <div class="corporate-card status-card-success">
+            <h3>📋 Testing Strategy</h3>
+            {testing_content}
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.markdown("**🌐 Network Requirements:**")
         requirements = selected_guidance['network_requirements']
         
         st.markdown(f"""
-        <div class="network-metric-card">
-            <h4>Minimum Bandwidth</h4>
-            <p style="font-size: 1.5em; color: #3b82f6;">{requirements['min_bandwidth']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div class="network-metric-card">
-            <h4>Maximum Latency</h4>
-            <p style="font-size: 1.5em; color: #f59e0b;">{requirements['max_latency']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        st.markdown(f"""
-        <div class="network-metric-card">
-            <h4>Consistency Model</h4>
-            <p style="font-size: 1.2em; color: #16a34a;">{requirements['consistency']}</p>
+        <div class="corporate-card">
+            <h3>🌐 Network Requirements</h3>
+            
+            <div class="metric-card" style="margin: 1rem 0;">
+                <div class="metric-value" style="color: var(--secondary-blue);">{requirements['min_bandwidth']}</div>
+                <div class="metric-label">Minimum Bandwidth</div>
+            </div>
+            
+            <div class="metric-card" style="margin: 1rem 0;">
+                <div class="metric-value" style="color: var(--warning-orange);">{requirements['max_latency']}</div>
+                <div class="metric-label">Maximum Latency</div>
+            </div>
+            
+            <div class="metric-card" style="margin: 1rem 0;">
+                <div class="metric-value" style="color: var(--success-green); font-size: 1.2em;">{requirements['consistency']}</div>
+                <div class="metric-label">Consistency Model</div>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
 # Main application
 def main():
-    render_header()
+    render_corporate_header()
     
     # Sidebar configuration
     config = render_enhanced_sidebar_controls()
@@ -2344,13 +2858,20 @@ def main():
     # Initialize analyzer
     analyzer = EnhancedNetworkAnalyzer()
     
-    # Main tabs - NOW WITH 5 TABS PRESERVING ALL ORIGINAL FUNCTIONALITY + NEW FEATURES
+    # Initialize API clients with credentials from secrets
+    if config.get('aws_access_key') and config.get('aws_secret_key'):
+        analyzer.pricing_client.initialize_client(config['aws_access_key'], config['aws_secret_key'])
+    
+    if config.get('claude_api_key'):
+        analyzer.ai_client.api_key = config['claude_api_key']
+    
+    # Main tabs - 5 TABS PRESERVING ALL ORIGINAL FUNCTIONALITY + NEW FEATURES
     tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "💧 Realistic Analysis",  # ORIGINAL
-        "⏱️ Migration Analysis",   # ORIGINAL 
-        "🤖 Original AI Recommendations",  # ORIGINAL
-        "🔄 Pattern Comparison",    # NEW
-        "📚 Database Guide"        # NEW
+        "💧 Infrastructure Analysis",    # Enhanced version of original Realistic Analysis
+        "⏱️ Migration Analysis",         # Enhanced version of original Migration Analysis 
+        "🤖 AI Recommendations",         # Enhanced version of original AI Recommendations
+        "🔄 Pattern Comparison",         # NEW - Enhanced comparison with corporate styling
+        "📚 Database Guide"              # NEW - Database engineer guidance
     ])
     
     with tab1:
@@ -2360,19 +2881,43 @@ def main():
         if 'waterfall_data' in locals():
             analysis_results = render_migration_analysis_tab(config, waterfall_data, analyzer)
         else:
-            st.info("Please run Realistic Analysis first.")
+            st.markdown("""
+            <div class="corporate-card status-card-warning">
+                <h3>⚠️ Analysis Required</h3>
+                <p>Please run Infrastructure Analysis first to proceed with Migration Analysis.</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     with tab3:
         if 'analysis_results' in locals():
             render_ai_recommendations_tab(config, analysis_results, analyzer)
         else:
-            st.info("Please run Migration Analysis first.")
+            st.markdown("""
+            <div class="corporate-card status-card-warning">
+                <h3>⚠️ Previous Analysis Required</h3>
+                <p>Please complete Infrastructure and Migration Analysis first to get AI recommendations.</p>
+            </div>
+            """, unsafe_allow_html=True)
     
     with tab4:
         pattern_analyses, ai_recommendation = render_pattern_comparison_tab(analyzer, config)
+        
+        # Store results in session state for use in other tabs
+        if pattern_analyses and ai_recommendation:
+            st.session_state['pattern_analyses'] = pattern_analyses
+            st.session_state['ai_recommendation'] = ai_recommendation
     
     with tab5:
         render_database_guidance_tab(config)
+        
+        # Optional: Show AI insights if pattern comparison has been run
+        if 'pattern_analyses' in st.session_state and 'ai_recommendation' in st.session_state:
+            st.markdown("---")
+            render_ai_insights_tab(
+                st.session_state['pattern_analyses'], 
+                st.session_state['ai_recommendation'], 
+                config
+            )
 
 if __name__ == "__main__":
     main()
