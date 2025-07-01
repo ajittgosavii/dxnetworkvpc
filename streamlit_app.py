@@ -6914,13 +6914,11 @@ def render_enhanced_sidebar_controls():
         'deployment_type': 'managed' if database_engine.startswith('rds_') else 'self_managed',
         'instance_type': database_engine if database_engine.startswith('ec2_') else None,
         'migration_complexity_score': migration_complexity,
-        'is_homogeneous': is_homogeneous     
-   
-    # ... existing fields ...
+        'is_homogeneous': is_homogeneous,     
         'use_vpc_endpoint': use_vpc_endpoint,
         'vpc_endpoint_type': vpc_endpoint_type,
-        'vpc_endpoint_policy': vpc_endpoint_policy,
-        # ... rest of existing fields ...
+        'vpc_endpoint_policy': vpc_endpoint_policy
+      
 
     }
  
