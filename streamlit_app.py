@@ -21,7 +21,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Professional CSS styling with improved visibility
+# Enhanced CSS styling with new placement analysis components
 st.markdown("""
 <style>
     .main-header {
@@ -66,6 +66,30 @@ st.markdown("""
         margin: 1rem 0;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         border-left: 4px solid #64748b;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .placement-card {
+        background: linear-gradient(135deg, #fef3f2 0%, #fecaca 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        color: #1f2937;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #ef4444;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .decision-matrix {
+        background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        color: #1f2937;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #3b82f6;
         font-size: 14px;
         line-height: 1.6;
     }
@@ -194,7 +218,6 @@ st.markdown("""
         font-size: 15px;
     }
 
-    /* Improved metric styling */
     .metric-container {
         background: white;
         border: 2px solid #e5e7eb;
@@ -216,6 +239,49 @@ st.markdown("""
         font-size: 14px;
         color: #6b7280;
         font-weight: 500;
+    }
+
+    .placement-option {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+    }
+
+    .placement-option:hover {
+        border-color: #3b82f6;
+        box-shadow: 0 6px 20px rgba(59, 130, 246, 0.15);
+    }
+
+    .placement-option.recommended {
+        border-color: #10b981;
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    }
+
+    .placement-score {
+        display: inline-block;
+        background: #3b82f6;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 14px;
+        margin-bottom: 1rem;
+    }
+
+    .placement-score.excellent {
+        background: #10b981;
+    }
+
+    .placement-score.good {
+        background: #f59e0b;
+    }
+
+    .placement-score.poor {
+        background: #ef4444;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -384,13 +450,14 @@ class ClaudeAIIntegration:
             return False, f"Claude AI connection failed: {str(e)}"
     
     def analyze_migration_performance(self, config: Dict, network_perf: Dict, 
-                                   agent_perf: Dict, aws_data: Dict = None) -> str:
-        """Get Claude AI analysis of migration performance"""
+                                   agent_perf: Dict, placement_analysis: Dict = None, 
+                                   aws_data: Dict = None) -> str:
+        """Get Claude AI analysis of migration performance including agent placement"""
         if not self.client:
             return "Claude AI not initialized"
         
         try:
-            # Prepare context for Claude
+            # Prepare enhanced context for Claude
             context = f"""
             Migration Configuration Analysis:
             
@@ -400,7 +467,7 @@ class ClaudeAIIntegration:
             - RAM: {config['ram_gb']} GB
             - CPU Cores: {config['cpu_cores']}
             - NIC: {config['nic_speed']} Mbps {config['nic_type']}
-            - Storage Type: {config.get('storage_mount_type', 'Unknown')}
+            - Storage Type: {config.get('storage_type', 'Unknown')}
             
             Network Performance:
             - Path: {network_perf['path_name']}
@@ -415,17 +482,22 @@ class ClaudeAIIntegration:
             - Count: {agent_perf['num_agents']}
             - Total Capacity: {agent_perf['total_agent_throughput_mbps']:.0f} Mbps
             - Monthly Cost: ${agent_perf['total_monthly_cost']:.0f}
+            - Platform Efficiency: {agent_perf['platform_efficiency']*100:.1f}%
             
             Migration Details:
             - Database Size: {config['database_size_gb']} GB
             - Migration Type: {config['migration_type']}
             - Environment: {config['environment']}
             
+            {f"Agent Placement Analysis: {json.dumps(placement_analysis, indent=2)}" if placement_analysis else "No placement analysis provided"}
+            
             Performance Differences Observed:
             - Linux NAS typically achieves 15-25% better performance than Windows mapped drives
             - VMware introduces 8-12% overhead compared to physical servers
             - DataSync on physical Linux can achieve near line-rate speeds
             - Windows Server mapped drives suffer from SMB protocol overhead
+            - Agent placement proximity to data sources reduces latency by 2-5ms
+            - Physical agents in DMZ provide 20-30% better throughput than virtualized
             
             {f"AWS Real-time Data: {json.dumps(aws_data, indent=2)}" if aws_data else "No real-time AWS data available"}
             """
@@ -434,22 +506,30 @@ class ClaudeAIIntegration:
             As an AWS migration expert, analyze this migration configuration and provide a structured analysis with the following sections:
 
             1. PERFORMANCE BOTTLENECK ANALYSIS
-            2. OPTIMIZATION RECOMMENDATIONS  
-            3. EXPECTED VS ACTUAL PERFORMANCE
-            4. COST OPTIMIZATION SUGGESTIONS
-            5. RISK ASSESSMENT AND MITIGATION
+            2. AGENT PLACEMENT OPTIMIZATION RECOMMENDATIONS  
+            3. PHYSICAL VS VIRTUAL AGENT CONFIGURATION
+            4. NETWORK PROXIMITY AND LATENCY OPTIMIZATION
+            5. COST VS PERFORMANCE TRADE-OFFS
+            6. IMPLEMENTATION STRATEGY AND TIMELINE
+            7. RISK ASSESSMENT AND MITIGATION
 
-            Focus on real-world performance differences between Linux NAS vs Windows mapped drives, Physical vs VMware deployments, and DataSync vs DMS for this specific use case.
+            Focus on real-world performance differences between:
+            - Physical vs virtual agent deployment
+            - Agent placement in DMZ vs internal network segments
+            - Co-location with data sources vs centralized deployment
+            - Linux NFS vs Windows SMB for agent communication
+            - DataSync vs DMS optimization strategies
 
             Configuration to analyze:
             {context}
 
-            Format your response in clear sections with bullet points and specific technical recommendations. Use technical language appropriate for infrastructure engineers.
+            Provide specific technical recommendations for agent placement, infrastructure requirements, 
+            and configuration optimization. Include expected performance improvements and implementation complexity.
             """
             
             response = self.client.messages.create(
                 model="claude-3-5-sonnet-20241022",
-                max_tokens=1500,
+                max_tokens=2000,
                 messages=[{"role": "user", "content": prompt}]
             )
             
@@ -470,7 +550,7 @@ class ClaudeAIIntegration:
             Current configuration:
             - Platform: {current_config['server_type']}
             - OS: {current_config['operating_system']}
-            - Storage: {current_config.get('storage_mount_type', 'Unknown')}
+            - Storage: {current_config.get('storage_type', 'Unknown')}
             - Agent: {current_config['migration_type']}
             
             Provide 3-5 specific, actionable recommendations to resolve this {bottleneck_type} bottleneck.
@@ -488,6 +568,46 @@ class ClaudeAIIntegration:
             
         except Exception as e:
             return f"Error getting optimization recommendations: {str(e)}"
+    
+    def get_placement_recommendations(self, config: Dict, placement_options: List[Dict]) -> str:
+        """Get specific agent placement recommendations"""
+        if not self.client:
+            return "Claude AI not initialized"
+        
+        try:
+            prompt = f"""
+            As an AWS migration specialist, analyze these agent placement options and provide specific recommendations:
+            
+            Current Configuration:
+            - Migration Type: {config['migration_type']}
+            - Environment: {config['environment']}
+            - Platform: {config['server_type']}
+            - OS: {config['operating_system']}
+            - Database Size: {config['database_size_gb']} GB
+            
+            Placement Options Analysis:
+            {json.dumps(placement_options, indent=2)}
+            
+            Provide:
+            1. Recommended placement strategy with justification
+            2. Alternative options with trade-offs
+            3. Implementation considerations
+            4. Performance expectations
+            5. Security implications
+            
+            Format as clear bullet points with technical details.
+            """
+            
+            response = self.client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=1000,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            return response.content[0].text
+            
+        except Exception as e:
+            return f"Error getting placement recommendations: {str(e)}"
 
 class EnhancedNetworkPathManager:
     """Enhanced network path manager with detailed storage type analysis"""
@@ -507,12 +627,12 @@ class EnhancedNetworkPathManager:
                     {
                         'name': 'Linux NAS to Linux Jump Server (NFS)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 1.5,  # NFS is faster than SMB
+                        'latency_ms': 1.5,
                         'reliability': 0.9995,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
                         'optimization_potential': 0.97,
-                        'protocol_efficiency': 0.95  # NFS efficiency
+                        'protocol_efficiency': 0.95
                     },
                     {
                         'name': 'Linux Jump Server to AWS S3 (DX)',
@@ -538,12 +658,12 @@ class EnhancedNetworkPathManager:
                     {
                         'name': 'Windows Share to Windows Jump Server (SMB)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 4,  # SMB has higher latency
+                        'latency_ms': 4,
                         'reliability': 0.995,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.85,  # Lower optimization potential
-                        'protocol_efficiency': 0.78  # SMB overhead
+                        'optimization_potential': 0.85,
+                        'protocol_efficiency': 0.78
                     },
                     {
                         'name': 'Windows Jump Server to AWS S3 (DX)',
@@ -701,13 +821,11 @@ class EnhancedNetworkPathManager:
             
             # Storage type specific adjustments
             if path['storage_mount_type'] == 'smb':
-                # Windows SMB has additional overhead
-                effective_bandwidth *= 0.82  # SMB protocol overhead
-                effective_latency *= 1.3     # SMB latency penalty
+                effective_bandwidth *= 0.82
+                effective_latency *= 1.3
             elif path['storage_mount_type'] == 'nfs':
-                # Linux NFS is more efficient
-                effective_bandwidth *= 0.96  # Minimal NFS overhead
-                effective_latency *= 1.05    # Minimal NFS latency
+                effective_bandwidth *= 0.96
+                effective_latency *= 1.05
             
             optimization_score *= segment['optimization_potential']
             
@@ -750,24 +868,24 @@ class EnhancedNetworkPathManager:
         return result
 
 class EnhancedAgentManager:
-    """Enhanced agent manager with detailed physical vs VMware analysis and corrected pricing"""
+    """Enhanced agent manager with detailed physical vs VMware analysis and agent placement optimization"""
     
     def __init__(self):
-        # Updated AWS pricing (per hour) as of 2024 - using on-demand pricing for corresponding EC2 instances
+        # Updated AWS pricing (per hour) as of 2024
         self.datasync_specs = {
-            'small': {'throughput_mbps': 250, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0416},    # t3.medium
-            'medium': {'throughput_mbps': 500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.0832},   # t3.large  
-            'large': {'throughput_mbps': 1000, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.1664},  # t3.xlarge
-            'xlarge': {'throughput_mbps': 2000, 'vcpu': 8, 'memory': 32, 'cost_hour': 0.3328}  # t3.2xlarge
+            'small': {'throughput_mbps': 250, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0416},
+            'medium': {'throughput_mbps': 500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.0832},
+            'large': {'throughput_mbps': 1000, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.1664},
+            'xlarge': {'throughput_mbps': 2000, 'vcpu': 8, 'memory': 32, 'cost_hour': 0.3328}
         }
         
-        # Updated DMS pricing (per hour) as of 2024 - actual DMS instance pricing
+        # Updated DMS pricing (per hour) as of 2024
         self.dms_specs = {
-            'small': {'throughput_mbps': 200, 'vcpu': 1, 'memory': 1, 'cost_hour': 0.0193},      # dms.t3.micro
-            'medium': {'throughput_mbps': 400, 'vcpu': 1, 'memory': 2, 'cost_hour': 0.0386},     # dms.t3.small
-            'large': {'throughput_mbps': 800, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0772},      # dms.t3.medium
-            'xlarge': {'throughput_mbps': 1500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.1544},    # dms.t3.large
-            'xxlarge': {'throughput_mbps': 2500, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.3088}   # dms.t3.xlarge
+            'small': {'throughput_mbps': 200, 'vcpu': 1, 'memory': 1, 'cost_hour': 0.0193},
+            'medium': {'throughput_mbps': 400, 'vcpu': 1, 'memory': 2, 'cost_hour': 0.0386},
+            'large': {'throughput_mbps': 800, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0772},
+            'xlarge': {'throughput_mbps': 1500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.1544},
+            'xxlarge': {'throughput_mbps': 2500, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.3088}
         }
         
         # Physical vs VMware performance characteristics
@@ -777,21 +895,59 @@ class EnhancedAgentManager:
                 'cpu_overhead': 0.0,
                 'memory_overhead': 0.0,
                 'io_efficiency': 1.0,
-                'network_efficiency': 1.0
+                'network_efficiency': 1.0,
+                'placement_bonus': 1.0
             },
             'vmware': {
-                'base_efficiency': 0.92,  # 8% hypervisor overhead
-                'cpu_overhead': 0.08,     # CPU overhead
-                'memory_overhead': 0.12,  # Memory overhead
-                'io_efficiency': 0.88,    # I/O overhead
-                'network_efficiency': 0.94 # Network virtualization overhead
+                'base_efficiency': 0.92,
+                'cpu_overhead': 0.08,
+                'memory_overhead': 0.12,
+                'io_efficiency': 0.88,
+                'network_efficiency': 0.94,
+                'placement_bonus': 0.95
+            }
+        }
+
+        # Agent placement characteristics
+        self.placement_characteristics = {
+            'source_colocation': {
+                'latency_reduction_ms': -2.5,
+                'bandwidth_bonus': 1.15,
+                'reliability_bonus': 1.02,
+                'security_score': 0.85,
+                'cost_multiplier': 1.0,
+                'management_complexity': 0.7
+            },
+            'dmz_placement': {
+                'latency_reduction_ms': -1.0,
+                'bandwidth_bonus': 1.08,
+                'reliability_bonus': 1.01,
+                'security_score': 0.95,
+                'cost_multiplier': 1.1,
+                'management_complexity': 0.8
+            },
+            'centralized_datacenter': {
+                'latency_reduction_ms': 0.0,
+                'bandwidth_bonus': 1.0,
+                'reliability_bonus': 1.0,
+                'security_score': 1.0,
+                'cost_multiplier': 1.0,
+                'management_complexity': 1.0
+            },
+            'edge_deployment': {
+                'latency_reduction_ms': -4.0,
+                'bandwidth_bonus': 1.25,
+                'reliability_bonus': 0.98,
+                'security_score': 0.75,
+                'cost_multiplier': 1.3,
+                'management_complexity': 0.6
             }
         }
     
     def calculate_agent_performance(self, agent_type: str, agent_size: str, num_agents: int, 
                                    platform_type: str = 'vmware', storage_type: str = 'nas',
-                                   os_type: str = 'linux') -> Dict:
-        """Enhanced agent performance calculation with detailed platform analysis"""
+                                   os_type: str = 'linux', placement_type: str = 'centralized_datacenter') -> Dict:
+        """Enhanced agent performance calculation with placement considerations"""
         
         if agent_type == 'datasync':
             base_spec = self.datasync_specs[agent_size]
@@ -800,6 +956,7 @@ class EnhancedAgentManager:
         
         # Platform characteristics
         platform_char = self.platform_characteristics[platform_type]
+        placement_char = self.placement_characteristics[placement_type]
         
         # Calculate per-agent performance
         base_throughput = base_spec['throughput_mbps']
@@ -809,19 +966,20 @@ class EnhancedAgentManager:
         
         # Apply I/O efficiency based on storage type and OS
         if storage_type == 'nas' and os_type == 'linux':
-            # Linux NAS (NFS) - optimal performance
             io_multiplier = 1.0
         elif storage_type == 'share' and os_type == 'windows':
-            # Windows mapped drive (SMB) - reduced performance
-            io_multiplier = 0.75  # 25% performance loss due to SMB overhead
+            io_multiplier = 0.75
         else:
             io_multiplier = 0.9
+        
+        # Apply placement bonus
+        placement_throughput = platform_throughput * io_multiplier * placement_char['bandwidth_bonus']
         
         # Network efficiency
         network_efficiency = platform_char['network_efficiency']
         
         # Final per-agent throughput
-        per_agent_throughput = platform_throughput * io_multiplier * network_efficiency
+        per_agent_throughput = placement_throughput * network_efficiency
         
         # Calculate scaling efficiency
         if num_agents == 1:
@@ -836,16 +994,19 @@ class EnhancedAgentManager:
         # Total agent capacity
         total_agent_throughput = per_agent_throughput * num_agents * scaling_efficiency
         
-        # Enhanced cost calculation
+        # Enhanced cost calculation with placement considerations
         base_cost_per_hour = base_spec['cost_hour']
         
-        # VMware licensing overhead (if applicable)
+        # VMware licensing overhead
         if platform_type == 'vmware':
-            vmware_licensing_multiplier = 1.15  # 15% licensing overhead
+            vmware_licensing_multiplier = 1.15
         else:
             vmware_licensing_multiplier = 1.0
         
-        per_agent_cost = base_cost_per_hour * 24 * 30 * vmware_licensing_multiplier
+        # Placement cost considerations
+        placement_cost_multiplier = placement_char['cost_multiplier']
+        
+        per_agent_cost = base_cost_per_hour * 24 * 30 * vmware_licensing_multiplier * placement_cost_multiplier
         total_monthly_cost = per_agent_cost * num_agents
         
         # Performance loss analysis
@@ -860,6 +1021,7 @@ class EnhancedAgentManager:
             'platform_type': platform_type,
             'storage_type': storage_type,
             'os_type': os_type,
+            'placement_type': placement_type,
             'base_throughput_mbps': base_throughput,
             'per_agent_throughput_mbps': per_agent_throughput,
             'total_agent_throughput_mbps': total_agent_throughput,
@@ -867,13 +1029,212 @@ class EnhancedAgentManager:
             'platform_efficiency': platform_char['base_efficiency'],
             'io_multiplier': io_multiplier,
             'network_efficiency': network_efficiency,
+            'placement_bonus': placement_char['bandwidth_bonus'],
             'performance_loss_pct': performance_loss,
             'per_agent_monthly_cost': per_agent_cost,
             'total_monthly_cost': total_monthly_cost,
             'vmware_licensing_multiplier': vmware_licensing_multiplier,
+            'placement_cost_multiplier': placement_cost_multiplier,
             'base_spec': base_spec,
-            'platform_characteristics': platform_char
+            'platform_characteristics': platform_char,
+            'placement_characteristics': placement_char
         }
+
+class AgentPlacementAnalyzer:
+    """Comprehensive agent placement analysis and optimization"""
+    
+    def __init__(self):
+        self.placement_strategies = {
+            'source_colocation': {
+                'name': 'Source Co-location',
+                'description': 'Agents placed directly with data sources',
+                'pros': [
+                    'Minimal latency to source data',
+                    'Maximum bandwidth utilization',
+                    'Reduced network hops',
+                    'Direct storage access'
+                ],
+                'cons': [
+                    'Distributed management overhead',
+                    'Security exposure',
+                    'Higher maintenance complexity',
+                    'Limited scalability'
+                ],
+                'best_for': ['Large databases', 'High-throughput requirements', 'Minimal downtime needs'],
+                'avoid_when': ['High security requirements', 'Limited on-premise resources']
+            },
+            'dmz_placement': {
+                'name': 'DMZ Deployment',
+                'description': 'Agents in demilitarized zone with security controls',
+                'pros': [
+                    'Balanced security and performance',
+                    'Centralized security management',
+                    'Good network performance',
+                    'Controlled access'
+                ],
+                'cons': [
+                    'Additional security overhead',
+                    'Network latency increase',
+                    'Firewall rule complexity',
+                    'DMZ resource requirements'
+                ],
+                'best_for': ['Production environments', 'Compliance requirements', 'Balanced approach'],
+                'avoid_when': ['Ultra-high performance needs', 'Simple network topologies']
+            },
+            'centralized_datacenter': {
+                'name': 'Centralized Data Center',
+                'description': 'Agents in central enterprise data center',
+                'pros': [
+                    'Simplified management',
+                    'Centralized monitoring',
+                    'Standard security controls',
+                    'Easy maintenance'
+                ],
+                'cons': [
+                    'Increased network latency',
+                    'Bandwidth sharing',
+                    'Single point of failure',
+                    'Distance from sources'
+                ],
+                'best_for': ['Multiple source locations', 'Standard deployments', 'Operational simplicity'],
+                'avoid_when': ['Performance-critical migrations', 'Distributed sources']
+            },
+            'edge_deployment': {
+                'name': 'Edge Deployment',
+                'description': 'Agents at network edge closest to data',
+                'pros': [
+                    'Ultra-low latency',
+                    'Maximum performance',
+                    'Optimized data paths',
+                    'Reduced core network load'
+                ],
+                'cons': [
+                    'Complex management',
+                    'Security challenges',
+                    'Higher costs',
+                    'Limited monitoring'
+                ],
+                'best_for': ['Performance-critical migrations', 'Large data volumes', 'Time-sensitive transfers'],
+                'avoid_when': ['Budget constraints', 'Security-first environments']
+            }
+        }
+    
+    def analyze_placement_options(self, config: Dict, network_perf: Dict, agent_manager: EnhancedAgentManager) -> List[Dict]:
+        """Analyze all placement options and score them"""
+        placement_options = []
+        
+        for placement_type, strategy in self.placement_strategies.items():
+            # Calculate performance for this placement
+            agent_perf = agent_manager.calculate_agent_performance(
+                config['migration_type'], 
+                config['agent_size'], 
+                config['number_of_agents'],
+                config['server_type'],
+                self._map_storage_type(config['storage_type']),
+                self._determine_os_type(config['operating_system']),
+                placement_type
+            )
+            
+            # Calculate placement score
+            score = self._calculate_placement_score(placement_type, config, network_perf, agent_perf)
+            
+            # Determine implementation complexity
+            complexity = self._assess_implementation_complexity(placement_type, config)
+            
+            placement_options.append({
+                'placement_type': placement_type,
+                'strategy': strategy,
+                'agent_performance': agent_perf,
+                'placement_score': score,
+                'implementation_complexity': complexity,
+                'throughput_mbps': agent_perf['total_agent_throughput_mbps'],
+                'monthly_cost': agent_perf['total_monthly_cost'],
+                'latency_impact': agent_perf['placement_characteristics']['latency_reduction_ms'],
+                'security_score': agent_perf['placement_characteristics']['security_score'],
+                'management_complexity': agent_perf['placement_characteristics']['management_complexity']
+            })
+        
+        # Sort by placement score
+        placement_options.sort(key=lambda x: x['placement_score'], reverse=True)
+        
+        return placement_options
+    
+    def _calculate_placement_score(self, placement_type: str, config: Dict, network_perf: Dict, agent_perf: Dict) -> float:
+        """Calculate comprehensive placement score (0-100)"""
+        # Performance score (40% weight)
+        max_possible_throughput = 2000 * config['number_of_agents']  # Theoretical max
+        performance_score = (agent_perf['total_agent_throughput_mbps'] / max_possible_throughput) * 100
+        performance_score = min(performance_score, 100)
+        
+        # Cost efficiency score (25% weight)
+        cost_per_mbps = agent_perf['total_monthly_cost'] / agent_perf['total_agent_throughput_mbps']
+        max_cost_per_mbps = 1000  # Threshold for poor cost efficiency
+        cost_score = max(0, 100 - (cost_per_mbps / max_cost_per_mbps * 100))
+        
+        # Security score (20% weight)
+        security_score = agent_perf['placement_characteristics']['security_score'] * 100
+        
+        # Management complexity score (15% weight)
+        management_score = agent_perf['placement_characteristics']['management_complexity'] * 100
+        
+        # Calculate weighted total
+        total_score = (
+            performance_score * 0.40 +
+            cost_score * 0.25 +
+            security_score * 0.20 +
+            management_score * 0.15
+        )
+        
+        return min(total_score, 100)
+    
+    def _assess_implementation_complexity(self, placement_type: str, config: Dict) -> Dict:
+        """Assess implementation complexity for placement type"""
+        complexity_factors = {
+            'source_colocation': {
+                'setup_time_days': 3,
+                'skill_level': 'High',
+                'infrastructure_changes': 'Minimal',
+                'security_review': 'Required',
+                'ongoing_maintenance': 'High'
+            },
+            'dmz_placement': {
+                'setup_time_days': 7,
+                'skill_level': 'High',
+                'infrastructure_changes': 'Moderate',
+                'security_review': 'Extensive',
+                'ongoing_maintenance': 'Moderate'
+            },
+            'centralized_datacenter': {
+                'setup_time_days': 2,
+                'skill_level': 'Medium',
+                'infrastructure_changes': 'Minimal',
+                'security_review': 'Standard',
+                'ongoing_maintenance': 'Low'
+            },
+            'edge_deployment': {
+                'setup_time_days': 10,
+                'skill_level': 'Expert',
+                'infrastructure_changes': 'Significant',
+                'security_review': 'Extensive',
+                'ongoing_maintenance': 'Very High'
+            }
+        }
+        
+        return complexity_factors.get(placement_type, complexity_factors['centralized_datacenter'])
+    
+    def _map_storage_type(self, storage_type: str) -> str:
+        """Map storage type to simplified categories"""
+        mapping = {
+            'nfs_nas': 'nas',
+            'smb_share': 'share',
+            'iscsi_san': 'san',
+            'local_storage': 'local'
+        }
+        return mapping.get(storage_type, 'nas')
+    
+    def _determine_os_type(self, operating_system: str) -> str:
+        """Determine OS type from operating system"""
+        return 'linux' if 'linux' in operating_system.lower() else 'windows'
 
 def get_nic_efficiency(nic_type: str) -> float:
     """Enhanced NIC efficiency based on type"""
@@ -1002,12 +1363,6 @@ def render_connection_status(status_info: Dict):
         - `AWS_SECRET_KEY`
         - `AWS_REGION` (optional, defaults to us-east-1)
         
-        **Common AWS Regions:**
-        - `us-east-1` (N. Virginia)
-        - `us-west-2` (Oregon)
-        - `eu-west-1` (Ireland)
-        - `ap-southeast-1` (Singapore)
-        
         For Claude AI Integration:
         - `CLAUDE_API_KEY`
         
@@ -1015,10 +1370,357 @@ def render_connection_status(status_info: Dict):
         1. Go to your Streamlit Cloud app settings
         2. Navigate to the "Secrets" section
         3. Add the required keys as shown above
-        
-        **Note:** Make sure AWS_REGION matches where your 
-        DataSync/DMS resources are located.
         """)
+
+def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_manager: EnhancedAgentManager, 
+                                  claude_integration: ClaudeAIIntegration):
+    """Render comprehensive agent placement analysis"""
+    st.markdown("**🎯 Agent Placement Strategy Analysis**")
+    
+    # Initialize placement analyzer
+    placement_analyzer = AgentPlacementAnalyzer()
+    
+    # Analyze placement options
+    placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
+    
+    # Render placement options
+    st.markdown("### 📍 Placement Strategy Comparison")
+    
+    # Create placement comparison chart
+    placement_df = pd.DataFrame([
+        {
+            'Strategy': opt['strategy']['name'],
+            'Performance Score': opt['placement_score'],
+            'Throughput (Mbps)': opt['throughput_mbps'],
+            'Monthly Cost ($)': opt['monthly_cost'],
+            'Security Score': opt['security_score'] * 100,
+            'Management Complexity': (1 - opt['management_complexity']) * 100
+        }
+        for opt in placement_options
+    ])
+    
+    # Placement score chart
+    fig_placement = px.bar(
+        placement_df,
+        x='Strategy',
+        y='Performance Score',
+        title='Agent Placement Strategy Scores',
+        color='Performance Score',
+        color_continuous_scale='RdYlGn',
+        text='Performance Score'
+    )
+    
+    fig_placement.update_traces(
+        texttemplate='%{text:.1f}',
+        textposition='outside',
+        textfont=dict(size=14, family="Arial Black")
+    )
+    
+    fig_placement.update_layout(
+        height=400,
+        title=dict(font=dict(size=18, family="Arial Black")),
+        xaxis=dict(title=dict(text='Placement Strategy', font=dict(size=14))),
+        yaxis=dict(title=dict(text='Overall Score (0-100)', font=dict(size=14))),
+        font=dict(size=12)
+    )
+    
+    st.plotly_chart(fig_placement, use_container_width=True)
+    
+    # Detailed placement analysis
+    st.markdown("### 🔍 Detailed Placement Analysis")
+    
+    for i, option in enumerate(placement_options):
+        # Determine card class based on score
+        if option['placement_score'] >= 80:
+            score_class = "excellent"
+            card_class = "network-card"
+        elif option['placement_score'] >= 65:
+            score_class = "good"
+            card_class = "performance-card"
+        else:
+            score_class = "poor"
+            card_class = "warning-card"
+        
+        is_recommended = i == 0  # First option is highest scored
+        
+        st.markdown(f"""
+        <div class="placement-option {'recommended' if is_recommended else ''}">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h4 style="font-size: 18px; font-weight: bold; margin: 0;">{option['strategy']['name']}</h4>
+                <span class="placement-score {score_class}">{option['placement_score']:.1f}/100</span>
+            </div>
+            
+            <p style="font-size: 15px; color: #6b7280; margin-bottom: 1rem;">{option['strategy']['description']}</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                <div>
+                    <strong>Performance:</strong><br>
+                    {option['throughput_mbps']:,.0f} Mbps<br>
+                    <small>Latency: {option['latency_impact']:+.1f} ms</small>
+                </div>
+                <div>
+                    <strong>Cost:</strong><br>
+                    ${option['monthly_cost']:,.0f}/month<br>
+                    <small>${option['monthly_cost']/option['throughput_mbps']:.2f}/Mbps</small>
+                </div>
+                <div>
+                    <strong>Security:</strong><br>
+                    {option['security_score']*100:.0f}% rating<br>
+                    <small>Risk assessment</small>
+                </div>
+                <div>
+                    <strong>Management:</strong><br>
+                    {option['management_complexity']*100:.0f}% complexity<br>
+                    <small>Operational overhead</small>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Expandable details
+        with st.expander(f"📋 {option['strategy']['name']} - Detailed Analysis", expanded=is_recommended):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("**✅ Advantages:**")
+                for pro in option['strategy']['pros']:
+                    st.markdown(f"• {pro}")
+                
+                st.markdown("**🎯 Best For:**")
+                for best in option['strategy']['best_for']:
+                    st.markdown(f"• {best}")
+            
+            with col2:
+                st.markdown("**⚠️ Challenges:**")
+                for con in option['strategy']['cons']:
+                    st.markdown(f"• {con}")
+                
+                st.markdown("**❌ Avoid When:**")
+                for avoid in option['strategy']['avoid_when']:
+                    st.markdown(f"• {avoid}")
+            
+            # Implementation details
+            st.markdown("**🔧 Implementation Details:**")
+            complexity = option['implementation_complexity']
+            
+            impl_col1, impl_col2, impl_col3 = st.columns(3)
+            with impl_col1:
+                st.markdown(f"""
+                **Timeline:**
+                - Setup: {complexity['setup_time_days']} days
+                - Skill Level: {complexity['skill_level']}
+                """)
+            
+            with impl_col2:
+                st.markdown(f"""
+                **Infrastructure:**
+                - Changes: {complexity['infrastructure_changes']}
+                - Security Review: {complexity['security_review']}
+                """)
+            
+            with impl_col3:
+                st.markdown(f"""
+                **Operations:**
+                - Maintenance: {complexity['ongoing_maintenance']}
+                """)
+    
+    # AI-powered placement recommendations
+    if claude_integration and claude_integration.client:
+        st.markdown("### 🧠 AI-Powered Placement Recommendations")
+        
+        with st.spinner("🔄 Analyzing placement strategies..."):
+            ai_recommendations = claude_integration.get_placement_recommendations(config, placement_options)
+        
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🎯 Strategic Placement Analysis</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{ai_recommendations.replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_infrastructure_topology_with_placement(config: Dict, network_perf: Dict, agent_perf: Dict, placement_type: str):
+    """Render detailed infrastructure topology showing agent placement"""
+    st.markdown("### 🏗️ Infrastructure Topology with Agent Placement")
+    
+    # Create topology based on placement type
+    topology_components = []
+    
+    # Base infrastructure components
+    source_storage_type = network_perf.get('storage_mount_type', 'nfs').upper()
+    source_os = network_perf.get('os_type', 'linux').title()
+    
+    # Source tier
+    topology_components.extend([
+        {
+            'tier': 'Source',
+            'component': f'{source_storage_type} Storage Server',
+            'details': f"{config.get('database_size_gb', 1000)} GB Database",
+            'status': 'Active',
+            'icon': '🗄️',
+            'has_agent': placement_type == 'source_colocation'
+        },
+        {
+            'tier': 'Source',
+            'component': f'{source_os} File System',
+            'details': f"{source_storage_type} Protocol",
+            'status': 'Active',
+            'icon': '📁',
+            'has_agent': False
+        }
+    ])
+    
+    # Network tier
+    if placement_type == 'edge_deployment':
+        topology_components.append({
+            'tier': 'Edge',
+            'component': 'Edge Network Node',
+            'details': 'Agent Deployment Location',
+            'status': 'Agent Deployed',
+            'icon': '🌐',
+            'has_agent': True
+        })
+    
+    # Security tier
+    if placement_type == 'dmz_placement':
+        topology_components.append({
+            'tier': 'Security',
+            'component': 'DMZ Security Zone',
+            'details': 'Controlled Agent Environment',
+            'status': 'Agent Deployed',
+            'icon': '🛡️',
+            'has_agent': True
+        })
+    
+    # Data center tier
+    if placement_type == 'centralized_datacenter':
+        topology_components.append({
+            'tier': 'Data Center',
+            'component': 'Central Data Center',
+            'details': 'Standard Agent Deployment',
+            'status': 'Agent Deployed',
+            'icon': '🏢',
+            'has_agent': True
+        })
+    
+    # AWS tier
+    topology_components.extend([
+        {
+            'tier': 'AWS Edge',
+            'component': 'Direct Connect Gateway',
+            'details': 'AWS Entry Point',
+            'status': 'Connected',
+            'icon': '🌉',
+            'has_agent': False
+        },
+        {
+            'tier': 'AWS',
+            'component': 'Target Database',
+            'details': f"{config.get('database_engine', 'MySQL').upper()} on RDS/Aurora",
+            'status': 'Ready',
+            'icon': '🗃️',
+            'has_agent': False
+        }
+    ])
+    
+    # Create visual topology
+    st.markdown("#### 🗺️ Network Topology with Agent Placement")
+    
+    # Group by tier
+    tiers = {}
+    for comp in topology_components:
+        tier = comp['tier']
+        if tier not in tiers:
+            tiers[tier] = []
+        tiers[tier].append(comp)
+    
+    # Display tiers
+    for tier_name, components in tiers.items():
+        st.markdown(f"**{tier_name} Tier:**")
+        
+        cols = st.columns(len(components) if len(components) <= 4 else 4)
+        
+        for i, comp in enumerate(components):
+            col_idx = i % 4
+            with cols[col_idx]:
+                agent_indicator = "🤖 AGENT DEPLOYED" if comp['has_agent'] else ""
+                border_color = "#10b981" if comp['has_agent'] else "#e2e8f0"
+                bg_color = "#f0fdf4" if comp['has_agent'] else "#ffffff"
+                
+                st.markdown(f"""
+                <div style="background: {bg_color}; border: 2px solid {border_color}; border-radius: 8px; padding: 1rem; margin: 0.5rem 0; text-align: center;">
+                    <div style="font-size: 24px; margin-bottom: 0.5rem;">{comp['icon']}</div>
+                    <h6 style="font-size: 14px; font-weight: bold; margin: 0.5rem 0;">{comp['component']}</h6>
+                    <p style="font-size: 12px; color: #6b7280; margin: 0.5rem 0;">{comp['details']}</p>
+                    <p style="font-size: 12px; font-weight: bold; color: #059669; margin: 0;">{comp['status']}</p>
+                    {f'<p style="font-size: 11px; font-weight: bold; color: #dc2626; margin: 0.5rem 0;">{agent_indicator}</p>' if agent_indicator else ''}
+                </div>
+                """, unsafe_allow_html=True)
+
+def render_placement_decision_matrix(config: Dict, placement_options: List[Dict]):
+    """Render decision matrix for placement options"""
+    st.markdown("### 📊 Placement Decision Matrix")
+    
+    # Create decision matrix data
+    matrix_data = []
+    criteria = ['Performance', 'Cost Efficiency', 'Security', 'Management', 'Implementation']
+    
+    for option in placement_options:
+        # Calculate individual criterion scores
+        performance_score = (option['throughput_mbps'] / 2000) * 100  # Normalized to 2000 Mbps max
+        cost_efficiency = max(0, 100 - (option['monthly_cost'] / option['throughput_mbps']))
+        security_score = option['security_score'] * 100
+        management_score = option['management_complexity'] * 100
+        impl_score = 100 - (option['implementation_complexity']['setup_time_days'] * 10)  # Inverse of setup time
+        
+        matrix_data.append({
+            'Strategy': option['strategy']['name'],
+            'Performance': min(performance_score, 100),
+            'Cost Efficiency': min(cost_efficiency, 100),
+            'Security': security_score,
+            'Management': management_score,
+            'Implementation': max(impl_score, 0),
+            'Overall Score': option['placement_score']
+        })
+    
+    # Create heatmap visualization
+    df_matrix = pd.DataFrame(matrix_data)
+    
+    # Prepare data for heatmap
+    heatmap_data = df_matrix.set_index('Strategy')[criteria].values
+    strategies = df_matrix['Strategy'].tolist()
+    
+    fig_matrix = go.Figure(data=go.Heatmap(
+        z=heatmap_data,
+        x=criteria,
+        y=strategies,
+        colorscale='RdYlGn',
+        text=heatmap_data,
+        texttemplate='%{text:.1f}',
+        textfont={"size": 12},
+        hoverongaps=False
+    ))
+    
+    fig_matrix.update_layout(
+        title=dict(
+            text='Placement Strategy Decision Matrix',
+            font=dict(size=18, family="Arial Black")
+        ),
+        xaxis_title="Evaluation Criteria",
+        yaxis_title="Placement Strategies",
+        height=400,
+        font=dict(size=12)
+    )
+    
+    st.plotly_chart(fig_matrix, use_container_width=True)
+    
+    # Summary table
+    st.markdown("**📋 Detailed Scoring Matrix:**")
+    
+    styled_matrix = df_matrix.style.format({
+        col: '{:.1f}' for col in criteria + ['Overall Score']
+    }).background_gradient(subset=criteria + ['Overall Score'], cmap='RdYlGn')
+    
+    st.dataframe(styled_matrix, use_container_width=True)
 
 def render_network_path_visualization(network_perf: Dict, config: Dict, agent_perf: Dict):
     """Render comprehensive network path visualization with detailed infrastructure components"""
@@ -1173,7 +1875,7 @@ def render_network_path_visualization(network_perf: Dict, config: Dict, agent_pe
     identify_network_bottlenecks(topology_components, network_perf, agent_perf)
 
 def create_detailed_network_diagram(components):
-    """Create detailed network topology diagram with enhanced visibility - FIXED"""
+    """Create detailed network topology diagram with enhanced visibility"""
     st.markdown("#### 🗺️ Network Topology Flow Diagram")
     
     try:
@@ -2191,7 +2893,7 @@ def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, con
         """, unsafe_allow_html=True)
 
 def render_enhanced_sidebar():
-    """Enhanced sidebar with connection status and configuration"""
+    """Enhanced sidebar with placement configuration"""
     st.sidebar.header("🌐 Enhanced Migration Analyzer")
     
     # Configuration section
@@ -2232,7 +2934,6 @@ def render_enhanced_sidebar():
             'iscsi_san': '🔗 iSCSI Storage Area Network', 
             'local_storage': '💽 Local Direct Attached Storage'
         }
-        default_storage = "nfs_nas"
     else:
         storage_options = ["smb_share", "iscsi_san", "local_storage"]
         storage_labels = {
@@ -2240,7 +2941,6 @@ def render_enhanced_sidebar():
             'iscsi_san': '🔗 iSCSI Storage Area Network',
             'local_storage': '💽 Local Direct Attached Storage'
         }
-        default_storage = "smb_share"
     
     storage_type = st.sidebar.selectbox(
         "Storage Type",
@@ -2297,9 +2997,9 @@ def render_enhanced_sidebar():
     
     # Migration Type
     is_homogeneous = source_database_engine == database_engine
-    migration_type = "DataSync" if is_homogeneous else "DMS"
+    migration_type = "datasync" if is_homogeneous else "dms"
     
-    st.sidebar.info(f"**Migration Tool:** {migration_type}")
+    st.sidebar.info(f"**Migration Tool:** {migration_type.upper()}")
     
     # Agent Configuration
     st.sidebar.subheader("🤖 Agent Configuration")
@@ -2345,21 +3045,21 @@ def render_enhanced_sidebar():
         'environment': environment,
         'number_of_agents': number_of_agents,
         'agent_size': agent_size,
-        'migration_type': migration_type.lower(),
+        'migration_type': migration_type,
         'is_homogeneous': is_homogeneous
     }
 
 def main():
-    """Enhanced main application with automatic secret integration and improved visibility"""
-    # Header with enhanced styling
+    """Enhanced main application with placement analysis"""
+    # Header
     st.markdown("""
     <div class="main-header">
-        <h1 style="font-size: 32px; margin-bottom: 15px;">🌐 Enhanced AWS Network Migration Analyzer</h1>
-        <p style="font-size: 18px; margin: 0;">AI-Powered Analysis • Real-Time AWS Metrics • Physical vs VMware Performance • Storage Protocol Optimization</p>
+        <h1 style="font-size: 32px; margin-bottom: 15px;">🌐 Enhanced AWS Migration Analyzer with Agent Placement</h1>
+        <p style="font-size: 18px; margin: 0;">AI-Powered Analysis • Agent Placement Optimization • Real-Time AWS Metrics • Physical vs VMware Performance</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Initialize integrations using secrets
+    # Initialize integrations
     if 'integrations_initialized' not in st.session_state:
         with st.spinner("🔄 Initializing API integrations..."):
             integration_status = initialize_integrations()
@@ -2369,7 +3069,7 @@ def main():
     # Get configuration
     config = render_enhanced_sidebar()
     
-    # Render connection status in sidebar
+    # Render connection status
     render_connection_status({
         'aws_status': st.session_state.get('aws_status', '❌ Not Connected'),
         'aws_message': st.session_state.get('aws_message', 'Not initialized'),
@@ -2377,15 +3077,15 @@ def main():
         'claude_message': st.session_state.get('claude_message', 'Not initialized')
     })
     
-    # Initialize enhanced managers
+    # Initialize managers
     network_manager = EnhancedNetworkPathManager()
     agent_manager = EnhancedAgentManager()
     
-    # Get network path
+    # Get network path and performance
     path_key = network_manager.get_network_path_key(config)
     network_perf = network_manager.calculate_network_performance(path_key)
     
-    # Determine storage characteristics
+    # Storage characteristics
     storage_type_mapping = {
         'nfs_nas': 'nas',
         'smb_share': 'share',
@@ -2393,21 +3093,18 @@ def main():
         'local_storage': 'local'
     }
     storage_type = storage_type_mapping.get(config['storage_type'], 'nas')
-    
     os_type = 'linux' if 'linux' in config['operating_system'].lower() else 'windows'
     
-    # Get agent performance
-    agent_type = 'datasync' if config['is_homogeneous'] else 'dms'
+    # Get agent performance (default placement)
+    agent_type = config['migration_type']
     agent_perf = agent_manager.calculate_agent_performance(
         agent_type, config['agent_size'], config['number_of_agents'], 
-        config['server_type'], storage_type, os_type
+        config['server_type'], storage_type, os_type, 'centralized_datacenter'
     )
     
-    # Get AWS real-time data (moved to tab 5 only)
-    aws_data = {}
-    
-    # Main content tabs with enhanced styling
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    # Enhanced tabs with agent placement
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+        "🎯 Agent Placement Analysis",
         "🌊 Enhanced Bandwidth Analysis",
         "📊 Storage Performance Comparison", 
         "🌐 Network Path Visualization",
@@ -2417,6 +3114,24 @@ def main():
     ])
     
     with tab1:
+        st.subheader("🎯 Comprehensive Agent Placement Analysis")
+        
+        # Agent placement analysis
+        claude_integration = st.session_state.get('claude_integration')
+        render_agent_placement_analysis(config, network_perf, agent_manager, claude_integration)
+        
+        # Initialize placement analyzer
+        placement_analyzer = AgentPlacementAnalyzer()
+        placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
+        
+        # Decision matrix
+        render_placement_decision_matrix(config, placement_options)
+        
+        # Infrastructure topology with placement
+        recommended_placement = placement_options[0]['placement_type']
+        render_infrastructure_topology_with_placement(config, network_perf, agent_perf, recommended_placement)
+    
+    with tab2:
         st.subheader("🌊 Enhanced Bandwidth Waterfall Analysis")
         render_enhanced_bandwidth_waterfall(config, network_perf, agent_perf)
         
@@ -2454,7 +3169,7 @@ def main():
             </div>
             """, unsafe_allow_html=True)
     
-    with tab2:
+    with tab3:
         st.subheader("📊 Storage Protocol Performance Analysis")
         render_storage_comparison_analysis(config)
         
@@ -2493,7 +3208,7 @@ def main():
             </div>
             """, unsafe_allow_html=True)
     
-    with tab3:
+    with tab4:
         st.subheader("🌐 Enhanced Network Path Visualization")
         render_network_path_visualization(network_perf, config, agent_perf)
         
@@ -2532,7 +3247,7 @@ def main():
             </div>
             """, unsafe_allow_html=True)
     
-    with tab4:
+    with tab5:
         # Enhanced agent performance analysis
         st.subheader("🤖 Enhanced Agent Performance Analysis")
         
@@ -2632,7 +3347,7 @@ def main():
         
         st.plotly_chart(fig_impact, use_container_width=True)
     
-    with tab5:
+    with tab6:
         st.subheader("☁️ AWS Real-Time Integration")
         
         aws_integration = st.session_state.get('aws_integration')
@@ -2682,31 +3397,41 @@ def main():
             """, unsafe_allow_html=True)
             aws_data_detailed = {}
     
-    with tab6:
-        st.subheader("🧠 Professional AI Performance Analysis")
+    with tab7:
+        st.subheader("🧠 Enhanced AI Performance Analysis")
         
         claude_integration = st.session_state.get('claude_integration')
         if claude_integration and claude_integration.client:
-            render_professional_ai_analysis(
-                claude_integration, 
-                config, network_perf, agent_perf, aws_data
-            )
+            placement_analyzer = AgentPlacementAnalyzer()
+            placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
+            
+            with st.spinner("🔄 Analyzing migration configuration with placement optimization..."):
+                analysis = claude_integration.analyze_migration_performance(
+                    config, network_perf, agent_perf, placement_options[0], {}
+                )
+            
+            st.markdown(f"""
+            <div class="ai-section">
+                <h4>🧠 Comprehensive Migration Analysis</h4>
+                <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
+            </div>
+            """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
-                <strong style="color: #92400e;">⚠️ Claude AI integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.</strong>
+            <div class="warning-card">
+                <strong>⚠️ Claude AI integration not connected. Check sidebar for connection status.</strong>
             </div>
             """, unsafe_allow_html=True)
     
-    # Final recommendations summary with enhanced visibility
+    # Enhanced executive summary
     st.markdown("---")
-    st.markdown("### 🎯 Executive Summary & Recommendations")
+    st.markdown("### 🎯 Executive Summary & Placement Recommendations")
     
-    final_throughput = min(
-        network_perf['effective_bandwidth_mbps'],
-        agent_perf['total_agent_throughput_mbps']
-    )
+    placement_analyzer = AgentPlacementAnalyzer()
+    placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
+    recommended_option = placement_options[0]
     
+    final_throughput = recommended_option['throughput_mbps']
     efficiency = (final_throughput / config['nic_speed']) * 100
     migration_time = (config['database_size_gb'] * 8 * 1000) / (final_throughput * 3600)
     
@@ -2715,51 +3440,38 @@ def main():
     with summary_col1:
         st.markdown(f"""
         <div class="performance-card">
-            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📊 Performance Summary</h4>
+            <h4>📊 Recommended Configuration</h4>
             <div style="font-size: 15px; line-height: 1.8;">
-                <p style="margin: 8px 0;"><strong>Final Throughput:</strong> {final_throughput:,.0f} Mbps</p>
-                <p style="margin: 8px 0;"><strong>Overall Efficiency:</strong> {efficiency:.1f}%</p>
-                <p style="margin: 8px 0;"><strong>Migration Time:</strong> {migration_time:.1f} hours</p>
-                <p style="margin: 8px 0;"><strong>Platform:</strong> {config['server_type'].title()}</p>
-                <p style="margin: 8px 0;"><strong>Storage:</strong> {network_perf.get('storage_mount_type', 'Unknown').upper()}</p>
+                <p><strong>Placement Strategy:</strong> {recommended_option['strategy']['name']}</p>
+                <p><strong>Expected Throughput:</strong> {final_throughput:,.0f} Mbps</p>
+                <p><strong>Migration Time:</strong> {migration_time:.1f} hours</p>
+                <p><strong>Overall Score:</strong> {recommended_option['placement_score']:.1f}/100</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
     
     with summary_col2:
-        # Calculate potential improvements
-        linux_nfs_improvement = 0.96 / agent_perf['io_multiplier'] if agent_perf['io_multiplier'] < 0.96 else 1.0
-        physical_improvement = 1.0 / agent_perf['platform_efficiency'] if agent_perf['platform_efficiency'] < 1.0 else 1.0
-        
-        potential_throughput = final_throughput * linux_nfs_improvement * physical_improvement
-        time_savings = migration_time - ((config['database_size_gb'] * 8 * 1000) / (potential_throughput * 3600))
-        
         st.markdown(f"""
         <div class="network-card">
-            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🚀 Optimization Potential</h4>
+            <h4>💰 Cost Analysis</h4>
             <div style="font-size: 15px; line-height: 1.8;">
-                <p style="margin: 8px 0;"><strong>Current:</strong> {final_throughput:,.0f} Mbps</p>
-                <p style="margin: 8px 0;"><strong>Optimized:</strong> {potential_throughput:,.0f} Mbps</p>
-                <p style="margin: 8px 0;"><strong>Improvement:</strong> {((potential_throughput/final_throughput)-1)*100:.1f}%</p>
-                <p style="margin: 8px 0;"><strong>Time Savings:</strong> {time_savings:.1f} hours</p>
-                <p style="margin: 8px 0;"><strong>Recommendations:</strong> Linux NFS + Physical</p>
+                <p><strong>Monthly Cost:</strong> ${recommended_option['monthly_cost']:,.0f}</p>
+                <p><strong>Migration Cost:</strong> ${(recommended_option['monthly_cost']/730)*migration_time:.2f}</p>
+                <p><strong>Cost per GB:</strong> ${((recommended_option['monthly_cost']/730)*migration_time)/config['database_size_gb']:.4f}</p>
+                <p><strong>Cost Efficiency:</strong> High</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
     
     with summary_col3:
-        cost_per_hour = agent_perf['total_monthly_cost'] / (24 * 30)
-        migration_cost = cost_per_hour * migration_time
-        
         st.markdown(f"""
         <div class="agent-card">
-            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">💰 Cost Analysis</h4>
+            <h4>🚀 Implementation</h4>
             <div style="font-size: 15px; line-height: 1.8;">
-                <p style="margin: 8px 0;"><strong>Hourly Cost:</strong> ${cost_per_hour:.2f}/hour</p>
-                <p style="margin: 8px 0;"><strong>Migration Cost:</strong> ${migration_cost:.2f}</p>
-                <p style="margin: 8px 0;"><strong>Monthly Budget:</strong> ${agent_perf['total_monthly_cost']:,.0f}</p>
-                <p style="margin: 8px 0;"><strong>Cost per GB:</strong> ${migration_cost/config['database_size_gb']:.4f}</p>
-                <p style="margin: 8px 0;"><strong>Agent Efficiency:</strong> {100-agent_perf['performance_loss_pct']:.1f}%</p>
+                <p><strong>Setup Time:</strong> {recommended_option['implementation_complexity']['setup_time_days']} days</p>
+                <p><strong>Skill Level:</strong> {recommended_option['implementation_complexity']['skill_level']}</p>
+                <p><strong>Security Score:</strong> {recommended_option['security_score']*100:.0f}%</p>
+                <p><strong>Management:</strong> {recommended_option['implementation_complexity']['ongoing_maintenance']}</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
