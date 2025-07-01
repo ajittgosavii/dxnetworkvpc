@@ -5431,21 +5431,54 @@ async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizin
                             destination_storage_cost + optimized_network_cost + 
                             os_licensing_cost + management_cost + vpc_endpoint_cost)
         
-        return {
-            'aws_compute_cost': aws_compute_cost,
-            'aws_storage_cost': aws_storage_cost,
-            'agent_cost': total_agent_cost,
-            'destination_storage_cost': destination_storage_cost,
-            'network_cost': optimized_network_cost,
-            'vpc_endpoint_cost': vpc_endpoint_cost,  # Add this line
-            'os_licensing_cost': os_licensing_cost,
-            'management_cost': management_cost,
-            'total_monthly_cost': total_monthly_cost,
-            # ... rest of existing return values ...
-    }
-        
-        
+        # Calculate ROI months safely
+if estimated_monthly_savings > 0:
+    roi_months = int(one_time_migration_cost / estimated_monthly_savings)
+else:
+    roi_months = None
+
+# Get AI optimization recommendations safely
+ai_optimization_recommendations = aws_sizing.get('ai_analysis', {}).get('performance_recommendations', [])
+ai_optimization_count = len(ai_optimization_recommendations) if ai_optimization_recommendations else 0
+
+# Calculate potential additional savings
+base_ai_savings = ai_optimization_count * 2  # 2% per recommendation
+agent_savings = int(agent_efficiency_bonus * 10) if agent_efficiency_bonus else 0
+storage_savings = int(storage_efficiency_bonus * 10) if storage_efficiency_bonus else 0
+total_potential_savings = base_ai_savings + agent_savings + storage_savings
+
+    return {
+        'aws_compute_cost': aws_compute_cost,
+        'aws_storage_cost': aws_storage_cost,
+        'agent_cost': total_agent_cost,
+        'agent_base_cost': agent_monthly_cost,
+        'agent_management_overhead': management_overhead,
+        'destination_storage_cost': destination_storage_cost,
+        'destination_storage_type': destination_storage,
+        'network_cost': optimized_network_cost,
+        'vpc_endpoint_cost': vpc_endpoint_cost,  # Add VPC endpoint cost
+        'os_licensing_cost': os_licensing_cost,
+        'management_cost': management_cost,
+        'total_monthly_cost': total_monthly_cost,
+        'one_time_migration_cost': one_time_migration_cost,
+        'agent_setup_cost': agent_setup_cost,
+        'agent_coordination_cost': agent_coordination_cost,
+        'storage_setup_cost': storage_setup_cost,
+        'estimated_monthly_savings': estimated_monthly_savings,
+        'roi_months': roi_months,
+        'ai_cost_insights': {
+            'ai_optimization_factor': ai_optimization_factor,
+            'complexity_multiplier': complexity_multiplier,
+            'management_reduction': ai_management_reduction,
+            'agent_efficiency_bonus': agent_efficiency_bonus,
+            'storage_efficiency_bonus': storage_efficiency_bonus,
+            'vpc_performance_bonus': vpc_performance_bonus if 'vpc_performance_bonus' in locals() else 0,
+            'ai_recommendations_count': ai_optimization_count,
+            'potential_additional_savings': f"{total_potential_savings}% through AI ({base_ai_savings}%), agent ({agent_savings}%), and storage ({storage_savings}%) optimization"
         }
+    }
+            
+            }
     
 def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
         """Calculate monthly cost for destination storage"""
