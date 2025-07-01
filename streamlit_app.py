@@ -1093,7 +1093,7 @@ class EnhancedNetworkAnalyzer:
         }
         
         # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
-            'datasync': {
+        'datasync': {
                 'name': 'AWS DataSync',
                 'use_case': 'File and object data transfer',
                 'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
@@ -1110,7 +1110,7 @@ class EnhancedNetworkAnalyzer:
                     'live_replication': False,
                     'transaction_logs': True
                 },
-                'sizes': {
+            'sizes': {
                     'small': {
                         'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
                         'vpc_endpoint_throughput_reduction': 0.1,
@@ -1121,7 +1121,7 @@ class EnhancedNetworkAnalyzer:
                         'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
                         'effective_throughput_mbps': 340  # NEW: After VMware overhead
                     },
-                    'medium': {
+                'medium': {
                         'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
                         'vpc_endpoint_throughput_reduction': 0.08,
                         'optimal_file_size_mb': '100-1000',
@@ -1131,7 +1131,7 @@ class EnhancedNetworkAnalyzer:
                         'vmware_overhead': 0.12,
                         'effective_throughput_mbps': 880
                     },
-                    'large': {
+                'large': {
                         'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
                         'vpc_endpoint_throughput_reduction': 0.05,
                         'optimal_file_size_mb': '1000+',
@@ -1141,7 +1141,7 @@ class EnhancedNetworkAnalyzer:
                         'vmware_overhead': 0.10,
                         'effective_throughput_mbps': 1800
                     },
-                    'xlarge': {
+                'xlarge': {
                         'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
                         'vpc_endpoint_throughput_reduction': 0.03,
                         'optimal_file_size_mb': '1000+',
