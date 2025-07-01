@@ -994,7 +994,7 @@ class EnhancedNetworkAnalyzer:
       # Close the database_scenarios dictionary
     
     # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
-    self.migration_services = 
+    self.migration_services = {
         'datasync': {
             'name': 'AWS DataSync',
             'use_case': 'File and object data transfer',
@@ -1196,7 +1196,7 @@ class EnhancedNetworkAnalyzer:
                     }
                 }
             }
-        
+    }
         
         # Initialize new clients
         self.pricing_client = AWSPricingClient()
