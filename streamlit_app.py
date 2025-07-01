@@ -275,7 +275,7 @@ class ClaudeAIIntegration:
             
             # Test the connection
             test_response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=50,
                 messages=[{"role": "user", "content": "Hello, are you working?"}]
             )
@@ -352,7 +352,7 @@ class ClaudeAIIntegration:
             """
             
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=1500,
                 messages=[{"role": "user", "content": prompt}]
             )
@@ -382,7 +382,7 @@ class ClaudeAIIntegration:
             """
             
             response = self.client.messages.create(
-                model="claude-3-sonnet-20240229",
+                model="claude-3-5-sonnet-20241022",
                 max_tokens=800,
                 messages=[{"role": "user", "content": prompt}]
             )
