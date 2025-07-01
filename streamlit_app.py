@@ -3,9 +3,15 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime
+from datetime import datetime, timedelta
 import math
+import json
+import asyncio
 from typing import Dict, List, Tuple, Optional
+import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
+import anthropic
+from anthropic import Anthropic
 
 # Configure page
 st.set_page_config(
@@ -67,11 +73,302 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         border-left: 3px solid #f59e0b;
     }
+
+    .ai-card {
+        background: linear-gradient(135deg, #fdf4ff 0%, #e879f9 100%);
+        padding: 1.5rem;
+        border-radius: 6px;
+        color: #374151;
+        margin: 1rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-left: 3px solid #a855f7;
+    }
+
+    .aws-card {
+        background: linear-gradient(135deg, #fef3c7 0%, #f59e0b 100%);
+        padding: 1.5rem;
+        border-radius: 6px;
+        color: #374151;
+        margin: 1rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-left: 3px solid #d97706;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-class NetworkPathManager:
-    """Manage network paths for production and non-production environments"""
+class AWSIntegration:
+    """AWS API integration for real-time metrics and recommendations"""
+    
+    def __init__(self):
+        self.session = None
+        self.cloudwatch = None
+        self.datasync = None
+        self.dms = None
+        self.ec2 = None
+        
+    def initialize_aws_session(self, aws_access_key: str = None, aws_secret_key: str = None, region: str = 'us-west-2'):
+        """Initialize AWS session with credentials"""
+        try:
+            if aws_access_key and aws_secret_key:
+                self.session = boto3.Session(
+                    aws_access_key_id=aws_access_key,
+                    aws_secret_access_key=aws_secret_key,
+                    region_name=region
+                )
+            else:
+                # Use default credentials (IAM roles, ~/.aws/credentials, etc.)
+                self.session = boto3.Session(region_name=region)
+            
+            self.cloudwatch = self.session.client('cloudwatch')
+            self.datasync = self.session.client('datasync')
+            self.dms = self.session.client('dms')
+            self.ec2 = self.session.client('ec2')
+            
+            return True, "AWS connection established successfully"
+        except NoCredentialsError:
+            return False, "AWS credentials not found. Please configure credentials."
+        except Exception as e:
+            return False, f"AWS connection failed: {str(e)}"
+    
+    def get_datasync_tasks(self) -> List[Dict]:
+        """Get existing DataSync tasks"""
+        try:
+            if not self.datasync:
+                return []
+                
+            response = self.datasync.list_tasks()
+            tasks = []
+            
+            for task in response.get('Tasks', []):
+                task_arn = task['TaskArn']
+                task_details = self.datasync.describe_task(TaskArn=task_arn)
+                
+                # Get execution history
+                executions = self.datasync.list_task_executions(TaskArn=task_arn, MaxResults=5)
+                
+                tasks.append({
+                    'name': task.get('Name', 'Unnamed Task'),
+                    'arn': task_arn,
+                    'status': task.get('Status', 'Unknown'),
+                    'source_location': task_details.get('SourceLocationArn', 'Unknown'),
+                    'destination_location': task_details.get('DestinationLocationArn', 'Unknown'),
+                    'executions': executions.get('TaskExecutions', [])
+                })
+            
+            return tasks
+        except Exception as e:
+            st.error(f"Error fetching DataSync tasks: {str(e)}")
+            return []
+    
+    def get_dms_tasks(self) -> List[Dict]:
+        """Get existing DMS replication tasks"""
+        try:
+            if not self.dms:
+                return []
+                
+            response = self.dms.describe_replication_tasks()
+            tasks = []
+            
+            for task in response.get('ReplicationTasks', []):
+                tasks.append({
+                    'name': task.get('ReplicationTaskIdentifier', 'Unnamed Task'),
+                    'arn': task.get('ReplicationTaskArn', ''),
+                    'status': task.get('Status', 'Unknown'),
+                    'source_endpoint': task.get('SourceEndpointArn', 'Unknown'),
+                    'target_endpoint': task.get('TargetEndpointArn', 'Unknown'),
+                    'migration_type': task.get('MigrationType', 'Unknown'),
+                    'table_mappings': task.get('TableMappings', '{}')
+                })
+            
+            return tasks
+        except Exception as e:
+            st.error(f"Error fetching DMS tasks: {str(e)}")
+            return []
+    
+    def get_cloudwatch_metrics(self, service: str, instance_id: str = None) -> Dict:
+        """Get CloudWatch metrics for DataSync or DMS"""
+        try:
+            if not self.cloudwatch:
+                return {}
+            
+            end_time = datetime.utcnow()
+            start_time = end_time - timedelta(hours=24)
+            
+            if service == 'datasync':
+                # DataSync metrics
+                metrics = {
+                    'BytesTransferred': self._get_metric_data('AWS/DataSync', 'BytesTransferred', start_time, end_time),
+                    'FilesTransferred': self._get_metric_data('AWS/DataSync', 'FilesTransferred', start_time, end_time),
+                }
+            elif service == 'dms':
+                # DMS metrics
+                metrics = {
+                    'CDCLatencySource': self._get_metric_data('AWS/DMS', 'CDCLatencySource', start_time, end_time, instance_id),
+                    'CDCLatencyTarget': self._get_metric_data('AWS/DMS', 'CDCLatencyTarget', start_time, end_time, instance_id),
+                    'CDCThroughputBandwidthSource': self._get_metric_data('AWS/DMS', 'CDCThroughputBandwidthSource', start_time, end_time, instance_id),
+                }
+            
+            return metrics
+        except Exception as e:
+            st.error(f"Error fetching CloudWatch metrics: {str(e)}")
+            return {}
+    
+    def _get_metric_data(self, namespace: str, metric_name: str, start_time: datetime, 
+                        end_time: datetime, instance_id: str = None) -> List[Dict]:
+        """Helper method to get metric data from CloudWatch"""
+        try:
+            dimensions = []
+            if instance_id:
+                dimensions = [{'Name': 'ReplicationInstanceIdentifier', 'Value': instance_id}]
+            
+            response = self.cloudwatch.get_metric_statistics(
+                Namespace=namespace,
+                MetricName=metric_name,
+                Dimensions=dimensions,
+                StartTime=start_time,
+                EndTime=end_time,
+                Period=3600,  # 1 hour periods
+                Statistics=['Average', 'Maximum', 'Minimum']
+            )
+            
+            return response.get('Datapoints', [])
+        except Exception:
+            return []
+
+class ClaudeAIIntegration:
+    """Claude AI integration for intelligent analysis and recommendations"""
+    
+    def __init__(self):
+        self.client = None
+        self.api_key = None
+    
+    def initialize_claude(self, api_key: str):
+        """Initialize Claude AI client"""
+        try:
+            self.api_key = api_key
+            self.client = Anthropic(api_key=api_key)
+            
+            # Test the connection
+            test_response = self.client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=50,
+                messages=[{"role": "user", "content": "Hello, are you working?"}]
+            )
+            
+            return True, "Claude AI connection established successfully"
+        except Exception as e:
+            return False, f"Claude AI connection failed: {str(e)}"
+    
+    def analyze_migration_performance(self, config: Dict, network_perf: Dict, 
+                                   agent_perf: Dict, aws_data: Dict = None) -> str:
+        """Get Claude AI analysis of migration performance"""
+        if not self.client:
+            return "Claude AI not initialized"
+        
+        try:
+            # Prepare context for Claude
+            context = f"""
+            Migration Configuration Analysis:
+            
+            Hardware Configuration:
+            - Operating System: {config['operating_system']}
+            - Server Type: {config['server_type']}
+            - RAM: {config['ram_gb']} GB
+            - CPU Cores: {config['cpu_cores']}
+            - NIC: {config['nic_speed']} Mbps {config['nic_type']}
+            - Storage Type: {config.get('storage_mount_type', 'Unknown')}
+            
+            Network Performance:
+            - Path: {network_perf['path_name']}
+            - Effective Bandwidth: {network_perf['effective_bandwidth_mbps']:.0f} Mbps
+            - Total Latency: {network_perf['total_latency_ms']:.1f} ms
+            - Reliability: {network_perf['total_reliability']*100:.2f}%
+            - Quality Score: {network_perf['network_quality_score']:.1f}/100
+            
+            Agent Performance:
+            - Type: {agent_perf['agent_type']}
+            - Size: {agent_perf['agent_size']}
+            - Count: {agent_perf['num_agents']}
+            - Total Capacity: {agent_perf['total_agent_throughput_mbps']:.0f} Mbps
+            - Monthly Cost: ${agent_perf['total_monthly_cost']:.0f}
+            
+            Migration Details:
+            - Database Size: {config['database_size_gb']} GB
+            - Migration Type: {config['migration_type']}
+            - Environment: {config['environment']}
+            
+            Performance Differences Observed:
+            - Linux NAS typically achieves 15-25% better performance than Windows mapped drives
+            - VMware introduces 8-12% overhead compared to physical servers
+            - DataSync on physical Linux can achieve near line-rate speeds
+            - Windows Server mapped drives suffer from SMB protocol overhead
+            
+            {f"AWS Real-time Data: {json.dumps(aws_data, indent=2)}" if aws_data else "No real-time AWS data available"}
+            """
+            
+            prompt = f"""
+            As an AWS migration expert, analyze this migration configuration and provide:
+            
+            1. Performance bottleneck analysis
+            2. Specific recommendations for optimization
+            3. Expected vs actual performance explanation
+            4. Cost optimization suggestions
+            5. Risk assessment and mitigation strategies
+            
+            Focus on the real-world performance differences between:
+            - Linux NAS vs Windows mapped drives
+            - Physical vs VMware deployments
+            - DataSync vs DMS for this specific use case
+            
+            Configuration to analyze:
+            {context}
+            
+            Provide actionable, technical recommendations in a structured format.
+            """
+            
+            response = self.client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=1500,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            return response.content[0].text
+            
+        except Exception as e:
+            return f"Error getting Claude AI analysis: {str(e)}"
+    
+    def get_optimization_recommendations(self, bottleneck_type: str, current_config: Dict) -> str:
+        """Get specific optimization recommendations based on bottleneck type"""
+        if not self.client:
+            return "Claude AI not initialized"
+        
+        try:
+            prompt = f"""
+            As an AWS migration specialist, the current migration setup has a {bottleneck_type} bottleneck.
+            
+            Current configuration:
+            - Platform: {current_config['server_type']}
+            - OS: {current_config['operating_system']}
+            - Storage: {current_config.get('storage_mount_type', 'Unknown')}
+            - Agent: {current_config['migration_type']}
+            
+            Provide 3-5 specific, actionable recommendations to resolve this {bottleneck_type} bottleneck.
+            Include expected performance improvements and implementation complexity for each recommendation.
+            """
+            
+            response = self.client.messages.create(
+                model="claude-3-sonnet-20240229",
+                max_tokens=800,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            
+            return response.content[0].text
+            
+        except Exception as e:
+            return f"Error getting optimization recommendations: {str(e)}"
+
+class EnhancedNetworkPathManager:
+    """Enhanced network path manager with detailed storage type analysis"""
     
     def __init__(self):
         self.network_paths = {
@@ -83,24 +380,26 @@ class NetworkPathManager:
                 'environment': 'non-production',
                 'os_type': 'linux',
                 'storage_type': 'nas',
+                'storage_mount_type': 'nfs',
                 'segments': [
                     {
-                        'name': 'Linux NAS to Linux Jump Server',
+                        'name': 'Linux NAS to Linux Jump Server (NFS)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 2,
-                        'reliability': 0.999,
+                        'latency_ms': 1.5,  # NFS is faster than SMB
+                        'reliability': 0.9995,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.95
+                        'optimization_potential': 0.97,
+                        'protocol_efficiency': 0.95  # NFS efficiency
                     },
                     {
                         'name': 'Linux Jump Server to AWS S3 (DX)',
-                        'bandwidth_mbps': 2000,  # Non-prod DX bottleneck
-                        'latency_ms': 15,
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 12,
                         'reliability': 0.998,
                         'connection_type': 'direct_connect',
                         'cost_factor': 2.0,
-                        'optimization_potential': 0.92
+                        'optimization_potential': 0.94
                     }
                 ]
             },
@@ -112,24 +411,26 @@ class NetworkPathManager:
                 'environment': 'non-production',
                 'os_type': 'windows',
                 'storage_type': 'share',
+                'storage_mount_type': 'smb',
                 'segments': [
                     {
-                        'name': 'Windows Share to Windows Jump Server',
+                        'name': 'Windows Share to Windows Jump Server (SMB)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.997,
+                        'latency_ms': 4,  # SMB has higher latency
+                        'reliability': 0.995,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.88
+                        'optimization_potential': 0.85,  # Lower optimization potential
+                        'protocol_efficiency': 0.78  # SMB overhead
                     },
                     {
                         'name': 'Windows Jump Server to AWS S3 (DX)',
-                        'bandwidth_mbps': 2000,  # Non-prod DX bottleneck
+                        'bandwidth_mbps': 2000,
                         'latency_ms': 18,
                         'reliability': 0.998,
                         'connection_type': 'direct_connect',
                         'cost_factor': 2.0,
-                        'optimization_potential': 0.90
+                        'optimization_potential': 0.88
                     }
                 ]
             },
@@ -141,15 +442,57 @@ class NetworkPathManager:
                 'environment': 'production',
                 'os_type': 'linux',
                 'storage_type': 'nas',
+                'storage_mount_type': 'nfs',
                 'segments': [
                     {
-                        'name': 'San Antonio Linux NAS to Linux Jump Server',
+                        'name': 'San Antonio Linux NAS to Linux Jump Server (NFS)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 1,
-                        'reliability': 0.999,
+                        'latency_ms': 0.8,
+                        'reliability': 0.9998,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
+                        'optimization_potential': 0.98,
+                        'protocol_efficiency': 0.96
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 10,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'optimization_potential': 0.96
+                    },
+                    {
+                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 6,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.0,
                         'optimization_potential': 0.97
+                    }
+                ]
+            },
+            'prod_sa_windows_share_s3': {
+                'name': 'Prod: San Antonio Windows Share → San Jose → AWS Production VPC S3',
+                'destination_storage': 'S3',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 Production VPC S3',
+                'environment': 'production',
+                'os_type': 'windows',
+                'storage_type': 'share',
+                'storage_mount_type': 'smb',
+                'segments': [
+                    {
+                        'name': 'San Antonio Windows Share to Windows Jump Server (SMB)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 3,
+                        'reliability': 0.996,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.86,
+                        'protocol_efficiency': 0.80
                     },
                     {
                         'name': 'San Antonio to San Jose (Private Line)',
@@ -162,50 +505,12 @@ class NetworkPathManager:
                     },
                     {
                         'name': 'San Jose to AWS Production VPC S3 (DX)',
-                        'bandwidth_mbps': 10000,  # Full 10Gbps in production
+                        'bandwidth_mbps': 10000,
                         'latency_ms': 8,
                         'reliability': 0.9999,
                         'connection_type': 'direct_connect',
                         'cost_factor': 4.0,
-                        'optimization_potential': 0.96
-                    }
-                ]
-            },
-            'prod_sa_windows_share_s3': {
-                'name': 'Prod: San Antonio Windows Share → San Jose → AWS Production VPC S3',
-                'destination_storage': 'S3',
-                'source': 'San Antonio',
-                'destination': 'AWS US-West-2 Production VPC S3',
-                'environment': 'production',
-                'os_type': 'windows',
-                'storage_type': 'share',
-                'segments': [
-                    {
-                        'name': 'San Antonio Windows Share to Windows Jump Server',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 2,
-                        'reliability': 0.997,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'optimization_potential': 0.88
-                    },
-                    {
-                        'name': 'San Antonio to San Jose (Private Line)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 15,
-                        'reliability': 0.9995,
-                        'connection_type': 'private_line',
-                        'cost_factor': 3.0,
-                        'optimization_potential': 0.92
-                    },
-                    {
-                        'name': 'San Jose to AWS Production VPC S3 (DX)',
-                        'bandwidth_mbps': 10000,  # Full 10Gbps in production
-                        'latency_ms': 10,
-                        'reliability': 0.9999,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 4.0,
-                        'optimization_potential': 0.94
+                        'optimization_potential': 0.95
                     }
                 ]
             }
@@ -213,7 +518,6 @@ class NetworkPathManager:
     
     def get_network_path_key(self, config: Dict) -> str:
         """Get network path key based on configuration"""
-        # Determine OS type
         os_lower = config['operating_system'].lower()
         if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel', 'centos']):
             os_type = 'linux'
@@ -222,23 +526,21 @@ class NetworkPathManager:
         else:
             os_type = 'linux'
         
-        # Determine environment
         environment = config['environment']
         
-        # Build path key
         if environment == 'non-production':
             if os_type == 'linux':
                 return 'nonprod_sj_linux_nas_s3'
             else:
                 return 'nonprod_sj_windows_share_s3'
-        else:  # production
+        else:
             if os_type == 'linux':
                 return 'prod_sa_linux_nas_s3'
             else:
                 return 'prod_sa_windows_share_s3'
     
     def calculate_network_performance(self, path_key: str, time_of_day: int = None) -> Dict:
-        """Calculate network performance with time-of-day adjustments"""
+        """Calculate network performance with enhanced storage type considerations"""
         path = self.network_paths[path_key]
         
         if time_of_day is None:
@@ -253,29 +555,37 @@ class NetworkPathManager:
         adjusted_segments = []
         
         for segment in path['segments']:
-            # Base metrics
             segment_latency = segment['latency_ms']
             segment_bandwidth = segment['bandwidth_mbps']
             segment_reliability = segment['reliability']
             
+            # Apply protocol efficiency if present
+            protocol_efficiency = segment.get('protocol_efficiency', 1.0)
+            effective_bandwidth = segment_bandwidth * protocol_efficiency
+            
             # Time-of-day congestion adjustments
             if segment['connection_type'] == 'internal_lan':
-                congestion_factor = 1.1 if 9 <= time_of_day <= 17 else 0.95
+                congestion_factor = 1.15 if 9 <= time_of_day <= 17 else 0.92
             elif segment['connection_type'] == 'private_line':
-                congestion_factor = 1.2 if 9 <= time_of_day <= 17 else 0.9
+                congestion_factor = 1.25 if 9 <= time_of_day <= 17 else 0.88
             elif segment['connection_type'] == 'direct_connect':
-                congestion_factor = 1.05 if 9 <= time_of_day <= 17 else 0.98
+                congestion_factor = 1.08 if 9 <= time_of_day <= 17 else 0.96
             else:
                 congestion_factor = 1.0
             
             # Apply congestion
-            effective_bandwidth = segment_bandwidth / congestion_factor
+            effective_bandwidth = effective_bandwidth / congestion_factor
             effective_latency = segment_latency * congestion_factor
             
-            # OS-specific adjustments
-            if path['os_type'] == 'windows' and segment['connection_type'] != 'internal_lan':
-                effective_bandwidth *= 0.95
-                effective_latency *= 1.1
+            # Storage type specific adjustments
+            if path['storage_mount_type'] == 'smb':
+                # Windows SMB has additional overhead
+                effective_bandwidth *= 0.82  # SMB protocol overhead
+                effective_latency *= 1.3     # SMB latency penalty
+            elif path['storage_mount_type'] == 'nfs':
+                # Linux NFS is more efficient
+                effective_bandwidth *= 0.96  # Minimal NFS overhead
+                effective_latency *= 1.05    # Minimal NFS latency
             
             optimization_score *= segment['optimization_potential']
             
@@ -289,21 +599,23 @@ class NetworkPathManager:
                 **segment,
                 'effective_bandwidth_mbps': effective_bandwidth,
                 'effective_latency_ms': effective_latency,
-                'congestion_factor': congestion_factor
+                'congestion_factor': congestion_factor,
+                'protocol_efficiency': protocol_efficiency
             })
         
         # Calculate quality scores
-        latency_score = max(0, 100 - (total_latency * 2))
-        bandwidth_score = min(100, (min_bandwidth / 1000) * 20)
+        latency_score = max(0, 100 - (total_latency * 1.5))
+        bandwidth_score = min(100, (min_bandwidth / 1000) * 15)
         reliability_score = total_reliability * 100
         
         network_quality = (latency_score * 0.25 + bandwidth_score * 0.45 + reliability_score * 0.30)
         
-        return {
+        result = {
             'path_name': path['name'],
             'destination_storage': path['destination_storage'],
             'environment': path['environment'],
             'os_type': path['os_type'],
+            'storage_mount_type': path['storage_mount_type'],
             'total_latency_ms': total_latency,
             'effective_bandwidth_mbps': min_bandwidth,
             'total_reliability': total_reliability,
@@ -312,9 +624,11 @@ class NetworkPathManager:
             'total_cost_factor': total_cost_factor,
             'segments': adjusted_segments
         }
+        
+        return result
 
-class AgentManager:
-    """Manage DataSync and DMS agent configurations"""
+class EnhancedAgentManager:
+    """Enhanced agent manager with detailed physical vs VMware analysis"""
     
     def __init__(self):
         self.datasync_specs = {
@@ -331,23 +645,61 @@ class AgentManager:
             'xlarge': {'throughput_mbps': 1500, 'vcpu': 8, 'memory': 16, 'cost_hour': 0.34},
             'xxlarge': {'throughput_mbps': 2500, 'vcpu': 16, 'memory': 32, 'cost_hour': 0.68}
         }
+        
+        # Physical vs VMware performance characteristics
+        self.platform_characteristics = {
+            'physical': {
+                'base_efficiency': 1.0,
+                'cpu_overhead': 0.0,
+                'memory_overhead': 0.0,
+                'io_efficiency': 1.0,
+                'network_efficiency': 1.0
+            },
+            'vmware': {
+                'base_efficiency': 0.92,  # 8% hypervisor overhead
+                'cpu_overhead': 0.08,     # CPU overhead
+                'memory_overhead': 0.12,  # Memory overhead
+                'io_efficiency': 0.88,    # I/O overhead
+                'network_efficiency': 0.94 # Network virtualization overhead
+            }
+        }
     
     def calculate_agent_performance(self, agent_type: str, agent_size: str, num_agents: int, 
-                                   platform_type: str = 'vmware') -> Dict:
-        """Calculate agent performance considering VMware overhead"""
+                                   platform_type: str = 'vmware', storage_type: str = 'nas',
+                                   os_type: str = 'linux') -> Dict:
+        """Enhanced agent performance calculation with detailed platform analysis"""
         
         if agent_type == 'datasync':
             base_spec = self.datasync_specs[agent_size]
         else:
             base_spec = self.dms_specs[agent_size]
         
-        # VMware overhead
-        vmware_efficiency = 0.92 if platform_type == 'vmware' else 1.0
+        # Platform characteristics
+        platform_char = self.platform_characteristics[platform_type]
         
         # Calculate per-agent performance
-        per_agent_throughput = base_spec['throughput_mbps'] * vmware_efficiency
+        base_throughput = base_spec['throughput_mbps']
         
-        # Calculate scaling efficiency (diminishing returns)
+        # Apply platform efficiency
+        platform_throughput = base_throughput * platform_char['base_efficiency']
+        
+        # Apply I/O efficiency based on storage type and OS
+        if storage_type == 'nas' and os_type == 'linux':
+            # Linux NAS (NFS) - optimal performance
+            io_multiplier = 1.0
+        elif storage_type == 'share' and os_type == 'windows':
+            # Windows mapped drive (SMB) - reduced performance
+            io_multiplier = 0.75  # 25% performance loss due to SMB overhead
+        else:
+            io_multiplier = 0.9
+        
+        # Network efficiency
+        network_efficiency = platform_char['network_efficiency']
+        
+        # Final per-agent throughput
+        per_agent_throughput = platform_throughput * io_multiplier * network_efficiency
+        
+        # Calculate scaling efficiency
         if num_agents == 1:
             scaling_efficiency = 1.0
         elif num_agents <= 3:
@@ -360,230 +712,397 @@ class AgentManager:
         # Total agent capacity
         total_agent_throughput = per_agent_throughput * num_agents * scaling_efficiency
         
-        # Costs
-        per_agent_cost = base_spec['cost_hour'] * 24 * 30
+        # Enhanced cost calculation
+        base_cost_per_hour = base_spec['cost_hour']
+        
+        # VMware licensing overhead (if applicable)
+        if platform_type == 'vmware':
+            vmware_licensing_multiplier = 1.15  # 15% licensing overhead
+        else:
+            vmware_licensing_multiplier = 1.0
+        
+        per_agent_cost = base_cost_per_hour * 24 * 30 * vmware_licensing_multiplier
         total_monthly_cost = per_agent_cost * num_agents
+        
+        # Performance loss analysis
+        max_theoretical = base_spec['throughput_mbps'] * num_agents
+        actual_total = total_agent_throughput
+        performance_loss = ((max_theoretical - actual_total) / max_theoretical) * 100
         
         return {
             'agent_type': agent_type,
             'agent_size': agent_size,
             'num_agents': num_agents,
             'platform_type': platform_type,
+            'storage_type': storage_type,
+            'os_type': os_type,
+            'base_throughput_mbps': base_throughput,
             'per_agent_throughput_mbps': per_agent_throughput,
             'total_agent_throughput_mbps': total_agent_throughput,
             'scaling_efficiency': scaling_efficiency,
-            'vmware_efficiency': vmware_efficiency,
+            'platform_efficiency': platform_char['base_efficiency'],
+            'io_multiplier': io_multiplier,
+            'network_efficiency': network_efficiency,
+            'performance_loss_pct': performance_loss,
             'per_agent_monthly_cost': per_agent_cost,
             'total_monthly_cost': total_monthly_cost,
-            'base_spec': base_spec
+            'vmware_licensing_multiplier': vmware_licensing_multiplier,
+            'base_spec': base_spec,
+            'platform_characteristics': platform_char
         }
 
 def get_nic_efficiency(nic_type: str) -> float:
-    """Get NIC efficiency based on type"""
+    """Enhanced NIC efficiency based on type"""
     efficiencies = {
-        'gigabit_copper': 0.85,
-        'gigabit_fiber': 0.90,
-        '10g_copper': 0.88,
-        '10g_fiber': 0.92,
-        '25g_fiber': 0.94,
-        '40g_fiber': 0.95
+        'gigabit_copper': 0.82,
+        'gigabit_fiber': 0.87,
+        '10g_copper': 0.85,
+        '10g_fiber': 0.91,
+        '25g_fiber': 0.93,
+        '40g_fiber': 0.94
     }
     return efficiencies.get(nic_type, 0.90)
 
-def render_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_perf: Dict):
-    """Render bandwidth waterfall analysis"""
-    st.markdown("**🌊 Bandwidth Waterfall Analysis: From Hardware to Migration Speed**")
+def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_perf: Dict):
+    """Enhanced bandwidth waterfall with storage type analysis"""
+    st.markdown("**🌊 Enhanced Bandwidth Waterfall: Complete Performance Analysis**")
     
-    # Start with user's actual hardware
     user_nic_speed = config['nic_speed']
     nic_type = config['nic_type']
     os_type = config['operating_system']
     platform_type = config['server_type']
+    storage_mount = network_perf.get('storage_mount_type', 'unknown')
     
-    # Step 1: Raw NIC Capacity
-    stages = ['Your NIC\nCapacity']
+    # Enhanced analysis stages
+    stages = ['Hardware\nNIC']
     throughputs = [user_nic_speed]
     descriptions = [f"{user_nic_speed:,.0f} Mbps {nic_type.replace('_', ' ')} NIC"]
     
-    # Step 2: NIC Hardware Efficiency
+    # NIC Processing Efficiency
     nic_efficiency = get_nic_efficiency(nic_type)
     after_nic = user_nic_speed * nic_efficiency
-    stages.append('After NIC\nProcessing')
+    stages.append('NIC\nProcessing')
     throughputs.append(after_nic)
-    descriptions.append(f"{nic_type.replace('_', ' ').title()} hardware efficiency")
+    descriptions.append(f"{nic_efficiency*100:.1f}% NIC efficiency")
     
-    # Step 3: OS Network Stack
-    os_efficiency = 0.90 if 'linux' in os_type else 0.88
+    # OS Network Stack
+    os_efficiency = 0.92 if 'linux' in os_type else 0.86
     after_os = after_nic * os_efficiency
-    stages.append('After OS\nNetwork Stack')
+    stages.append('OS Network\nStack')
     throughputs.append(after_os)
-    descriptions.append(f"{os_type.replace('_', ' ').title()} network processing")
+    descriptions.append(f"{os_type.replace('_', ' ').title()} stack")
     
-    # Step 4: VMware Virtualization
+    # Platform Virtualization
     if platform_type == 'vmware':
-        vmware_efficiency = 0.92
-        after_vmware = after_os * vmware_efficiency
-        stages.append('After VMware\nVirtualization')
-        throughputs.append(after_vmware)
-        descriptions.append('VMware hypervisor overhead')
+        platform_efficiency = agent_perf['platform_efficiency']
+        after_platform = after_os * platform_efficiency
+        stages.append('VMware\nOverhead')
+        throughputs.append(after_platform)
+        descriptions.append(f"{platform_efficiency*100:.1f}% VMware efficiency")
     else:
-        after_vmware = after_os
+        after_platform = after_os
+        stages.append('Physical\nServer')
+        throughputs.append(after_platform)
+        descriptions.append('No virtualization overhead')
     
-    # Step 5: Protocol Overhead
-    protocol_efficiency = 0.82 if config['environment'] == 'production' else 0.85
-    after_protocol = after_vmware * protocol_efficiency
-    stages.append('After Protocol\nOverhead')
+    # Storage Protocol Impact
+    storage_efficiency = agent_perf['io_multiplier']
+    after_storage = after_platform * storage_efficiency
+    stages.append(f'{storage_mount.upper()}\nProtocol')
+    throughputs.append(after_storage)
+    descriptions.append(f"{storage_efficiency*100:.1f}% {storage_mount.upper()} efficiency")
+    
+    # Protocol Security Overhead
+    protocol_efficiency = 0.85 if config['environment'] == 'production' else 0.88
+    after_protocol = after_storage * protocol_efficiency
+    stages.append('Security\nProtocols')
     throughputs.append(after_protocol)
-    descriptions.append(f"{config['environment'].title()} security protocols")
+    descriptions.append(f"{config['environment'].title()} security")
     
-    # Step 6: Network Path Limitation
+    # Network Path Limitation
     network_bandwidth = network_perf['effective_bandwidth_mbps']
     after_network = min(after_protocol, network_bandwidth)
-    network_is_bottleneck = after_protocol > network_bandwidth
-    stages.append('After Network\nPath Limit')
+    stages.append('Network\nBottleneck')
     throughputs.append(after_network)
-    descriptions.append(f"Network path: {network_bandwidth:,.0f} Mbps available")
+    descriptions.append(f"{network_bandwidth:,.0f} Mbps network limit")
     
-    # Step 7: Agent Processing
+    # Agent Processing
     agent_capacity = agent_perf['total_agent_throughput_mbps']
     final_throughput = min(after_network, agent_capacity)
-    stages.append('Final Migration\nThroughput')
+    stages.append('Final\nThroughput')
     throughputs.append(final_throughput)
-    descriptions.append(f"{agent_perf['num_agents']}x {agent_perf['agent_type'].upper()} agents")
+    descriptions.append(f"{agent_perf['num_agents']}x {agent_perf['agent_type']} agents")
     
-    # Create visualization
+    # Create enhanced visualization
     waterfall_data = pd.DataFrame({
         'Stage': stages,
         'Throughput (Mbps)': throughputs,
         'Description': descriptions
     })
     
+    # Create subplot with performance loss
     fig = px.bar(
         waterfall_data,
         x='Stage',
         y='Throughput (Mbps)',
-        title=f"Bandwidth Analysis: {user_nic_speed:,.0f} Mbps Hardware → {final_throughput:.0f} Mbps Migration Speed",
+        title=f"Enhanced Analysis: {user_nic_speed:,.0f} Mbps → {final_throughput:.0f} Mbps ({storage_mount.upper()}/{platform_type})",
         text='Throughput (Mbps)',
         color='Throughput (Mbps)',
         color_continuous_scale='RdYlGn'
     )
     
-    fig.update_traces(texttemplate='%{text:.0f} Mbps', textposition='outside')
+    fig.update_traces(texttemplate='%{text:.0f}', textposition='outside')
     fig.update_layout(height=500, showlegend=False)
     
     st.plotly_chart(fig, use_container_width=True)
     
-    # Analysis summary
+    # Enhanced analysis summary
     total_loss = user_nic_speed - final_throughput
     total_loss_pct = (total_loss / user_nic_speed) * 100
     
-    if network_is_bottleneck:
-        st.warning(f"""
-        ⚠️ **Network Infrastructure Bottleneck Detected:**
-        • **Your Hardware:** {user_nic_speed:,.0f} Mbps {nic_type.replace('_', ' ')} NIC
-        • **Network Limitation:** {network_bandwidth:,.0f} Mbps ({config['environment']} environment)
-        • **Final Migration Speed:** {final_throughput:.0f} Mbps
-        • **Total Efficiency Loss:** {total_loss_pct:.1f}%
-        
-        💡 **Recommendation:** Plan migration times using {final_throughput:.0f} Mbps actual speed
+    # Storage type impact analysis
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        **🔍 Storage Protocol Impact:**
+        • **Protocol Type:** {storage_mount.upper()}
+        • **Efficiency:** {storage_efficiency*100:.1f}%
+        • **Performance Loss:** {(1-storage_efficiency)*100:.1f}%
+        • **Bandwidth Impact:** {after_platform - after_storage:.0f} Mbps lost
         """)
-    else:
-        if agent_capacity < after_network:
-            st.error(f"""
-            🔍 **Agent Bottleneck Detected:**
-            • **Available Bandwidth:** {after_network:,.0f} Mbps
-            • **Agent Capacity:** {agent_capacity:,.0f} Mbps
-            • **Final Migration Speed:** {final_throughput:.0f} Mbps
-            • **Recommendation:** Scale agents or optimize configuration
-            """)
-        else:
-            st.success(f"""
-            ✅ **Optimal Configuration:**
-            • **Hardware Capacity:** {user_nic_speed:,.0f} Mbps
-            • **Final Migration Speed:** {final_throughput:.0f} Mbps
-            • **Total Efficiency:** {100-total_loss_pct:.1f}%
-            """)
+    
+    with col2:
+        st.markdown(f"""
+        **⚙️ Platform Impact:**
+        • **Platform:** {platform_type.title()}
+        • **Efficiency:** {agent_perf['platform_efficiency']*100:.1f}%
+        • **Performance Loss:** {(1-agent_perf['platform_efficiency'])*100:.1f}%
+        • **Bandwidth Impact:** {after_os - after_platform:.0f} Mbps lost
+        """)
+    
+    # Comparison analysis
+    if storage_mount == 'smb':
+        nfs_efficiency = 1.0  # Theoretical NFS efficiency
+        nfs_throughput = (after_platform / storage_efficiency) * nfs_efficiency
+        performance_gain = nfs_throughput - after_storage
+        
+        st.warning(f"""
+        **⚠️ SMB Protocol Performance Impact:**
+        • **Current (SMB):** {after_storage:.0f} Mbps
+        • **Potential (NFS):** {nfs_throughput:.0f} Mbps  
+        • **Performance Gain:** {performance_gain:.0f} Mbps (+{(performance_gain/after_storage)*100:.1f}%)
+        
+        💡 **Recommendation:** Consider Linux NAS with NFS for optimal performance
+        """)
+    
+    if platform_type == 'vmware':
+        physical_throughput = after_os  # No virtualization overhead
+        platform_gain = physical_throughput - after_platform
+        
+        st.info(f"""
+        **☁️ VMware Virtualization Impact:**
+        • **Current (VMware):** {after_platform:.0f} Mbps
+        • **Potential (Physical):** {physical_throughput:.0f} Mbps
+        • **Performance Gain:** {platform_gain:.0f} Mbps (+{(platform_gain/after_platform)*100:.1f}%)
+        
+        💡 **Trade-off:** Physical servers offer better performance but less flexibility
+        """)
 
-def create_network_diagram(network_perf: Dict):
-    """Create network path diagram"""
-    segments = network_perf.get('segments', [])
-    if not segments:
-        return None
+def render_storage_comparison_analysis(config: Dict):
+    """Render detailed storage type comparison"""
+    st.markdown("**📊 Storage Protocol Performance Comparison**")
     
-    fig = go.Figure()
+    # Create comparison scenarios
+    scenarios = []
     
-    num_segments = len(segments)
-    x_positions = [i * 100 for i in range(num_segments + 1)]
-    y_positions = [50] * (num_segments + 1)
+    # Current configuration
+    current_os = 'linux' if 'linux' in config['operating_system'].lower() else 'windows'
+    current_storage = 'nfs' if current_os == 'linux' else 'smb'
     
-    # Add network segments
-    for i, segment in enumerate(segments):
-        bandwidth = segment.get('effective_bandwidth_mbps', 0)
-        latency = segment.get('effective_latency_ms', 0)
-        reliability = segment.get('reliability', 0)
+    base_throughput = 1000  # Base throughput for comparison
+    
+    configurations = [
+        {'name': 'Linux + NFS + Physical', 'os': 'linux', 'storage': 'nfs', 'platform': 'physical', 'efficiency': 0.96},
+        {'name': 'Linux + NFS + VMware', 'os': 'linux', 'storage': 'nfs', 'platform': 'vmware', 'efficiency': 0.88},
+        {'name': 'Windows + SMB + Physical', 'os': 'windows', 'storage': 'smb', 'platform': 'physical', 'efficiency': 0.75},
+        {'name': 'Windows + SMB + VMware', 'os': 'windows', 'storage': 'smb', 'platform': 'vmware', 'efficiency': 0.69},
+    ]
+    
+    for config_item in configurations:
+        is_current = (config_item['os'] == current_os and 
+                     config_item['platform'] == config['server_type'])
         
-        line_width = max(2, min(10, bandwidth / 200))
-        line_color = '#27ae60' if reliability > 0.999 else '#f39c12' if reliability > 0.995 else '#e74c3c'
-        
-        fig.add_trace(go.Scatter(
-            x=[x_positions[i], x_positions[i+1]],
-            y=[y_positions[i], y_positions[i+1]],
-            mode='lines+markers',
-            line=dict(width=line_width, color=line_color),
-            marker=dict(size=15, color='#2c3e50', symbol='square'),
-            name=segment['name'],
-            hovertemplate=f"""
-            <b>{segment['name']}</b><br>
-            Bandwidth: {bandwidth:,.0f} Mbps<br>
-            Latency: {latency:.1f} ms<br>
-            Reliability: {reliability*100:.3f}%<br>
-            <extra></extra>
-            """
-        ))
-        
-        # Add annotations
-        mid_x = (x_positions[i] + x_positions[i+1]) / 2
-        mid_y = y_positions[i] + 20
-        
-        fig.add_annotation(
-            x=mid_x, y=mid_y,
-            text=f"<b>{bandwidth:,.0f} Mbps</b><br>{latency:.1f} ms",
-            showarrow=False,
-            bgcolor='rgba(255,255,255,0.9)',
-            bordercolor='#bdc3c7',
-            borderwidth=1
-        )
+        scenarios.append({
+            'Configuration': config_item['name'],
+            'Throughput (Mbps)': base_throughput * config_item['efficiency'],
+            'Efficiency (%)': config_item['efficiency'] * 100,
+            'Current': '✓ Current' if is_current else '',
+            'Performance Loss (%)': (1 - config_item['efficiency']) * 100
+        })
     
-    # Add source and destination
-    fig.add_trace(go.Scatter(
-        x=[x_positions[0]], y=[y_positions[0]],
-        mode='markers+text',
-        marker=dict(size=25, color='#27ae60', symbol='circle'),
-        text=['SOURCE'], textposition='bottom center',
-        name='Source System'
-    ))
+    df_scenarios = pd.DataFrame(scenarios)
     
-    fig.add_trace(go.Scatter(
-        x=[x_positions[-1]], y=[y_positions[-1]],
-        mode='markers+text',
-        marker=dict(size=25, color='#3498db', symbol='circle'),
-        text=['AWS S3'], textposition='bottom center',
-        name='AWS Destination'
-    ))
-    
-    fig.update_layout(
-        title=f"Network Path: {network_perf.get('path_name', 'Unknown')}",
-        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-        showlegend=False,
-        height=350
+    # Create comparison chart
+    fig = px.bar(
+        df_scenarios,
+        x='Configuration',
+        y='Throughput (Mbps)',
+        title='Storage Protocol & Platform Performance Comparison',
+        color='Efficiency (%)',
+        color_continuous_scale='RdYlGn',
+        text='Throughput (Mbps)'
     )
     
-    return fig
+    fig.update_traces(texttemplate='%{text:.0f} Mbps', textposition='outside')
+    fig.update_layout(height=400, xaxis_tickangle=-45)
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Performance impact table
+    st.markdown("**📋 Detailed Performance Analysis:**")
+    st.dataframe(df_scenarios.drop('Current', axis=1), use_container_width=True)
+    
+    # Key insights
+    best_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmax()]
+    worst_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmin()]
+    
+    performance_diff = best_config['Throughput (Mbps)'] - worst_config['Throughput (Mbps)']
+    performance_diff_pct = (performance_diff / worst_config['Throughput (Mbps)']) * 100
+    
+    st.success(f"""
+    **🏆 Key Performance Insights:**
+    • **Best Configuration:** {best_config['Configuration']} ({best_config['Throughput (Mbps)']:.0f} Mbps)
+    • **Worst Configuration:** {worst_config['Configuration']} ({worst_config['Throughput (Mbps)']:.0f} Mbps)
+    • **Performance Gap:** {performance_diff:.0f} Mbps ({performance_diff_pct:.1f}% difference)
+    • **Linux NFS Advantage:** ~20-25% better than Windows SMB
+    • **Physical Server Advantage:** ~8-12% better than VMware
+    """)
 
-def render_sidebar():
-    """Render sidebar controls"""
-    st.sidebar.header("🌐 Network Migration Configuration")
+def render_aws_integration_panel(aws_integration: AWSIntegration):
+    """Render AWS integration status and real-time data"""
+    st.markdown("**☁️ AWS Real-Time Integration**")
+    
+    if not aws_integration.session:
+        st.info("AWS integration not configured. Enter credentials in sidebar to enable real-time monitoring.")
+        return {}
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**📊 DataSync Tasks**")
+        datasync_tasks = aws_integration.get_datasync_tasks()
+        
+        if datasync_tasks:
+            for task in datasync_tasks[:3]:  # Show first 3 tasks
+                with st.expander(f"Task: {task['name']}"):
+                    st.write(f"**Status:** {task['status']}")
+                    st.write(f"**Source:** {task['source_location']}")
+                    st.write(f"**Destination:** {task['destination_location']}")
+                    if task['executions']:
+                        latest_execution = task['executions'][0]
+                        st.write(f"**Latest Execution:** {latest_execution.get('Status', 'Unknown')}")
+        else:
+            st.info("No DataSync tasks found in the current region.")
+    
+    with col2:
+        st.markdown("**🔄 DMS Tasks**")
+        dms_tasks = aws_integration.get_dms_tasks()
+        
+        if dms_tasks:
+            for task in dms_tasks[:3]:  # Show first 3 tasks
+                with st.expander(f"Task: {task['name']}"):
+                    st.write(f"**Status:** {task['status']}")
+                    st.write(f"**Migration Type:** {task['migration_type']}")
+                    st.write(f"**Source:** {task['source_endpoint']}")
+                    st.write(f"**Target:** {task['target_endpoint']}")
+        else:
+            st.info("No DMS tasks found in the current region.")
+    
+    return {
+        'datasync_tasks': len(datasync_tasks),
+        'dms_tasks': len(dms_tasks),
+        'active_tasks': len([t for t in datasync_tasks if t['status'] == 'AVAILABLE']) + 
+                       len([t for t in dms_tasks if t['status'] == 'ready'])
+    }
+
+def render_claude_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
+                            network_perf: Dict, agent_perf: Dict, aws_data: Dict):
+    """Render Claude AI analysis panel"""
+    st.markdown("**🤖 Claude AI Performance Analysis**")
+    
+    if not claude_integration.client:
+        st.info("Claude AI integration not configured. Enter API key in sidebar for intelligent analysis.")
+        return
+    
+    with st.spinner("Getting AI analysis..."):
+        analysis = claude_integration.analyze_migration_performance(
+            config, network_perf, agent_perf, aws_data
+        )
+    
+    st.markdown(f"""
+    <div class="ai-card">
+        <h4>🧠 AI Performance Analysis</h4>
+        <div style="white-space: pre-wrap;">{analysis}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Get specific optimization recommendations
+    if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
+        bottleneck_type = "network"
+    else:
+        bottleneck_type = "agent"
+    
+    with st.expander("🎯 Targeted Optimization Recommendations"):
+        with st.spinner("Getting optimization recommendations..."):
+            recommendations = claude_integration.get_optimization_recommendations(
+                bottleneck_type, config
+            )
+        st.markdown(recommendations)
+
+def render_enhanced_sidebar():
+    """Enhanced sidebar with API integrations"""
+    st.sidebar.header("🌐 Enhanced Migration Analyzer")
+    
+    # API Integration Section
+    st.sidebar.subheader("🔗 API Integrations")
+    
+    # AWS Integration
+    with st.sidebar.expander("☁️ AWS Integration"):
+        aws_access_key = st.text_input("AWS Access Key", type="password")
+        aws_secret_key = st.text_input("AWS Secret Key", type="password")
+        aws_region = st.selectbox("AWS Region", 
+                                 ["us-west-2", "us-east-1", "eu-west-1", "ap-southeast-1"],
+                                 index=0)
+        
+        if st.button("Connect to AWS"):
+            aws_integration = AWSIntegration()
+            success, message = aws_integration.initialize_aws_session(
+                aws_access_key, aws_secret_key, aws_region
+            )
+            if success:
+                st.success(message)
+                st.session_state['aws_integration'] = aws_integration
+            else:
+                st.error(message)
+    
+    # Claude AI Integration
+    with st.sidebar.expander("🤖 Claude AI Integration"):
+        claude_api_key = st.text_input("Claude AI API Key", type="password")
+        
+        if st.button("Connect to Claude AI"):
+            claude_integration = ClaudeAIIntegration()
+            success, message = claude_integration.initialize_claude(claude_api_key)
+            if success:
+                st.success(message)
+                st.session_state['claude_integration'] = claude_integration
+            else:
+                st.error(message)
+    
+    st.sidebar.divider()
+    
+    # Original configuration options
+    st.sidebar.subheader("💻 System Configuration")
     
     # Operating System
     operating_system = st.sidebar.selectbox(
@@ -604,8 +1123,37 @@ def render_sidebar():
     server_type = st.sidebar.selectbox(
         "Server Platform",
         ["physical", "vmware"],
-        index=1,  # Default to VMware
+        index=1,
         format_func=lambda x: "🏢 Physical Server" if x == "physical" else "☁️ VMware Virtual Machine"
+    )
+    
+    # Storage Configuration
+    st.sidebar.subheader("💾 Storage Configuration")
+    
+    # Determine storage type based on OS
+    os_lower = operating_system.lower()
+    if 'linux' in os_lower:
+        storage_options = ["nfs_nas", "iscsi_san", "local_storage"]
+        storage_labels = {
+            'nfs_nas': '📁 NFS Network Attached Storage',
+            'iscsi_san': '🔗 iSCSI Storage Area Network', 
+            'local_storage': '💽 Local Direct Attached Storage'
+        }
+        default_storage = "nfs_nas"
+    else:
+        storage_options = ["smb_share", "iscsi_san", "local_storage"]
+        storage_labels = {
+            'smb_share': '📁 SMB/CIFS Network Share',
+            'iscsi_san': '🔗 iSCSI Storage Area Network',
+            'local_storage': '💽 Local Direct Attached Storage'
+        }
+        default_storage = "smb_share"
+    
+    storage_type = st.sidebar.selectbox(
+        "Storage Type",
+        storage_options,
+        index=0,
+        format_func=lambda x: storage_labels[x]
     )
     
     # Hardware Configuration
@@ -693,6 +1241,7 @@ def render_sidebar():
     return {
         'operating_system': operating_system,
         'server_type': server_type,
+        'storage_type': storage_type,
         'ram_gb': ram_gb,
         'cpu_cores': cpu_cores,
         'nic_type': nic_type,
@@ -708,106 +1257,142 @@ def render_sidebar():
     }
 
 def main():
-    """Main application"""
+    """Enhanced main application"""
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1>🌐 AWS Network Migration Analyzer</h1>
-        <p>Comprehensive Network Path Analysis • Bandwidth Optimization • Agent Performance Analysis</p>
+        <h1>🌐 Enhanced AWS Network Migration Analyzer</h1>
+        <p>AI-Powered Analysis • Real-Time AWS Metrics • Physical vs VMware Performance • Storage Protocol Optimization</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Get configuration
-    config = render_sidebar()
+    # Initialize session state for integrations
+    if 'aws_integration' not in st.session_state:
+        st.session_state['aws_integration'] = AWSIntegration()
+    if 'claude_integration' not in st.session_state:
+        st.session_state['claude_integration'] = ClaudeAIIntegration()
     
-    # Initialize managers
-    network_manager = NetworkPathManager()
-    agent_manager = AgentManager()
+    # Get configuration
+    config = render_enhanced_sidebar()
+    
+    # Initialize enhanced managers
+    network_manager = EnhancedNetworkPathManager()
+    agent_manager = EnhancedAgentManager()
     
     # Get network path
     path_key = network_manager.get_network_path_key(config)
     network_perf = network_manager.calculate_network_performance(path_key)
     
+    # Determine storage characteristics
+    storage_type_mapping = {
+        'nfs_nas': 'nas',
+        'smb_share': 'share',
+        'iscsi_san': 'san',
+        'local_storage': 'local'
+    }
+    storage_type = storage_type_mapping.get(config['storage_type'], 'nas')
+    
+    os_type = 'linux' if 'linux' in config['operating_system'].lower() else 'windows'
+    
     # Get agent performance
     agent_type = 'datasync' if config['is_homogeneous'] else 'dms'
     agent_perf = agent_manager.calculate_agent_performance(
-        agent_type, config['agent_size'], config['number_of_agents'], config['server_type']
+        agent_type, config['agent_size'], config['number_of_agents'], 
+        config['server_type'], storage_type, os_type
     )
     
+    # Get AWS real-time data
+    aws_data = {}
+    if st.session_state['aws_integration'].session:
+        aws_data = render_aws_integration_panel(st.session_state['aws_integration'])
+    
     # Main content tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "🌊 Bandwidth Analysis",
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+        "🌊 Enhanced Bandwidth Analysis",
+        "📊 Storage Performance Comparison", 
         "🌐 Network Paths",
         "🤖 Agent Performance",
-        "📊 Performance Comparison"
+        "☁️ AWS Integration",
+        "🧠 AI Analysis"
     ])
     
     with tab1:
-        st.subheader("🌊 Bandwidth Waterfall Analysis")
-        render_bandwidth_waterfall(config, network_perf, agent_perf)
+        st.subheader("🌊 Enhanced Bandwidth Waterfall Analysis")
+        render_enhanced_bandwidth_waterfall(config, network_perf, agent_perf)
         
-        # Performance impact table
-        st.markdown("**📊 Detailed Performance Impact:**")
+        # Physical vs VMware comparison
+        st.markdown("**⚖️ Physical vs VMware Performance Impact**")
         
-        impact_data = []
-        running_throughput = config['nic_speed']
+        # Calculate both scenarios
+        physical_agent_perf = agent_manager.calculate_agent_performance(
+            agent_type, config['agent_size'], config['number_of_agents'], 
+            'physical', storage_type, os_type
+        )
         
-        # NIC Processing
-        nic_efficiency = get_nic_efficiency(config['nic_type'])
-        nic_loss = running_throughput * (1 - nic_efficiency)
-        running_throughput *= nic_efficiency
-        impact_data.append({
-            'Layer': '🔌 NIC Hardware',
-            'Component': f"{config['nic_type'].replace('_', ' ').title()}",
-            'Throughput (Mbps)': f"{running_throughput:.0f}",
-            'Efficiency (%)': f"{nic_efficiency * 100:.1f}%",
-            'Loss (Mbps)': f"{nic_loss:.0f}"
-        })
+        vmware_agent_perf = agent_manager.calculate_agent_performance(
+            agent_type, config['agent_size'], config['number_of_agents'], 
+            'vmware', storage_type, os_type
+        )
         
-        # OS Network Stack
-        os_efficiency = 0.90 if 'linux' in config['operating_system'] else 0.88
-        os_loss = running_throughput * (1 - os_efficiency)
-        running_throughput *= os_efficiency
-        impact_data.append({
-            'Layer': '💻 OS Network Stack',
-            'Component': f"{config['operating_system'].replace('_', ' ').title()}",
-            'Throughput (Mbps)': f"{running_throughput:.0f}",
-            'Efficiency (%)': f"{os_efficiency * 100:.1f}%",
-            'Loss (Mbps)': f"{os_loss:.0f}"
-        })
+        comparison_col1, comparison_col2 = st.columns(2)
         
-        # VMware (if applicable)
-        if config['server_type'] == 'vmware':
-            vmware_efficiency = 0.92
-            vmware_loss = running_throughput * (1 - vmware_efficiency)
-            running_throughput *= vmware_efficiency
-            impact_data.append({
-                'Layer': '☁️ VMware Virtualization',
-                'Component': 'VMware hypervisor overhead',
-                'Throughput (Mbps)': f"{running_throughput:.0f}",
-                'Efficiency (%)': f"{vmware_efficiency * 100:.1f}%",
-                'Loss (Mbps)': f"{vmware_loss:.0f}"
-            })
+        with comparison_col1:
+            st.metric(
+                "🏢 Physical Server Performance",
+                f"{physical_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
+                delta=f"+{physical_agent_perf['total_agent_throughput_mbps'] - vmware_agent_perf['total_agent_throughput_mbps']:.0f} Mbps vs VMware"
+            )
         
-        # Protocol Overhead
-        protocol_efficiency = 0.82 if config['environment'] == 'production' else 0.85
-        protocol_loss = running_throughput * (1 - protocol_efficiency)
-        running_throughput *= protocol_efficiency
-        impact_data.append({
-            'Layer': '🔗 Protocol Overhead',
-            'Component': f"{config['environment'].title()} security protocols",
-            'Throughput (Mbps)': f"{running_throughput:.0f}",
-            'Efficiency (%)': f"{protocol_efficiency * 100:.1f}%",
-            'Loss (Mbps)': f"{protocol_loss:.0f}"
-        })
-        
-        df_impact = pd.DataFrame(impact_data)
-        st.dataframe(df_impact, use_container_width=True)
+        with comparison_col2:
+            st.metric(
+                "☁️ VMware Performance", 
+                f"{vmware_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
+                delta=f"{vmware_agent_perf['performance_loss_pct']:.1f}% total loss"
+            )
     
     with tab2:
+        st.subheader("📊 Storage Protocol Performance Analysis")
+        render_storage_comparison_analysis(config)
+        
+        # Real-world performance insights
+        st.markdown("**🔬 Real-World Performance Insights**")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            <div class="network-card">
+                <h4>🐧 Linux NFS Advantages</h4>
+                <ul>
+                    <li><strong>Lower CPU overhead:</strong> Kernel-level NFS client</li>
+                    <li><strong>Better caching:</strong> Page cache optimization</li>
+                    <li><strong>Efficient metadata:</strong> Reduced round trips</li>
+                    <li><strong>Parallel I/O:</strong> Multiple outstanding requests</li>
+                    <li><strong>Network efficiency:</strong> TCP window scaling</li>
+                </ul>
+                <p><strong>Typical Performance:</strong> 85-95% of line rate</p>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown("""
+            <div class="warning-card">
+                <h4>🪟 Windows SMB Challenges</h4>
+                <ul>
+                    <li><strong>Protocol overhead:</strong> SMB2/3 authentication</li>
+                    <li><strong>Opportunistic locks:</strong> Performance penalties</li>
+                    <li><strong>Buffer management:</strong> User-space overhead</li>
+                    <li><strong>Latency sensitivity:</strong> Chatty protocol</li>
+                    <li><strong>Security overhead:</strong> Encryption impact</li>
+                </ul>
+                <p><strong>Typical Performance:</strong> 65-80% of line rate</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    with tab3:
+        # Existing network paths tab content
         st.subheader("🌐 Network Path Analysis")
         
-        # Network overview
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
@@ -821,80 +1406,16 @@ def main():
         
         with col4:
             st.metric("🛡️ Reliability", f"{network_perf['total_reliability']*100:.2f}%")
-        
-        # Network diagram
-        st.markdown("**🗺️ Network Path Visualization:**")
-        network_diagram = create_network_diagram(network_perf)
-        if network_diagram:
-            st.plotly_chart(network_diagram, use_container_width=True)
-        
-        # Path comparison
-        st.markdown("**⚖️ Production vs Non-Production Comparison:**")
-        
-        # Get both paths for comparison
-        if config['environment'] == 'production':
-            alt_config = config.copy()
-            alt_config['environment'] = 'non-production'
-            alt_path_key = network_manager.get_network_path_key(alt_config)
-            alt_network_perf = network_manager.calculate_network_performance(alt_path_key)
-            
-            comparison_data = {
-                'Environment': ['Production (Current)', 'Non-Production'],
-                'Bandwidth (Mbps)': [
-                    network_perf['effective_bandwidth_mbps'],
-                    alt_network_perf['effective_bandwidth_mbps']
-                ],
-                'Latency (ms)': [
-                    network_perf['total_latency_ms'],
-                    alt_network_perf['total_latency_ms']
-                ],
-                'Quality Score': [
-                    network_perf['network_quality_score'],
-                    alt_network_perf['network_quality_score']
-                ],
-                'Cost Factor': [
-                    network_perf['total_cost_factor'],
-                    alt_network_perf['total_cost_factor']
-                ]
-            }
-        else:
-            alt_config = config.copy()
-            alt_config['environment'] = 'production'
-            alt_path_key = network_manager.get_network_path_key(alt_config)
-            alt_network_perf = network_manager.calculate_network_performance(alt_path_key)
-            
-            comparison_data = {
-                'Environment': ['Non-Production (Current)', 'Production'],
-                'Bandwidth (Mbps)': [
-                    network_perf['effective_bandwidth_mbps'],
-                    alt_network_perf['effective_bandwidth_mbps']
-                ],
-                'Latency (ms)': [
-                    network_perf['total_latency_ms'],
-                    alt_network_perf['total_latency_ms']
-                ],
-                'Quality Score': [
-                    network_perf['network_quality_score'],
-                    alt_network_perf['network_quality_score']
-                ],
-                'Cost Factor': [
-                    network_perf['total_cost_factor'],
-                    alt_network_perf['total_cost_factor']
-                ]
-            }
-        
-        df_comparison = pd.DataFrame(comparison_data)
-        st.dataframe(df_comparison, use_container_width=True)
     
-    with tab3:
-        st.subheader("🤖 Agent Performance Analysis")
+    with tab4:
+        # Enhanced agent performance analysis
+        st.subheader("🤖 Enhanced Agent Performance Analysis")
         
-        # Agent overview
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
             st.metric(
-                "🔧 Agent Configuration",
+                "🔧 Configuration",
                 f"{agent_perf['num_agents']}x {agent_perf['agent_size'].title()}",
                 delta=f"{agent_perf['agent_type'].upper()}"
             )
@@ -903,249 +1424,156 @@ def main():
             st.metric(
                 "⚡ Total Capacity",
                 f"{agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
-                delta=f"Per Agent: {agent_perf['per_agent_throughput_mbps']:.0f} Mbps"
+                delta=f"{agent_perf['performance_loss_pct']:.1f}% loss from ideal"
             )
         
         with col3:
             st.metric(
-                "🎯 Scaling Efficiency",
-                f"{agent_perf['scaling_efficiency']*100:.1f}%",
-                delta="Multi-agent coordination"
+                "🎯 Platform Efficiency",
+                f"{agent_perf['platform_efficiency']*100:.1f}%",
+                delta=f"{config['server_type'].title()}"
             )
         
         with col4:
             st.metric(
                 "💰 Monthly Cost",
                 f"${agent_perf['total_monthly_cost']:,.0f}",
-                delta=f"${agent_perf['per_agent_monthly_cost']:.0f} per agent"
+                delta=f"${agent_perf['per_agent_monthly_cost']:.0f}/agent"
             )
         
-        # VMware impact analysis
-        st.markdown("**☁️ VMware Platform Impact:**")
+        # Detailed performance breakdown
+        st.markdown("**📈 Performance Impact Breakdown**")
         
-        vmware_col1, vmware_col2 = st.columns(2)
-        
-        with vmware_col1:
-            st.markdown(f"""
-            <div class="agent-card">
-                <h4>🖥️ Platform Configuration</h4>
-                <p><strong>Platform:</strong> {config['server_type'].title()}</p>
-                <p><strong>VMware Efficiency:</strong> {agent_perf['vmware_efficiency']*100:.1f}%</p>
-                <p><strong>Performance Impact:</strong> {(1-agent_perf['vmware_efficiency'])*100:.1f}% overhead</p>
-                <p><strong>Per-Agent Impact:</strong> {agent_perf['base_spec']['throughput_mbps'] - agent_perf['per_agent_throughput_mbps']:.0f} Mbps loss</p>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with vmware_col2:
-            # Compare physical vs VMware
-            physical_throughput = agent_perf['base_spec']['throughput_mbps'] * agent_perf['num_agents'] * agent_perf['scaling_efficiency']
-            
-            platform_comparison = {
-                'Platform': ['Physical', 'VMware (Current)'],
-                'Per Agent (Mbps)': [
-                    agent_perf['base_spec']['throughput_mbps'],
-                    agent_perf['per_agent_throughput_mbps']
-                ],
-                'Total Capacity (Mbps)': [
-                    physical_throughput,
-                    agent_perf['total_agent_throughput_mbps']
-                ]
-            }
-            
-            fig_platform = px.bar(
-                platform_comparison,
-                x='Platform',
-                y=['Per Agent (Mbps)', 'Total Capacity (Mbps)'],
-                title="Physical vs VMware Performance",
-                barmode='group'
-            )
-            st.plotly_chart(fig_platform, use_container_width=True)
-        
-        # Agent scaling analysis
-        st.markdown("**📈 Agent Scaling Analysis:**")
-        
-        scaling_data = []
-        for num in range(1, 6):
-            test_perf = agent_manager.calculate_agent_performance(
-                agent_type, config['agent_size'], num, config['server_type']
-            )
-            scaling_data.append({
-                'Agents': num,
-                'Total Throughput (Mbps)': test_perf['total_agent_throughput_mbps'],
-                'Scaling Efficiency (%)': test_perf['scaling_efficiency'] * 100,
-                'Monthly Cost ($)': test_perf['total_monthly_cost']
-            })
-        
-        df_scaling = pd.DataFrame(scaling_data)
-        
-        # Highlight current configuration
-        df_scaling['Current'] = df_scaling['Agents'] == config['number_of_agents']
-        
-        fig_scaling = px.line(
-            df_scaling,
-            x='Agents',
-            y='Total Throughput (Mbps)',
-            title="Agent Scaling Performance",
-            markers=True
-        )
-        
-        # Add current point
-        current_point = df_scaling[df_scaling['Current']]
-        fig_scaling.add_scatter(
-            x=current_point['Agents'],
-            y=current_point['Total Throughput (Mbps)'],
-            mode='markers',
-            marker=dict(size=15, color='red'),
-            name='Current Config'
-        )
-        
-        st.plotly_chart(fig_scaling, use_container_width=True)
-    
-    with tab4:
-        st.subheader("📊 Overall Performance Comparison")
-        
-        # Final throughput calculation
-        final_throughput = min(
-            network_perf['effective_bandwidth_mbps'],
-            agent_perf['total_agent_throughput_mbps']
-        )
-        
-        # Determine bottleneck
-        if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
-            bottleneck = "Network"
-            bottleneck_severity = "High" if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps'] * 0.8 else "Medium"
-        else:
-            bottleneck = "Agents"
-            bottleneck_severity = "Medium"
-        
-        # Performance summary
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.metric(
-                "🚀 Final Throughput",
-                f"{final_throughput:,.0f} Mbps",
-                delta=f"Bottleneck: {bottleneck}"
-            )
-        
-        with col2:
-            efficiency = (final_throughput / config['nic_speed']) * 100
-            st.metric(
-                "⚡ Overall Efficiency",
-                f"{efficiency:.1f}%",
-                delta=f"From {config['nic_speed']:,} Mbps NIC"
-            )
-        
-        with col3:
-            migration_time = (config['database_size_gb'] * 8 * 1000) / (final_throughput * 3600)
-            st.metric(
-                "⏱️ Migration Time",
-                f"{migration_time:.1f} hours",
-                delta=f"{config['database_size_gb']:,} GB database"
-            )
-        
-        with col4:
-            st.metric(
-                "🛡️ Bottleneck Severity",
-                bottleneck_severity,
-                delta=f"{bottleneck} limited"
-            )
-        
-        # Performance breakdown chart
-        st.markdown("**📊 Performance Component Analysis:**")
-        
-        component_data = {
-            'Component': ['NIC Capacity', 'Network Path', 'Agent Capacity', 'Final Throughput'],
-            'Throughput (Mbps)': [
-                config['nic_speed'],
-                network_perf['effective_bandwidth_mbps'],
-                agent_perf['total_agent_throughput_mbps'],
-                final_throughput
+        impact_data = {
+            'Factor': ['Base Throughput', 'Platform Efficiency', 'I/O Protocol', 'Network Efficiency', 'Scaling Factor'],
+            'Impact (%)': [
+                100,
+                agent_perf['platform_efficiency'] * 100,
+                agent_perf['io_multiplier'] * 100,
+                agent_perf['network_efficiency'] * 100,
+                agent_perf['scaling_efficiency'] * 100
+            ],
+            'Cumulative (Mbps)': [
+                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'],
+                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'] * agent_perf['platform_efficiency'],
+                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'] * agent_perf['platform_efficiency'] * agent_perf['io_multiplier'],
+                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'] * agent_perf['platform_efficiency'] * agent_perf['io_multiplier'] * agent_perf['network_efficiency'],
+                agent_perf['total_agent_throughput_mbps']
             ]
         }
         
-        fig_components = px.bar(
-            component_data,
-            x='Component',
-            y='Throughput (Mbps)',
-            title="Migration Performance Components",
-            color='Throughput (Mbps)',
+        df_impact = pd.DataFrame(impact_data)
+        
+        fig_impact = px.bar(
+            df_impact,
+            x='Factor',
+            y='Cumulative (Mbps)',
+            title='Agent Performance Impact Analysis',
+            color='Impact (%)',
             color_continuous_scale='RdYlGn'
         )
         
-        # Add bottleneck line
-        bottleneck_value = network_perf['effective_bandwidth_mbps'] if bottleneck == "Network" else agent_perf['total_agent_throughput_mbps']
-        fig_components.add_hline(
-            y=bottleneck_value,
-            line_dash="dash",
-            line_color="red",
-            annotation_text=f"{bottleneck} Bottleneck: {bottleneck_value:,.0f} Mbps"
-        )
+        st.plotly_chart(fig_impact, use_container_width=True)
+    
+    with tab5:
+        st.subheader("☁️ AWS Real-Time Integration")
         
-        st.plotly_chart(fig_components, use_container_width=True)
-        
-        # Recommendations
-        st.markdown("**💡 Optimization Recommendations:**")
-        
-        if bottleneck == "Network":
-            st.markdown(f"""
-            <div class="warning-card">
-                <h4>🌐 Network Optimization Required</h4>
-                <p><strong>Issue:</strong> Network bandwidth ({network_perf['effective_bandwidth_mbps']:,.0f} Mbps) is limiting migration speed</p>
-                <p><strong>Agent Capacity:</strong> {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps available but unused</p>
-                <p><strong>Recommendations:</strong></p>
-                <ul>
-                    <li>Upgrade to production environment for {alt_network_perf['effective_bandwidth_mbps']:,.0f} Mbps bandwidth</li>
-                    <li>Schedule migration during off-peak hours</li>
-                    <li>Consider network optimization techniques</li>
-                    <li>Plan migration timeline using {final_throughput:,.0f} Mbps actual speed</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+        if st.session_state['aws_integration'].session:
+            aws_data_detailed = render_aws_integration_panel(st.session_state['aws_integration'])
+            
+            # CloudWatch metrics visualization
+            st.markdown("**📊 CloudWatch Metrics**")
+            
+            metrics_col1, metrics_col2 = st.columns(2)
+            
+            with metrics_col1:
+                if agent_type == 'datasync':
+                    datasync_metrics = st.session_state['aws_integration'].get_cloudwatch_metrics('datasync')
+                    if datasync_metrics:
+                        st.success(f"Found {len(datasync_metrics)} DataSync metrics")
+                    else:
+                        st.info("No recent DataSync metrics available")
+            
+            with metrics_col2:
+                dms_metrics = st.session_state['aws_integration'].get_cloudwatch_metrics('dms')
+                if dms_metrics:
+                    st.success(f"Found {len(dms_metrics)} DMS metrics") 
+                else:
+                    st.info("No recent DMS metrics available")
         else:
-            st.markdown(f"""
-            <div class="agent-card">
-                <h4>🤖 Agent Optimization Opportunities</h4>
-                <p><strong>Status:</strong> Agents ({agent_perf['total_agent_throughput_mbps']:,.0f} Mbps) are the limiting factor</p>
-                <p><strong>Network Capacity:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps available</p>
-                <p><strong>Recommendations:</strong></p>
-                <ul>
-                    <li>Scale up to larger agent sizes for better performance</li>
-                    <li>Add more agents (currently {agent_perf['num_agents']})</li>
-                    <li>Consider moving from VMware to physical for +8% performance</li>
-                    <li>Optimize agent configuration for {config['migration_type'].upper()}</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
+            st.warning("AWS integration not configured. Configure in the sidebar to enable real-time monitoring.")
+            aws_data_detailed = {}
+    
+    with tab6:
+        st.subheader("🧠 Claude AI Performance Analysis")
         
-        # Migration planning
-        st.markdown("**📅 Migration Planning Summary:**")
+        if st.session_state['claude_integration'].client:
+            render_claude_ai_analysis(
+                st.session_state['claude_integration'], 
+                config, network_perf, agent_perf, aws_data
+            )
+        else:
+            st.warning("Claude AI integration not configured. Configure in the sidebar for intelligent analysis.")
+    
+    # Final recommendations summary
+    st.markdown("---")
+    st.markdown("### 🎯 Executive Summary & Recommendations")
+    
+    final_throughput = min(
+        network_perf['effective_bandwidth_mbps'],
+        agent_perf['total_agent_throughput_mbps']
+    )
+    
+    efficiency = (final_throughput / config['nic_speed']) * 100
+    migration_time = (config['database_size_gb'] * 8 * 1000) / (final_throughput * 3600)
+    
+    summary_col1, summary_col2, summary_col3 = st.columns(3)
+    
+    with summary_col1:
+        st.markdown(f"""
+        <div class="performance-card">
+            <h4>📊 Performance Summary</h4>
+            <p><strong>Final Throughput:</strong> {final_throughput:,.0f} Mbps</p>
+            <p><strong>Overall Efficiency:</strong> {efficiency:.1f}%</p>
+            <p><strong>Migration Time:</strong> {migration_time:.1f} hours</p>
+            <p><strong>Platform:</strong> {config['server_type'].title()}</p>
+            <p><strong>Storage:</strong> {network_perf.get('storage_mount_type', 'Unknown').upper()}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with summary_col2:
+        # Calculate potential improvements
+        linux_nfs_improvement = 0.96 / agent_perf['io_multiplier'] if agent_perf['io_multiplier'] < 0.96 else 1.0
+        physical_improvement = 1.0 / agent_perf['platform_efficiency'] if agent_perf['platform_efficiency'] < 1.0 else 1.0
         
-        planning_col1, planning_col2 = st.columns(2)
+        potential_throughput = final_throughput * linux_nfs_improvement * physical_improvement
+        time_savings = migration_time - ((config['database_size_gb'] * 8 * 1000) / (potential_throughput * 3600))
         
-        with planning_col1:
-            st.markdown(f"""
-            <div class="network-card">
-                <h4>⏱️ Time Estimates</h4>
-                <p><strong>Database Size:</strong> {config['database_size_gb']:,} GB</p>
-                <p><strong>Effective Speed:</strong> {final_throughput:,.0f} Mbps</p>
-                <p><strong>Migration Time:</strong> {migration_time:.1f} hours</p>
-                <p><strong>Data Transfer:</strong> {config['database_size_gb'] * 8:,} Megabits</p>
-                <p><strong>Buffer Time (20%):</strong> {migration_time * 1.2:.1f} hours</p>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="network-card">
+            <h4>🚀 Optimization Potential</h4>
+            <p><strong>Current:</strong> {final_throughput:,.0f} Mbps</p>
+            <p><strong>Optimized:</strong> {potential_throughput:,.0f} Mbps</p>
+            <p><strong>Improvement:</strong> {((potential_throughput/final_throughput)-1)*100:.1f}%</p>
+            <p><strong>Time Savings:</strong> {time_savings:.1f} hours</p>
+            <p><strong>Recommendations:</strong> Linux NFS + Physical</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with summary_col3:
+        cost_per_hour = agent_perf['total_monthly_cost'] / (24 * 30)
+        migration_cost = cost_per_hour * migration_time
         
-        with planning_col2:
-            st.markdown(f"""
-            <div class="performance-card">
-                <h4>💰 Cost Summary</h4>
-                <p><strong>Agent Monthly Cost:</strong> ${agent_perf['total_monthly_cost']:,.0f}</p>
-                <p><strong>Per-Agent Cost:</strong> ${agent_perf['per_agent_monthly_cost']:,.0f}</p>
-                <p><strong>Cost per Mbps:</strong> ${agent_perf['total_monthly_cost'] / agent_perf['total_agent_throughput_mbps']:.2f}</p>
-                <p><strong>Migration Window:</strong> {migration_time:.1f} hours</p>
-                <p><strong>Efficiency Rating:</strong> {efficiency:.1f}%</p>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="agent-card">
+            <h4>💰 Cost Analysis</h4>
+            <p><strong>Hourly Cost:</strong> ${cost_per_hour:.2f}/hour</p>
+            <p><strong>Migration Cost:</strong> ${migration_cost:.2f}</p>
+            <p><strong>Monthly Budget:</strong> ${agent_perf['total_monthly_cost']:,.0f}</p>
+            <p><strong>Cost per GB:</strong> ${migration_cost/config['database_size_gb']:.4f}</p>
+            <p><strong>Agent Efficiency:</strong> {100-agent_perf['performance_loss_pct']:.1f}%</p>
+        </div>
+        """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
