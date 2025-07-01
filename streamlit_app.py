@@ -21,331 +21,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Professional CSS styling with enterprise colors (preserving all original card types)
-st.markdown("""
-<style>
-    /* Professional color scheme */
-    :root {
-        --primary-blue: #1f2937;
-        --secondary-blue: #374151;
-        --accent-blue: #3b82f6;
-        --light-gray: #f8fafc;
-        --medium-gray: #e5e7eb;
-        --dark-gray: #6b7280;
-        --success-green: #059669;
-        --warning-orange: #d97706;
-        --danger-red: #dc2626;
-        --info-blue: #0284c7;
-    }
-    
-    .main-header {
-        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
-        padding: 2rem;
-        border-radius: 8px;
-        color: white;
-        text-align: center;
-        margin-bottom: 2rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    
-    .network-card {
-        background: #f0fdf4;
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid var(--success-green);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    
-    .performance-card {
-        background: #fffbeb;
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid var(--warning-orange);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    
-    .agent-card {
-        background: var(--light-gray);
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid var(--dark-gray);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    
-    .placement-card {
-        background: #fef2f2;
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid var(--danger-red);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    
-    .decision-matrix {
-        background: #f0f9ff;
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid var(--info-blue);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-    
-    .warning-card {
-        background: #fefce8;
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid var(--warning-orange);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    .professional-ai-card {
-        background: white;
-        border: 1px solid var(--medium-gray);
-        padding: 2rem;
-        border-radius: 10px;
-        color: #1e293b;
-        margin: 1rem 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        border-left: 5px solid var(--accent-blue);
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-        font-size: 15px;
-        line-height: 1.7;
-    }
-
-    .aws-card {
-        background: #fef3c7;
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid var(--warning-orange);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    .backup-card {
-        background: #ede9fe;
-        border: 1px solid var(--medium-gray);
-        padding: 1.5rem;
-        border-radius: 8px;
-        color: #1f2937;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        border-left: 4px solid #8b5cf6;
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    .connection-status {
-        padding: 0.75rem 1.25rem;
-        border-radius: 6px;
-        margin: 0.75rem 0;
-        font-weight: 600;
-        font-size: 13px;
-    }
-    
-    .status-connected {
-        background-color: #d1fae5;
-        color: #065f46;
-        border: 2px solid #10b981;
-    }
-    
-    .status-disconnected {
-        background-color: #fee2e2;
-        color: #991b1b;
-        border: 2px solid #ef4444;
-    }
-    
-    .status-partial {
-        background-color: #fef3c7;
-        color: #92400e;
-        border: 2px solid #f59e0b;
-    }
-
-    .network-segment-card {
-        background: white;
-        border: 1px solid var(--medium-gray);
-        border-radius: 8px;
-        padding: 1.25rem;
-        margin: 0.75rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        font-size: 14px;
-        line-height: 1.6;
-    }
-
-    .segment-performance {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 0.75rem;
-        font-size: 13px;
-        font-weight: 500;
-    }
-
-    .ai-section {
-        background: white;
-        border: 1px solid var(--medium-gray);
-        border-radius: 10px;
-        padding: 2rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        font-size: 15px;
-        line-height: 1.7;
-    }
-
-    .ai-section h4 {
-        color: #1e293b;
-        font-weight: 700;
-        margin-bottom: 1.5rem;
-        padding-bottom: 0.75rem;
-        border-bottom: 3px solid #f1f5f9;
-        font-size: 18px;
-    }
-
-    .ai-section p, .ai-section ul, .ai-section ol {
-        color: #475569;
-        line-height: 1.8;
-        margin-bottom: 1rem;
-        font-size: 15px;
-    }
-
-    .ai-section ul li {
-        margin-bottom: 0.6rem;
-        font-size: 14px;
-    }
-
-    .ai-highlight {
-        background: var(--light-gray);
-        border-left: 4px solid var(--accent-blue);
-        padding: 1.5rem;
-        margin: 1.5rem 0;
-        border-radius: 0 8px 8px 0;
-        font-size: 15px;
-    }
-
-    .metric-container {
-        background: white;
-        border: 1px solid var(--medium-gray);
-        border-radius: 8px;
-        padding: 1rem;
-        margin: 0.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        text-align: center;
-    }
-
-    .metric-value {
-        font-size: 24px;
-        font-weight: 700;
-        color: #1f2937;
-        margin-bottom: 0.5rem;
-    }
-
-    .metric-label {
-        font-size: 14px;
-        color: var(--dark-gray);
-        font-weight: 500;
-    }
-
-    .placement-option {
-        background: white;
-        border: 1px solid var(--medium-gray);
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-    }
-
-    .placement-option:hover {
-        border-color: var(--accent-blue);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
-    }
-
-    .placement-option.recommended {
-        border-color: var(--success-green);
-        background: #f0fdf4;
-    }
-
-    .placement-score {
-        display: inline-block;
-        background: var(--accent-blue);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 14px;
-        margin-bottom: 1rem;
-    }
-
-    .placement-score.excellent {
-        background: var(--success-green);
-    }
-
-    .placement-score.good {
-        background: var(--warning-orange);
-    }
-
-    .placement-score.poor {
-        background: var(--danger-red);
-    }
-
-    /* New Waterfall Analysis Styles */
-    .waterfall-segment {
-        background: white;
-        border: 1px solid var(--medium-gray);
-        border-radius: 6px;
-        padding: 1rem;
-        margin: 0.5rem 0;
-        position: relative;
-    }
-    
-    .waterfall-arrow {
-        text-align: center;
-        color: var(--dark-gray);
-        font-size: 20px;
-        margin: 0.5rem 0;
-    }
-    
-    .performance-summary {
-        background: var(--light-gray);
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        border: 1px solid var(--medium-gray);
-    }
-</style>
-""", unsafe_allow_html=True)
-
 class AWSIntegration:
     """AWS API integration for real-time metrics and recommendations"""
     
@@ -1581,34 +1256,24 @@ def initialize_integrations():
     }
 
 def render_connection_status(status_info: Dict):
-    """Render connection status in sidebar"""
+    """Render connection status in sidebar using native Streamlit components"""
     st.sidebar.subheader("🔗 API Connection Status")
     
     # AWS Status
-    aws_status_class = "status-connected" if "✅" in status_info['aws_status'] else (
-        "status-partial" if "⚠️" in status_info['aws_status'] else "status-disconnected"
-    )
-    
-    st.sidebar.markdown(f"""
-    <div class="connection-status {aws_status_class}">
-        <strong>AWS Integration</strong><br>
-        {status_info['aws_status']}<br>
-        <small>{status_info['aws_message']}</small>
-    </div>
-    """, unsafe_allow_html=True)
+    if "✅" in status_info['aws_status']:
+        st.sidebar.success(f"**AWS Integration**\n{status_info['aws_status']}\n{status_info['aws_message']}")
+    elif "⚠️" in status_info['aws_status']:
+        st.sidebar.warning(f"**AWS Integration**\n{status_info['aws_status']}\n{status_info['aws_message']}")
+    else:
+        st.sidebar.error(f"**AWS Integration**\n{status_info['aws_status']}\n{status_info['aws_message']}")
     
     # Claude AI Status
-    claude_status_class = "status-connected" if "✅" in status_info['claude_status'] else (
-        "status-partial" if "⚠️" in status_info['claude_status'] else "status-disconnected"
-    )
-    
-    st.sidebar.markdown(f"""
-    <div class="connection-status {claude_status_class}">
-        <strong>Claude AI Integration</strong><br>
-        {status_info['claude_status']}<br>
-        <small>{status_info['claude_message']}</small>
-    </div>
-    """, unsafe_allow_html=True)
+    if "✅" in status_info['claude_status']:
+        st.sidebar.success(f"**Claude AI Integration**\n{status_info['claude_status']}\n{status_info['claude_message']}")
+    elif "⚠️" in status_info['claude_status']:
+        st.sidebar.warning(f"**Claude AI Integration**\n{status_info['claude_status']}\n{status_info['claude_message']}")
+    else:
+        st.sidebar.error(f"**Claude AI Integration**\n{status_info['claude_status']}\n{status_info['claude_message']}")
     
     # Manual refresh button
     if st.sidebar.button("🔄 Refresh Connections"):
@@ -1634,7 +1299,7 @@ def render_connection_status(status_info: Dict):
         """)
 
 def render_enhanced_sidebar():
-    """Enhanced sidebar focused on database backup migration scenarios"""
+    """Enhanced sidebar focused on database backup migration scenarios using native Streamlit components"""
     st.sidebar.header("🗄️ Database Backup Migration Analyzer")
     
     # Database Configuration Section
@@ -1793,94 +1458,64 @@ def render_enhanced_sidebar():
     }
 
 def render_backup_migration_overview(config: Dict):
-    """Render database backup migration overview"""
+    """Render database backup migration overview using native Streamlit components"""
     st.markdown("### 🗄️ Database Backup Migration Overview")
     
     # Migration flow visualization
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown(f"""
-        <div class="backup-card">
-            <h4>🗃️ Source Database</h4>
-            <div style="font-size: 14px; line-height: 1.6;">
-                <p><strong>Engine:</strong> {config['source_database_engine'].upper()}</p>
-                <p><strong>Backup Size:</strong> {config['backup_size_gb']:,} GB</p>
-                <p><strong>Format:</strong> {config['backup_format'].title()}</p>
-                <p><strong>Environment:</strong> {config['environment'].title()}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.success("**🗃️ Source Database**")
+        st.write(f"**Engine:** {config['source_database_engine'].upper()}")
+        st.write(f"**Backup Size:** {config['backup_size_gb']:,} GB")
+        st.write(f"**Format:** {config['backup_format'].title()}")
+        st.write(f"**Environment:** {config['environment'].title()}")
     
     with col2:
-        st.markdown(f"""
-        <div class="network-card">
-            <h4>📁 Backup Storage</h4>
-            <div style="font-size: 14px; line-height: 1.6;">
-                <p><strong>Type:</strong> {config['backup_storage_description']}</p>
-                <p><strong>Protocol:</strong> {config['storage_protocol']}</p>
-                <p><strong>OS:</strong> {config['operating_system'].replace('_', ' ').title()}</p>
-                <p><strong>Access:</strong> Network Attached</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("**📁 Backup Storage**")
+        st.write(f"**Type:** {config['backup_storage_description']}")
+        st.write(f"**Protocol:** {config['storage_protocol']}")
+        st.write(f"**OS:** {config['operating_system'].replace('_', ' ').title()}")
+        st.write(f"**Access:** Network Attached")
     
     with col3:
-        st.markdown(f"""
-        <div class="agent-card">
-            <h4>🤖 DataSync Agents</h4>
-            <div style="font-size: 14px; line-height: 1.6;">
-                <p><strong>Count:</strong> {config['number_of_agents']} agents</p>
-                <p><strong>Size:</strong> {config['agent_size'].title()}</p>
-                <p><strong>Platform:</strong> {config['server_type'].title()}</p>
-                <p><strong>Purpose:</strong> File Transfer</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.warning("**🤖 DataSync Agents**")
+        st.write(f"**Count:** {config['number_of_agents']} agents")
+        st.write(f"**Size:** {config['agent_size'].title()}")
+        st.write(f"**Platform:** {config['server_type'].title()}")
+        st.write(f"**Purpose:** File Transfer")
     
     with col4:
-        st.markdown(f"""
-        <div class="aws-card">
-            <h4>☁️ AWS S3 Destination</h4>
-            <div style="font-size: 14px; line-height: 1.6;">
-                <p><strong>Service:</strong> Amazon S3</p>
-                <p><strong>Storage Class:</strong> {config['s3_storage_class'].replace('_', ' ').title()}</p>
-                <p><strong>Region:</strong> US-West-2</p>
-                <p><strong>Purpose:</strong> Backup Archive</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.error("**☁️ AWS S3 Destination**", icon="☁️")
+        st.write(f"**Service:** Amazon S3")
+        st.write(f"**Storage Class:** {config['s3_storage_class'].replace('_', ' ').title()}")
+        st.write(f"**Region:** US-West-2")
+        st.write(f"**Purpose:** Backup Archive")
     
     # Migration flow diagram
     st.markdown("#### 🔄 Backup Migration Flow")
     
     if config['source_database_engine'] == 'sqlserver':
-        flow_description = """
+        st.info("""
         **SQL Server Backup Migration Flow:**
         1. 🗃️ SQL Server creates backup files on Windows File Share (SMB/CIFS)
         2. 🤖 DataSync agents access backup files via SMB protocol
         3. 📤 DataSync transfers backup files to AWS S3 via HTTPS
         4. ☁️ S3 stores backup files with configured storage class
         5. 🔍 DataSync validates file integrity and provides transfer reports
-        """
+        """)
     else:
-        flow_description = """
+        st.info("""
         **Oracle/PostgreSQL/MySQL Backup Migration Flow:**
         1. 🗃️ Database creates backup files on Linux NAS (NFS)
         2. 🤖 DataSync agents access backup files via NFS protocol
         3. 📤 DataSync transfers backup files to AWS S3 via HTTPS
         4. ☁️ S3 stores backup files with configured storage class
         5. 🔍 DataSync validates file integrity and provides transfer reports
-        """
-    
-    st.markdown(f"""
-    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.5rem; margin: 1rem 0; font-size: 15px; line-height: 1.8;">
-        {flow_description}
-    </div>
-    """, unsafe_allow_html=True)
+        """)
 
 def render_backup_performance_analysis(config: Dict, network_perf: Dict, agent_perf: Dict):
-    """Render backup-specific performance analysis"""
+    """Render backup-specific performance analysis using native Streamlit components"""
     st.markdown("### 📊 Backup Transfer Performance Analysis")
     
     # Calculate transfer times
@@ -1896,13 +1531,11 @@ def render_backup_performance_analysis(config: Dict, network_perf: Dict, agent_p
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown(f"""
-        <div class="metric-container">
-            <div class="metric-value">📤 {throughput_mbps:,.0f} Mbps</div>
-            <div class="metric-label">Effective Transfer Rate</div>
-            <div style="font-size: 12px; color: #6b7280;">End-to-End Performance</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(
+            "📤 Effective Transfer Rate",
+            f"{throughput_mbps:,.0f} Mbps",
+            help="End-to-End Performance"
+        )
     
     with col2:
         if transfer_time_hours < 1:
@@ -1912,72 +1545,56 @@ def render_backup_performance_analysis(config: Dict, network_perf: Dict, agent_p
         else:
             time_display = f"{transfer_time_hours/24:.1f} days"
         
-        st.markdown(f"""
-        <div class="metric-container">
-            <div class="metric-value">⏱️ {time_display}</div>
-            <div class="metric-label">Estimated Transfer Time</div>
-            <div style="font-size: 12px; color: #6b7280;">{backup_size_gb:,} GB backup</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(
+            "⏱️ Estimated Transfer Time",
+            time_display,
+            help=f"{backup_size_gb:,} GB backup"
+        )
     
     with col3:
         # Calculate cost per GB
         transfer_cost = (agent_perf['total_monthly_cost'] / 730) * transfer_time_hours  # Hourly cost
         cost_per_gb = transfer_cost / backup_size_gb
         
-        st.markdown(f"""
-        <div class="metric-container">
-            <div class="metric-value">💰 ${cost_per_gb:.4f}</div>
-            <div class="metric-label">Cost per GB</div>
-            <div style="font-size: 12px; color: #6b7280;">Transfer cost only</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(
+            "💰 Cost per GB",
+            f"${cost_per_gb:.4f}",
+            help="Transfer cost only"
+        )
     
     with col4:
         # Network efficiency for backup files
         storage_efficiency = agent_perf['io_multiplier'] * agent_perf['backup_access_efficiency']
         
-        st.markdown(f"""
-        <div class="metric-container">
-            <div class="metric-value">🎯 {storage_efficiency*100:.1f}%</div>
-            <div class="metric-label">Storage Efficiency</div>
-            <div style="font-size: 12px; color: #6b7280;">Backup access optimization</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.metric(
+            "🎯 Storage Efficiency",
+            f"{storage_efficiency*100:.1f}%",
+            help="Backup access optimization"
+        )
     
     # Backup-specific insights
     st.markdown("#### 💡 Backup Transfer Insights")
     
     # Performance comparison based on database engine
     if config['source_database_engine'] == 'sqlserver':
-        st.markdown(f"""
-        <div class="warning-card">
-            <h4>🔵 SQL Server Backup Characteristics:</h4>
-            <div style="font-size: 15px; line-height: 1.8;">
-                • <strong>Storage Protocol:</strong> SMB/CIFS on Windows File Share<br>
-                • <strong>Protocol Efficiency:</strong> ~75-80% due to SMB overhead<br>
-                • <strong>Large File Performance:</strong> SMB struggles with files >10GB<br>
-                • <strong>Recommendation:</strong> Consider multiple smaller backup files or compression<br>
-                • <strong>Expected Performance:</strong> {throughput_mbps:,.0f} Mbps ({storage_efficiency*100:.1f}% efficiency)
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container():
+            st.warning("**🔵 SQL Server Backup Characteristics**")
+            st.write(f"• **Storage Protocol:** SMB/CIFS on Windows File Share")
+            st.write(f"• **Protocol Efficiency:** ~75-80% due to SMB overhead")
+            st.write(f"• **Large File Performance:** SMB struggles with files >10GB")
+            st.write(f"• **Recommendation:** Consider multiple smaller backup files or compression")
+            st.write(f"• **Expected Performance:** {throughput_mbps:,.0f} Mbps ({storage_efficiency*100:.1f}% efficiency)")
     else:
-        st.markdown(f"""
-        <div class="network-card">
-            <h4>🐧 Linux Database Backup Characteristics:</h4>
-            <div style="font-size: 15px; line-height: 1.8;">
-                • <strong>Storage Protocol:</strong> NFS on Linux NAS<br>
-                • <strong>Protocol Efficiency:</strong> ~90-95% optimal for large files<br>
-                • <strong>Large File Performance:</strong> NFS excels with sequential reads<br>
-                • <strong>Recommendation:</strong> Optimize NFS mount options for large files<br>
-                • <strong>Expected Performance:</strong> {throughput_mbps:,.0f} Mbps ({storage_efficiency*100:.1f}% efficiency)
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        with st.container():
+            st.success("**🐧 Linux Database Backup Characteristics**")
+            st.write(f"• **Storage Protocol:** NFS on Linux NAS")
+            st.write(f"• **Protocol Efficiency:** ~90-95% optimal for large files")
+            st.write(f"• **Large File Performance:** NFS excels with sequential reads")
+            st.write(f"• **Recommendation:** Optimize NFS mount options for large files")
+            st.write(f"• **Expected Performance:** {throughput_mbps:,.0f} Mbps ({storage_efficiency*100:.1f}% efficiency)")
 
 def render_s3_storage_optimization(config: Dict, agent_perf: Dict):
-    """Render S3 storage class optimization for backup retention"""
+    """Render S3 storage class optimization for backup retention using native Streamlit components"""
     st.markdown("### ☁️ S3 Storage Optimization for Backup Retention")
     
     backup_size_gb = config['backup_size_gb']
@@ -2013,18 +1630,15 @@ def render_s3_storage_optimization(config: Dict, agent_perf: Dict):
     selected_class = config['s3_storage_class']
     selected_cost = storage_costs[selected_class]
     
-    st.markdown(f"""
-    <div class="aws-card">
-        <h4>💰 Current S3 Configuration Impact:</h4>
-        <div style="font-size: 15px; line-height: 1.8;">
-            • <strong>Selected Storage Class:</strong> {selected_class.replace('_', ' ').title()}<br>
-            • <strong>Storage Cost:</strong> ${selected_cost:.4f} per GB per month<br>
-            • <strong>Monthly Storage Cost:</strong> ${backup_size_gb * selected_cost:.2f} for {backup_size_gb:,} GB<br>
-            • <strong>Annual Storage Cost:</strong> ${backup_size_gb * selected_cost * 12:.2f}<br>
-            • <strong>One-time Transfer Cost:</strong> ${monthly_transfer_cost:.2f}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    st.warning("**💰 Current S3 Configuration Impact**")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.write(f"• **Selected Storage Class:** {selected_class.replace('_', ' ').title()}")
+        st.write(f"• **Storage Cost:** ${selected_cost:.4f} per GB per month")
+        st.write(f"• **Monthly Storage Cost:** ${backup_size_gb * selected_cost:.2f} for {backup_size_gb:,} GB")
+    with col2:
+        st.write(f"• **Annual Storage Cost:** ${backup_size_gb * selected_cost * 12:.2f}")
+        st.write(f"• **One-time Transfer Cost:** ${monthly_transfer_cost:.2f}")
     
     # Storage cost comparison chart
     df_storage = pd.DataFrame(storage_analysis)
@@ -2060,33 +1674,21 @@ def render_s3_storage_optimization(config: Dict, agent_perf: Dict):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("""
-        <div class="network-card">
-            <h4>📦 For Active Backups (0-3 months):</h4>
-            <div style="font-size: 14px; line-height: 1.7;">
-                • <strong>S3 Standard:</strong> Immediate access, higher cost<br>
-                • <strong>Use Case:</strong> Recent backups, disaster recovery<br>
-                • <strong>Retrieval:</strong> Instant, no additional cost<br>
-                • <strong>Best For:</strong> Operational recovery scenarios
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.success("**📦 For Active Backups (0-3 months)**")
+        st.write("• **S3 Standard:** Immediate access, higher cost")
+        st.write("• **Use Case:** Recent backups, disaster recovery")
+        st.write("• **Retrieval:** Instant, no additional cost")
+        st.write("• **Best For:** Operational recovery scenarios")
     
     with col2:
-        st.markdown("""
-        <div class="performance-card">
-            <h4>🧊 For Archive Backups (>6 months):</h4>
-            <div style="font-size: 14px; line-height: 1.7;">
-                • <strong>S3 Glacier:</strong> Low cost, hours to retrieve<br>
-                • <strong>S3 Deep Archive:</strong> Lowest cost, 12+ hours<br>
-                • <strong>Use Case:</strong> Compliance, long-term retention<br>
-                • <strong>Best For:</strong> Regulatory requirements
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("**🧊 For Archive Backups (>6 months)**")
+        st.write("• **S3 Glacier:** Low cost, hours to retrieve")
+        st.write("• **S3 Deep Archive:** Lowest cost, 12+ hours")
+        st.write("• **Use Case:** Compliance, long-term retention")
+        st.write("• **Best For:** Regulatory requirements")
 
 def render_waterfall_analysis(network_perf: Dict):
-    """NEW: Render waterfall bandwidth analysis"""
+    """Render waterfall bandwidth analysis using native Streamlit components"""
     st.subheader("🌊 Waterfall Bandwidth Analysis")
     
     # Initialize waterfall analyzer
@@ -2134,16 +1736,15 @@ def render_waterfall_analysis(network_perf: Dict):
             col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
             
             with col1:
-                status_class = "placement-card" if "Critical" in segment['bottleneck_status'] else \
-                              "warning-card" if "Concern" in segment['bottleneck_status'] else \
-                              "network-card"
-                
-                st.markdown(f"""
-                <div class="waterfall-segment {status_class}">
-                    <h5>Step {i+1}: {segment['segment_name']}</h5>
-                    <p><strong>Status:</strong> {segment['bottleneck_status']}</p>
-                </div>
-                """, unsafe_allow_html=True)
+                if "Critical" in segment['bottleneck_status']:
+                    st.error(f"**Step {i+1}: {segment['segment_name']}**")
+                    st.write(f"Status: {segment['bottleneck_status']}")
+                elif "Concern" in segment['bottleneck_status']:
+                    st.warning(f"**Step {i+1}: {segment['segment_name']}**")
+                    st.write(f"Status: {segment['bottleneck_status']}")
+                else:
+                    st.success(f"**Step {i+1}: {segment['segment_name']}**")
+                    st.write(f"Status: {segment['bottleneck_status']}")
             
             with col2:
                 st.metric(
@@ -2167,7 +1768,7 @@ def render_waterfall_analysis(network_perf: Dict):
                 )
             
             if i < len(waterfall_analysis['waterfall_segments']) - 1:
-                st.markdown('<div class="waterfall-arrow">⬇️</div>', unsafe_allow_html=True)
+                st.markdown("**⬇️**")
     
     # Optimization recommendations
     optimization = waterfall_analysis['optimization_potential']
@@ -2177,36 +1778,27 @@ def render_waterfall_analysis(network_perf: Dict):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown(f"""
-        <div class="decision-matrix">
-            <h4>📊 Optimization Summary</h4>
-            <ul>
-                <li><strong>Current Bandwidth:</strong> {optimization['current_bandwidth']:,.0f} Mbps</li>
-                <li><strong>Maximum Possible:</strong> {optimization['max_possible_bandwidth']:,.0f} Mbps</li>
-                <li><strong>Improvement Potential:</strong> {optimization['total_potential']:.1f}%</li>
-                <li><strong>Critical Bottlenecks:</strong> {waterfall_analysis['bottleneck_count']}</li>
-            </ul>
-        </div>
-        """, unsafe_allow_html=True)
+        st.info("**📊 Optimization Summary**")
+        st.write(f"• **Current Bandwidth:** {optimization['current_bandwidth']:,.0f} Mbps")
+        st.write(f"• **Maximum Possible:** {optimization['max_possible_bandwidth']:,.0f} Mbps")
+        st.write(f"• **Improvement Potential:** {optimization['total_potential']:.1f}%")
+        st.write(f"• **Critical Bottlenecks:** {waterfall_analysis['bottleneck_count']}")
     
     with col2:
         if optimization['recommendations']:
             st.markdown("**Priority Recommendations:**")
             for rec in optimization['recommendations']:
                 priority_color = "🔴" if rec['priority'] == 'High' else "🟡"
-                st.markdown(f"{priority_color} **{rec['segment']}** ({rec['priority']} Priority): {rec['improvement_type']}")
+                st.write(f"{priority_color} **{rec['segment']}** ({rec['priority']} Priority): {rec['improvement_type']}")
         else:
             st.success("✅ Network path is well optimized!")
 
 def main():
-    """Enhanced main application with professional styling and all original features"""
-    # Header
-    st.markdown("""
-    <div class="main-header">
-        <h1 style="font-size: 32px; margin-bottom: 15px;">🗄️ AWS DataSync Database Backup Migration Analyzer</h1>
-        <p style="font-size: 18px; margin: 0;">Professional Database Backup Transfer Optimization • DataSync Agent Placement • Waterfall Network Analysis • SQL Server & Oracle/PostgreSQL Support</p>
-    </div>
-    """, unsafe_allow_html=True)
+    """Enhanced main application with native Streamlit styling and all original features"""
+    
+    # Header using native Streamlit components
+    st.title("🗄️ AWS DataSync Database Backup Migration Analyzer")
+    st.markdown("### Professional Database Backup Transfer Optimization • DataSync Agent Placement • Waterfall Network Analysis • SQL Server & Oracle/PostgreSQL Support")
     
     # Initialize integrations
     if 'integrations_initialized' not in st.session_state:
@@ -2295,42 +1887,36 @@ def main():
         for i, option in enumerate(placement_options):
             is_recommended = i == 0
             
-            # Determine card styling
+            # Determine status type for native component
             if option['placement_score'] >= 80:
-                card_class = "network-card"
+                status_type = "success"
             elif option['placement_score'] >= 65:
-                card_class = "performance-card"
+                status_type = "warning"
             else:
-                card_class = "warning-card"
+                status_type = "error"
             
-            st.markdown(f"""
-            <div class="{card_class}">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <h4>{option['strategy']['name']} {'⭐ RECOMMENDED' if is_recommended else ''}</h4>
-                    <span style="background: {'#059669' if option['placement_score'] >= 80 else '#d97706' if option['placement_score'] >= 65 else '#dc2626'}; color: white; padding: 0.5rem 1rem; border-radius: 20px; font-weight: bold;">{option['placement_score']:.1f}/100</span>
-                </div>
+            with st.container():
+                if status_type == "success":
+                    st.success(f"**{option['strategy']['name']} {'⭐ RECOMMENDED' if is_recommended else ''}** - Score: {option['placement_score']:.1f}/100")
+                elif status_type == "warning":
+                    st.warning(f"**{option['strategy']['name']} {'⭐ RECOMMENDED' if is_recommended else ''}** - Score: {option['placement_score']:.1f}/100")
+                else:
+                    st.error(f"**{option['strategy']['name']} {'⭐ RECOMMENDED' if is_recommended else ''}** - Score: {option['placement_score']:.1f}/100")
                 
-                <p style="margin-bottom: 1rem;">{option['strategy']['description']}</p>
+                st.write(option['strategy']['description'])
                 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                    <div>
-                        <strong>Backup Performance:</strong><br>
-                        {option['throughput_mbps']:,.0f} Mbps<br>
-                        <small>Access Efficiency: {option['backup_access_efficiency']*100:.0f}%</small>
-                    </div>
-                    <div>
-                        <strong>Transfer Cost:</strong><br>
-                        ${option['monthly_cost']:,.0f}/month<br>
-                        <small>${option['monthly_cost']/option['throughput_mbps']:.2f}/Mbps</small>
-                    </div>
-                    <div>
-                        <strong>Implementation:</strong><br>
-                        {option['implementation_complexity']['setup_time_days']} days setup<br>
-                        <small>{option['implementation_complexity']['skill_level']} skill level</small>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.write(f"**Backup Performance:** {option['throughput_mbps']:,.0f} Mbps")
+                    st.write(f"Access Efficiency: {option['backup_access_efficiency']*100:.0f}%")
+                
+                with col2:
+                    st.write(f"**Transfer Cost:** ${option['monthly_cost']:,.0f}/month")
+                    st.write(f"${option['monthly_cost']/option['throughput_mbps']:.2f}/Mbps")
+                
+                with col3:
+                    st.write(f"**Implementation:** {option['implementation_complexity']['setup_time_days']} days setup")
+                    st.write(f"{option['implementation_complexity']['skill_level']} skill level")
             
             # Detailed backup considerations
             with st.expander(f"🔍 {option['strategy']['name']} - Backup-Specific Analysis"):
@@ -2339,20 +1925,18 @@ def main():
                 with col1:
                     st.markdown("**Backup Transfer Advantages:**")
                     for pro in option['strategy']['pros']:
-                        st.markdown(f"• {pro}")
+                        st.write(f"• {pro}")
                 
                 with col2:
                     st.markdown("**Backup Transfer Challenges:**")
                     for con in option['strategy']['cons']:
-                        st.markdown(f"• {con}")
+                        st.write(f"• {con}")
                 
-                st.markdown(f"""
-                **Backup Integration Details:**
-                - **Setup Time:** {option['implementation_complexity']['setup_time_days']} days
-                - **Backup Integration:** {option['implementation_complexity']['backup_integration']}
-                - **Backup Access Latency:** {option['latency_impact']:+.1f} ms
-                - **Storage Protocol Efficiency:** {option['agent_performance']['io_multiplier']*100:.1f}%
-                """)
+                st.write(f"**Backup Integration Details:**")
+                st.write(f"- **Setup Time:** {option['implementation_complexity']['setup_time_days']} days")
+                st.write(f"- **Backup Integration:** {option['implementation_complexity']['backup_integration']}")
+                st.write(f"- **Backup Access Latency:** {option['latency_impact']:+.1f} ms")
+                st.write(f"- **Storage Protocol Efficiency:** {option['agent_performance']['io_multiplier']*100:.1f}%")
         
         # AI-powered placement recommendations
         if claude_integration and claude_integration.client:
@@ -2362,12 +1946,8 @@ def main():
                 with st.spinner("🔄 Analyzing DataSync placement for backup migration..."):
                     ai_recommendations = claude_integration.get_placement_recommendations(config, placement_options)
                 
-                st.markdown(f"""
-                <div class="ai-section">
-                    <h4>🎯 DataSync Agent Placement Strategy for Database Backups</h4>
-                    <div style="font-size: 15px; line-height: 1.8; color: #374151;">{ai_recommendations.replace(chr(10), '<br>')}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.info("**🎯 DataSync Agent Placement Strategy for Database Backups**")
+                st.write(ai_recommendations)
             except Exception as e:
                 st.warning(f"AI analysis error: {str(e)}")
     
@@ -2381,43 +1961,31 @@ def main():
         st.markdown("#### 🔄 Backup Storage Protocol Comparison")
         
         if config['source_database_engine'] == 'sqlserver':
-            st.markdown("""
-            <div class="warning-card">
-                <h4>🔵 SQL Server Backup on Windows Share (SMB/CIFS):</h4>
-                <div style="font-size: 15px; line-height: 1.8;">
-                    <strong>Current Configuration Analysis:</strong><br>
-                    • Protocol overhead reduces effective bandwidth by ~20-25%<br>
-                    • Large backup files (>10GB) experience additional SMB latency<br>
-                    • Windows file system metadata overhead<br>
-                    • Authentication and session management overhead<br><br>
-                    
-                    <strong>Optimization Recommendations:</strong><br>
-                    • Enable SMB3 multichannel if supported<br>
-                    • Increase SMB TCP window size<br>
-                    • Consider backup file compression<br>
-                    • Split large backups into smaller files if possible
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.warning("**🔵 SQL Server Backup on Windows Share (SMB/CIFS)**")
+            st.write("**Current Configuration Analysis:**")
+            st.write("• Protocol overhead reduces effective bandwidth by ~20-25%")
+            st.write("• Large backup files (>10GB) experience additional SMB latency")
+            st.write("• Windows file system metadata overhead")
+            st.write("• Authentication and session management overhead")
+            st.write("")
+            st.write("**Optimization Recommendations:**")
+            st.write("• Enable SMB3 multichannel if supported")
+            st.write("• Increase SMB TCP window size")
+            st.write("• Consider backup file compression")
+            st.write("• Split large backups into smaller files if possible")
         else:
-            st.markdown("""
-            <div class="network-card">
-                <h4>🐧 Oracle/PostgreSQL Backup on Linux NAS (NFS):</h4>
-                <div style="font-size: 15px; line-height: 1.8;">
-                    <strong>Current Configuration Analysis:</strong><br>
-                    • NFS optimized for large sequential file operations<br>
-                    • Minimal protocol overhead (~5-10% reduction)<br>
-                    • Excellent performance with large backup files<br>
-                    • Efficient client-side caching<br><br>
-                    
-                    <strong>Optimization Recommendations:</strong><br>
-                    • Use NFS v4.1 or higher for best performance<br>
-                    • Optimize rsize/wsize parameters (1MB+)<br>
-                    • Enable NFS client-side caching<br>
-                    • Consider dedicated backup network segment
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.success("**🐧 Oracle/PostgreSQL Backup on Linux NAS (NFS)**")
+            st.write("**Current Configuration Analysis:**")
+            st.write("• NFS optimized for large sequential file operations")
+            st.write("• Minimal protocol overhead (~5-10% reduction)")
+            st.write("• Excellent performance with large backup files")
+            st.write("• Efficient client-side caching")
+            st.write("")
+            st.write("**Optimization Recommendations:**")
+            st.write("• Use NFS v4.1 or higher for best performance")
+            st.write("• Optimize rsize/wsize parameters (1MB+)")
+            st.write("• Enable NFS client-side caching")
+            st.write("• Consider dedicated backup network segment")
         
         # Transfer time analysis
         st.markdown("#### ⏱️ Backup Transfer Time Analysis")
@@ -2464,44 +2032,32 @@ def main():
         lifecycle_col1, lifecycle_col2 = st.columns(2)
         
         with lifecycle_col1:
-            st.markdown("""
-            <div class="network-card">
-                <h4>📅 Recommended Backup Lifecycle:</h4>
-                <div style="font-size: 14px; line-height: 1.7;">
-                    <strong>0-30 days:</strong> S3 Standard<br>
-                    • Immediate access for recovery<br>
-                    • Full restore capabilities<br>
-                    • Point-in-time recovery<br><br>
-                    
-                    <strong>30-90 days:</strong> S3 Standard-IA<br>
-                    • Infrequent access, lower cost<br>
-                    • Quick retrieval when needed<br>
-                    • Compliance requirements<br><br>
-                    
-                    <strong>90+ days:</strong> S3 Glacier<br>
-                    • Long-term archival<br>
-                    • Regulatory compliance<br>
-                    • Cost-effective retention
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.success("**📅 Recommended Backup Lifecycle**")
+            st.write("**0-30 days:** S3 Standard")
+            st.write("• Immediate access for recovery")
+            st.write("• Full restore capabilities")
+            st.write("• Point-in-time recovery")
+            st.write("")
+            st.write("**30-90 days:** S3 Standard-IA")
+            st.write("• Infrequent access, lower cost")
+            st.write("• Quick retrieval when needed")
+            st.write("• Compliance requirements")
+            st.write("")
+            st.write("**90+ days:** S3 Glacier")
+            st.write("• Long-term archival")
+            st.write("• Regulatory compliance")
+            st.write("• Cost-effective retention")
         
         with lifecycle_col2:
-            st.markdown(f"""
-            <div class="performance-card">
-                <h4>💰 Cost Impact Analysis:</h4>
-                <div style="font-size: 14px; line-height: 1.7;">
-                    <strong>Current Setup ({config['backup_size_gb']:,} GB):</strong><br>
-                    • Transfer Cost: ${agent_perf['total_monthly_cost']:.2f} (one-time)<br>
-                    • S3 Standard (1 year): ${config['backup_size_gb'] * 0.023 * 12:.2f}<br>
-                    • S3 Glacier (1 year): ${config['backup_size_gb'] * 0.004 * 12:.2f}<br><br>
-                    
-                    <strong>Annual Savings with Lifecycle:</strong><br>
-                    • Standard to Glacier: ${config['backup_size_gb'] * (0.023 - 0.004) * 12:.2f}<br>
-                    • ROI: {((config['backup_size_gb'] * (0.023 - 0.004) * 12) / agent_perf['total_monthly_cost'] * 100):.0f}% of transfer cost
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.info(f"**💰 Cost Impact Analysis ({config['backup_size_gb']:,} GB)**")
+            st.write(f"**Current Setup:**")
+            st.write(f"• Transfer Cost: ${agent_perf['total_monthly_cost']:.2f} (one-time)")
+            st.write(f"• S3 Standard (1 year): ${config['backup_size_gb'] * 0.023 * 12:.2f}")
+            st.write(f"• S3 Glacier (1 year): ${config['backup_size_gb'] * 0.004 * 12:.2f}")
+            st.write("")
+            st.write(f"**Annual Savings with Lifecycle:**")
+            st.write(f"• Standard to Glacier: ${config['backup_size_gb'] * (0.023 - 0.004) * 12:.2f}")
+            st.write(f"• ROI: {((config['backup_size_gb'] * (0.023 - 0.004) * 12) / agent_perf['total_monthly_cost'] * 100):.0f}% of transfer cost")
     
     with tab5:
         st.subheader("🌐 Database Backup Network Path Analysis")
@@ -2515,28 +2071,22 @@ def main():
                 col1, col2, col3 = st.columns(3)
                 
                 with col1:
-                    st.markdown(f"""
-                    **Performance Metrics:**
-                    - Bandwidth: {segment['effective_bandwidth_mbps']:,.0f} Mbps
-                    - Latency: {segment['effective_latency_ms']:.1f} ms
-                    - Reliability: {segment['reliability']*100:.2f}%
-                    """)
+                    st.write("**Performance Metrics:**")
+                    st.write(f"- Bandwidth: {segment['effective_bandwidth_mbps']:,.0f} Mbps")
+                    st.write(f"- Latency: {segment['effective_latency_ms']:.1f} ms")
+                    st.write(f"- Reliability: {segment['reliability']*100:.2f}%")
                 
                 with col2:
-                    st.markdown(f"""
-                    **Protocol Details:**
-                    - Connection: {segment['connection_type'].replace('_', ' ').title()}
-                    - Efficiency: {segment.get('protocol_efficiency', 1.0)*100:.1f}%
-                    - Congestion: {segment.get('congestion_factor', 1.0):.2f}x
-                    """)
+                    st.write("**Protocol Details:**")
+                    st.write(f"- Connection: {segment['connection_type'].replace('_', ' ').title()}")
+                    st.write(f"- Efficiency: {segment.get('protocol_efficiency', 1.0)*100:.1f}%")
+                    st.write(f"- Congestion: {segment.get('congestion_factor', 1.0):.2f}x")
                 
                 with col3:
-                    st.markdown(f"""
-                    **Backup Impact:**
-                    - Optimization: {segment['optimization_potential']*100:.1f}%
-                    - Cost Factor: {segment['cost_factor']:.1f}x
-                    - Type: {'Storage Access' if 'Backup' in segment['name'] else 'Network Transit'}
-                    """)
+                    st.write("**Backup Impact:**")
+                    st.write(f"- Optimization: {segment['optimization_potential']*100:.1f}%")
+                    st.write(f"- Cost Factor: {segment['cost_factor']:.1f}x")
+                    st.write(f"- Type: {'Storage Access' if 'Backup' in segment['name'] else 'Network Transit'}")
         
         # Overall network performance
         st.markdown("#### 📊 Network Performance Summary")
@@ -2567,13 +2117,11 @@ def main():
             if datasync_tasks:
                 for task in datasync_tasks:
                     with st.expander(f"DataSync Task: {task['name']}", expanded=False):
-                        st.markdown(f"""
-                        **Task Details:**
-                        - Status: {task['status']}
-                        - Source: {task['source_location'].split('/')[-1] if task['source_location'] != 'Unknown' else 'Unknown'}
-                        - Destination: {task['destination_location'].split('/')[-1] if task['destination_location'] != 'Unknown' else 'Unknown'}
-                        - Executions: {len(task['executions'])} recent runs
-                        """)
+                        st.write(f"**Task Details:**")
+                        st.write(f"- Status: {task['status']}")
+                        st.write(f"- Source: {task['source_location'].split('/')[-1] if task['source_location'] != 'Unknown' else 'Unknown'}")
+                        st.write(f"- Destination: {task['destination_location'].split('/')[-1] if task['destination_location'] != 'Unknown' else 'Unknown'}")
+                        st.write(f"- Executions: {len(task['executions'])} recent runs")
             else:
                 st.info("No DataSync tasks found. This tool will help you plan your backup migration configuration.")
             
@@ -2603,12 +2151,8 @@ def main():
                         config, network_perf, agent_perf, {}, {}
                     )
                 
-                st.markdown(f"""
-                <div class="ai-section">
-                    <h4>🧠 Comprehensive Database Backup Migration Analysis</h4>
-                    <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.info("**🧠 Comprehensive Database Backup Migration Analysis**")
+                st.write(analysis)
                 
                 # Get specific optimization recommendations
                 if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
@@ -2622,12 +2166,8 @@ def main():
                             bottleneck_type, config
                         )
                     
-                    st.markdown(f"""
-                    <div class="ai-section">
-                        <h4>🔧 {bottleneck_type.title()} Optimization for Backup Transfer</h4>
-                        <div style="font-size: 15px; line-height: 1.8; color: #374151;">{recommendations.replace(chr(10), '<br>')}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.info(f"**🔧 {bottleneck_type.title()} Optimization for Backup Transfer**")
+                    st.write(recommendations)
                 
             except Exception as e:
                 st.warning(f"AI analysis error: {str(e)}")
@@ -2651,49 +2191,31 @@ def main():
     summary_col1, summary_col2, summary_col3 = st.columns(3)
     
     with summary_col1:
-        st.markdown(f"""
-        <div class="backup-card">
-            <h4>🗄️ Backup Migration Plan</h4>
-            <div style="font-size: 15px; line-height: 1.8;">
-                <p><strong>Source:</strong> {config['source_database_engine'].upper()}</p>
-                <p><strong>Backup Size:</strong> {backup_size_gb:,} GB</p>
-                <p><strong>Storage:</strong> {config['backup_storage_description']}</p>
-                <p><strong>Transfer Time:</strong> {transfer_time_hours:.1f} hours</p>
-                <p><strong>Agent Strategy:</strong> {recommended_option['strategy']['name']}</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.success("**🗄️ Backup Migration Plan**")
+        st.write(f"**Source:** {config['source_database_engine'].upper()}")
+        st.write(f"**Backup Size:** {backup_size_gb:,} GB")
+        st.write(f"**Storage:** {config['backup_storage_description']}")
+        st.write(f"**Transfer Time:** {transfer_time_hours:.1f} hours")
+        st.write(f"**Agent Strategy:** {recommended_option['strategy']['name']}")
     
     with summary_col2:
-        st.markdown(f"""
-        <div class="performance-card">
-            <h4>⚡ Performance Summary</h4>
-            <div style="font-size: 15px; line-height: 1.8;">
-                <p><strong>Transfer Rate:</strong> {final_throughput:,.0f} Mbps</p>
-                <p><strong>DataSync Agents:</strong> {config['number_of_agents']}x {config['agent_size'].title()}</p>
-                <p><strong>Platform:</strong> {config['server_type'].title()}</p>
-                <p><strong>Efficiency Score:</strong> {recommended_option['placement_score']:.1f}/100</p>
-                <p><strong>Backup Access:</strong> {recommended_option['backup_access_efficiency']*100:.0f}%</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.warning("**⚡ Performance Summary**")
+        st.write(f"**Transfer Rate:** {final_throughput:,.0f} Mbps")
+        st.write(f"**DataSync Agents:** {config['number_of_agents']}x {config['agent_size'].title()}")
+        st.write(f"**Platform:** {config['server_type'].title()}")
+        st.write(f"**Efficiency Score:** {recommended_option['placement_score']:.1f}/100")
+        st.write(f"**Backup Access:** {recommended_option['backup_access_efficiency']*100:.0f}%")
     
     with summary_col3:
         transfer_cost = (agent_perf['total_monthly_cost'] / 730) * transfer_time_hours
         storage_cost_annual = backup_size_gb * 0.023 * 12  # S3 Standard
         
-        st.markdown(f"""
-        <div class="aws-card">
-            <h4>💰 Cost Analysis</h4>
-            <div style="font-size: 15px; line-height: 1.8;">
-                <p><strong>Transfer Cost:</strong> ${transfer_cost:.2f} (one-time)</p>
-                <p><strong>Monthly Agent Cost:</strong> ${agent_perf['total_monthly_cost']:,.0f}</p>
-                <p><strong>S3 Storage (Annual):</strong> ${storage_cost_annual:.2f}</p>
-                <p><strong>Cost per GB:</strong> ${transfer_cost/backup_size_gb:.4f}</p>
-                <p><strong>Setup Time:</strong> {recommended_option['implementation_complexity']['setup_time_days']} days</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.error("**💰 Cost Analysis**", icon="💰")
+        st.write(f"**Transfer Cost:** ${transfer_cost:.2f} (one-time)")
+        st.write(f"**Monthly Agent Cost:** ${agent_perf['total_monthly_cost']:,.0f}")
+        st.write(f"**S3 Storage (Annual):** ${storage_cost_annual:.2f}")
+        st.write(f"**Cost per GB:** ${transfer_cost/backup_size_gb:.4f}")
+        st.write(f"**Setup Time:** {recommended_option['implementation_complexity']['setup_time_days']} days")
 
 if __name__ == "__main__":
     main()
