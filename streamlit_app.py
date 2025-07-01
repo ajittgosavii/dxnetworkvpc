@@ -74,14 +74,15 @@ st.markdown("""
         border-left: 3px solid #f59e0b;
     }
 
-    .ai-card {
-        background: linear-gradient(135deg, #fdf4ff 0%, #e879f9 100%);
-        padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
+    .professional-ai-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 2rem;
+        border-radius: 8px;
+        color: #1e293b;
         margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #a855f7;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        border-left: 4px solid #3b82f6;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
     .aws-card {
@@ -117,6 +118,57 @@ st.markdown("""
         background-color: #fef3c7;
         color: #92400e;
         border: 1px solid #f59e0b;
+    }
+
+    .network-segment-card {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .segment-performance {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+    }
+
+    .ai-section {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .ai-section h4 {
+        color: #1e293b;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+
+    .ai-section p, .ai-section ul, .ai-section ol {
+        color: #475569;
+        line-height: 1.6;
+        margin-bottom: 0.8rem;
+    }
+
+    .ai-section ul li {
+        margin-bottom: 0.4rem;
+    }
+
+    .ai-highlight {
+        background: #f8fafc;
+        border-left: 3px solid #3b82f6;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 0 6px 6px 0;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -332,23 +384,20 @@ class ClaudeAIIntegration:
             """
             
             prompt = f"""
-            As an AWS migration expert, analyze this migration configuration and provide:
-            
-            1. Performance bottleneck analysis
-            2. Specific recommendations for optimization
-            3. Expected vs actual performance explanation
-            4. Cost optimization suggestions
-            5. Risk assessment and mitigation strategies
-            
-            Focus on the real-world performance differences between:
-            - Linux NAS vs Windows mapped drives
-            - Physical vs VMware deployments
-            - DataSync vs DMS for this specific use case
-            
+            As an AWS migration expert, analyze this migration configuration and provide a structured analysis with the following sections:
+
+            1. PERFORMANCE BOTTLENECK ANALYSIS
+            2. OPTIMIZATION RECOMMENDATIONS  
+            3. EXPECTED VS ACTUAL PERFORMANCE
+            4. COST OPTIMIZATION SUGGESTIONS
+            5. RISK ASSESSMENT AND MITIGATION
+
+            Focus on real-world performance differences between Linux NAS vs Windows mapped drives, Physical vs VMware deployments, and DataSync vs DMS for this specific use case.
+
             Configuration to analyze:
             {context}
-            
-            Provide actionable, technical recommendations in a structured format.
+
+            Format your response in clear sections with bullet points and specific technical recommendations. Use technical language appropriate for infrastructure engineers.
             """
             
             response = self.client.messages.create(
@@ -379,6 +428,7 @@ class ClaudeAIIntegration:
             
             Provide 3-5 specific, actionable recommendations to resolve this {bottleneck_type} bottleneck.
             Include expected performance improvements and implementation complexity for each recommendation.
+            Format as clear bullet points with technical details.
             """
             
             response = self.client.messages.create(
@@ -921,6 +971,252 @@ def render_connection_status(status_info: Dict):
         DataSync/DMS resources are located.
         """)
 
+def render_network_path_visualization(network_perf: Dict):
+    """Render enhanced network path visualization with bandwidth flow"""
+    st.markdown("**🌐 Network Path Performance Flow**")
+    
+    segments = network_perf['segments']
+    
+    # Create Sankey-like flow diagram
+    fig = go.Figure()
+    
+    # Calculate cumulative bandwidth degradation
+    bandwidth_flow = []
+    current_bandwidth = 10000  # Starting bandwidth
+    
+    for i, segment in enumerate(segments):
+        bandwidth_flow.append({
+            'segment': f"Segment {i+1}",
+            'name': segment['name'],
+            'start_bandwidth': current_bandwidth,
+            'end_bandwidth': segment['effective_bandwidth_mbps'],
+            'loss': current_bandwidth - segment['effective_bandwidth_mbps'],
+            'latency': segment['effective_latency_ms'],
+            'reliability': segment['reliability'] * 100,
+            'protocol_efficiency': segment.get('protocol_efficiency', 1.0) * 100
+        })
+        current_bandwidth = segment['effective_bandwidth_mbps']
+    
+    # Create waterfall chart for bandwidth
+    fig_bandwidth = go.Figure()
+    
+    x_labels = ['Start'] + [f"After\n{flow['name'].split('(')[0].strip()}" for flow in bandwidth_flow]
+    y_values = [10000] + [flow['end_bandwidth'] for flow in bandwidth_flow]
+    
+    # Add bars for each segment
+    colors = ['lightblue'] + ['lightcoral' if y_values[i] < y_values[i-1] else 'lightgreen' 
+                             for i in range(1, len(y_values))]
+    
+    fig_bandwidth.add_trace(go.Bar(
+        x=x_labels,
+        y=y_values,
+        text=[f"{val:,.0f} Mbps" for val in y_values],
+        textposition='outside',
+        marker_color=colors,
+        name='Bandwidth Flow'
+    ))
+    
+    fig_bandwidth.update_layout(
+        title="Network Path Bandwidth Degradation",
+        xaxis_title="Network Segments",
+        yaxis_title="Bandwidth (Mbps)",
+        height=400,
+        showlegend=False
+    )
+    
+    st.plotly_chart(fig_bandwidth, use_container_width=True)
+    
+    # Detailed segment analysis
+    st.markdown("**📊 Segment-by-Segment Analysis**")
+    
+    for i, (segment, flow) in enumerate(zip(segments, bandwidth_flow)):
+        with st.expander(f"🔗 Segment {i+1}: {segment['name']}"):
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric(
+                    "Bandwidth Impact",
+                    f"{flow['end_bandwidth']:,.0f} Mbps",
+                    delta=f"-{flow['loss']:,.0f} Mbps" if flow['loss'] > 0 else "No loss"
+                )
+            
+            with col2:
+                st.metric(
+                    "Latency Added",
+                    f"{flow['latency']:.1f} ms",
+                    delta=f"vs {segment['latency_ms']:.1f} ms base"
+                )
+            
+            with col3:
+                st.metric(
+                    "Reliability",
+                    f"{flow['reliability']:.2f}%",
+                    delta=""
+                )
+            
+            with col4:
+                st.metric(
+                    "Protocol Efficiency", 
+                    f"{flow['protocol_efficiency']:.1f}%",
+                    delta=""
+                )
+            
+            # Additional details
+            st.markdown(f"""
+            **Connection Type:** {segment['connection_type'].replace('_', ' ').title()}  
+            **Congestion Factor:** {segment['congestion_factor']:.2f}x  
+            **Cost Factor:** {segment['cost_factor']:.1f}  
+            """)
+    
+    # Network path summary
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="network-segment-card">
+            <h4>🎯 Path Summary</h4>
+            <p><strong>Total Segments:</strong> {len(segments)}</p>
+            <p><strong>Initial Bandwidth:</strong> 10,000 Mbps</p>
+            <p><strong>Final Bandwidth:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</p>
+            <p><strong>Total Bandwidth Loss:</strong> {10000 - network_perf['effective_bandwidth_mbps']:,.0f} Mbps ({((10000 - network_perf['effective_bandwidth_mbps'])/10000)*100:.1f}%)</p>
+            <p><strong>Total Latency:</strong> {network_perf['total_latency_ms']:.1f} ms</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="network-segment-card">
+            <h4>⚡ Performance Characteristics</h4>
+            <p><strong>Environment:</strong> {network_perf['environment'].title()}</p>
+            <p><strong>OS Type:</strong> {network_perf['os_type'].title()}</p>
+            <p><strong>Storage Protocol:</strong> {network_perf['storage_mount_type'].upper()}</p>
+            <p><strong>Quality Score:</strong> {network_perf['network_quality_score']:.1f}/100</p>
+            <p><strong>Reliability:</strong> {network_perf['total_reliability']*100:.2f}%</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+def parse_ai_analysis(analysis_text: str) -> Dict:
+    """Parse Claude AI analysis into structured sections"""
+    sections = {
+        'performance_bottleneck': '',
+        'optimization_recommendations': '',
+        'expected_vs_actual': '',
+        'cost_optimization': '',
+        'risk_assessment': ''
+    }
+    
+    current_section = None
+    lines = analysis_text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Identify section headers
+        if 'PERFORMANCE BOTTLENECK' in line.upper():
+            current_section = 'performance_bottleneck'
+        elif 'OPTIMIZATION RECOMMENDATION' in line.upper():
+            current_section = 'optimization_recommendations'
+        elif 'EXPECTED VS ACTUAL' in line.upper():
+            current_section = 'expected_vs_actual'
+        elif 'COST OPTIMIZATION' in line.upper():
+            current_section = 'cost_optimization'
+        elif 'RISK ASSESSMENT' in line.upper():
+            current_section = 'risk_assessment'
+        elif current_section and line:
+            sections[current_section] += line + '\n'
+    
+    # If sections aren't clearly defined, put everything in performance_bottleneck
+    if not any(sections.values()):
+        sections['performance_bottleneck'] = analysis_text
+    
+    return sections
+
+def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
+                                   network_perf: Dict, agent_perf: Dict, aws_data: Dict):
+    """Render professionally formatted Claude AI analysis"""
+    st.markdown("**🤖 AI-Powered Performance Analysis**")
+    
+    if not claude_integration.client:
+        st.info("Claude AI integration not connected. Check sidebar for connection status.")
+        return
+    
+    with st.spinner("Analyzing migration configuration..."):
+        analysis = claude_integration.analyze_migration_performance(
+            config, network_perf, agent_perf, aws_data
+        )
+    
+    # Parse the analysis into sections
+    sections = parse_ai_analysis(analysis)
+    
+    # Render sections professionally
+    if sections['performance_bottleneck']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🔍 Performance Bottleneck Analysis</h4>
+            <div>{sections['performance_bottleneck'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['optimization_recommendations']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🚀 Optimization Recommendations</h4>
+            <div>{sections['optimization_recommendations'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['expected_vs_actual']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>📊 Expected vs Actual Performance</h4>
+            <div>{sections['expected_vs_actual'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['cost_optimization']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>💰 Cost Optimization Suggestions</h4>
+            <div>{sections['cost_optimization'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['risk_assessment']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>⚠️ Risk Assessment & Mitigation</h4>
+            <div>{sections['risk_assessment'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # If no sections were parsed, show the full analysis
+    if not any(sections.values()):
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🧠 Complete Analysis</h4>
+            <div>{analysis.replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Get specific optimization recommendations
+    if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
+        bottleneck_type = "network"
+    else:
+        bottleneck_type = "agent"
+    
+    with st.expander("🎯 Targeted Optimization Recommendations"):
+        with st.spinner("Getting optimization recommendations..."):
+            recommendations = claude_integration.get_optimization_recommendations(
+                bottleneck_type, config
+            )
+        
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🔧 {bottleneck_type.title()} Bottleneck Solutions</h4>
+            <div>{recommendations.replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
 def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_perf: Dict):
     """Enhanced bandwidth waterfall with storage type analysis"""
     st.markdown("**🌊 Enhanced Bandwidth Waterfall: Complete Performance Analysis**")
@@ -1197,40 +1493,6 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
         'region': current_region
     }
 
-def render_claude_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
-                            network_perf: Dict, agent_perf: Dict, aws_data: Dict):
-    """Render Claude AI analysis panel"""
-    st.markdown("**🤖 Claude AI Performance Analysis**")
-    
-    if not claude_integration.client:
-        st.info("Claude AI integration not connected. Check sidebar for connection status.")
-        return
-    
-    with st.spinner("Getting AI analysis..."):
-        analysis = claude_integration.analyze_migration_performance(
-            config, network_perf, agent_perf, aws_data
-        )
-    
-    st.markdown(f"""
-    <div class="ai-card">
-        <h4>🧠 AI Performance Analysis</h4>
-        <div style="white-space: pre-wrap;">{analysis}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Get specific optimization recommendations
-    if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
-        bottleneck_type = "network"
-    else:
-        bottleneck_type = "agent"
-    
-    with st.expander("🎯 Targeted Optimization Recommendations"):
-        with st.spinner("Getting optimization recommendations..."):
-            recommendations = claude_integration.get_optimization_recommendations(
-                bottleneck_type, config
-            )
-        st.markdown(recommendations)
-
 def render_enhanced_sidebar():
     """Enhanced sidebar with connection status and configuration"""
     st.sidebar.header("🌐 Enhanced Migration Analyzer")
@@ -1453,7 +1715,7 @@ def main():
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "🌊 Enhanced Bandwidth Analysis",
         "📊 Storage Performance Comparison", 
-        "🌐 Network Paths",
+        "🌐 Network Path Visualization",
         "🤖 Agent Performance",
         "☁️ AWS Integration",
         "🧠 AI Analysis"
@@ -1533,8 +1795,8 @@ def main():
             """, unsafe_allow_html=True)
     
     with tab3:
-        # Existing network paths tab content
-        st.subheader("🌐 Network Path Analysis")
+        st.subheader("🌐 Enhanced Network Path Visualization")
+        render_network_path_visualization(network_perf)
         
         col1, col2, col3, col4 = st.columns(4)
         
@@ -1649,11 +1911,11 @@ def main():
             aws_data_detailed = {}
     
     with tab6:
-        st.subheader("🧠 Claude AI Performance Analysis")
+        st.subheader("🧠 Professional AI Performance Analysis")
         
         claude_integration = st.session_state.get('claude_integration')
         if claude_integration and claude_integration.client:
-            render_claude_ai_analysis(
+            render_professional_ai_analysis(
                 claude_integration, 
                 config, network_perf, agent_perf, aws_data
             )
