@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional
 import asyncio
 from dataclasses import dataclass
 import numpy as np
-
+import math  # Required for the new DataSync scaling calculations
 # =============================================================================
 # PAGE CONFIGURATION
 # =============================================================================
@@ -1093,7 +1093,6 @@ class EnhancedNetworkAnalyzer:
         }
         
         # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
-        self.migration_services = {
             'datasync': {
                 'name': 'AWS DataSync',
                 'use_case': 'File and object data transfer',
@@ -1105,6 +1104,7 @@ class EnhancedNetworkAnalyzer:
                 'protocol_efficiency': 0.96,
                 'latency_sensitivity': 'medium',
                 'tcp_window_scaling_required': True,
+                'vmware_deployment': True,  # NEW FLAG
                 'database_compatibility': {
                     'file_based_backups': True,
                     'live_replication': False,
@@ -1112,36 +1112,44 @@ class EnhancedNetworkAnalyzer:
                 },
                 'sizes': {
                     'small': {
-                        'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 250, 'cost_per_hour': 0.042,
+                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
                         'vpc_endpoint_throughput_reduction': 0.1,
                         'optimal_file_size_mb': '1-100',
-                        'concurrent_transfers': 8,
-                        'tcp_connections': 8,
-                        'instance_type': 'm5.large'
-                    },
-                    'medium': {
-                        'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 500, 'cost_per_hour': 0.085,
-                        'vpc_endpoint_throughput_reduction': 0.08,
-                        'optimal_file_size_mb': '100-1000',
                         'concurrent_transfers': 16,
                         'tcp_connections': 16,
-                        'instance_type': 'm5.xlarge'
+                        'instance_type': 'm5.xlarge',
+                        'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
+                        'effective_throughput_mbps': 340  # NEW: After VMware overhead
                     },
-                    'large': {
-                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 1000, 'cost_per_hour': 0.17,
-                        'vpc_endpoint_throughput_reduction': 0.05,
-                        'optimal_file_size_mb': '1000+',
+                    'medium': {
+                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
+                        'vpc_endpoint_throughput_reduction': 0.08,
+                        'optimal_file_size_mb': '100-1000',
                         'concurrent_transfers': 32,
                         'tcp_connections': 32,
-                        'instance_type': 'm5.2xlarge'
+                        'instance_type': 'm5.2xlarge',
+                        'vmware_overhead': 0.12,
+                        'effective_throughput_mbps': 880
                     },
-                    'xlarge': {
-                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 2000, 'cost_per_hour': 0.34,
-                        'vpc_endpoint_throughput_reduction': 0.03,
+                    'large': {
+                        'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
+                        'vpc_endpoint_throughput_reduction': 0.05,
                         'optimal_file_size_mb': '1000+',
                         'concurrent_transfers': 64,
                         'tcp_connections': 64,
-                        'instance_type': 'm5.4xlarge'
+                        'instance_type': 'm5.4xlarge',
+                        'vmware_overhead': 0.10,
+                        'effective_throughput_mbps': 1800
+                    },
+                    'xlarge': {
+                        'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
+                        'vpc_endpoint_throughput_reduction': 0.03,
+                        'optimal_file_size_mb': '1000+',
+                        'concurrent_transfers': 128,
+                        'tcp_connections': 128,
+                        'instance_type': 'm5.8xlarge',
+                        'vmware_overhead': 0.08,
+                        'effective_throughput_mbps': 3680
                     }
                 }
             },
@@ -1451,19 +1459,59 @@ class EnhancedNetworkAnalyzer:
         })
         step_number += 1
         
+        # MODIFY the existing "Step 10: Service Capacity" section in calculate_realistic_bandwidth_waterfall()
+# Replace around line 700-750:
+
+        # OLD CODE:
         # Step 10: Service Capacity
         service_capacity = service_spec['throughput_mbps'] * num_instances
         service_limited_bandwidth = min(protocol_adjusted_bandwidth, service_capacity)
         service_reduction = protocol_adjusted_bandwidth - service_limited_bandwidth
+
+        # NEW ENHANCED CODE:
+        # Step 10: Service Capacity (Enhanced for DataSync VMware overhead)
+        if migration_service == 'datasync' and service.get('vmware_deployment', False):
+            # Use effective throughput that accounts for VMware overhead
+            single_vm_capacity = service_spec.get('effective_throughput_mbps', 
+                                                service_spec['throughput_mbps'] * (1 - service_spec.get('vmware_overhead', 0.1)))
+            service_capacity = single_vm_capacity * num_instances
+            
+            # Add detailed DataSync analysis
+            vmware_overhead_pct = service_spec.get('vmware_overhead', 0.1) * 100
+            steps.append({
+                'name': f'VMware Virtualization Overhead ({vmware_overhead_pct:.0f}%)',
+                'value': -(service_spec['throughput_mbps'] * num_instances - service_capacity),
+                'cumulative': service_capacity,
+                'type': 'reduction',
+                'layer': 'service',
+                'step_number': step_number,
+                'details': f"DataSync VM running on VMware ESXi with {vmware_overhead_pct:.0f}% virtualization overhead"
+            })
+            step_number += 1
+        else:
+            # Standard service capacity calculation
+            service_capacity = service_spec['throughput_mbps'] * num_instances
+
+        service_limited_bandwidth = min(protocol_adjusted_bandwidth, service_capacity)
+        service_reduction = protocol_adjusted_bandwidth - service_limited_bandwidth
+
+        # Enhanced step details for DataSync
+        step_name = f'{service["name"]} Capacity'
+        if migration_service == 'datasync':
+            if num_instances > 1:
+                step_name += f' ({num_instances} VMs @ {service_capacity/num_instances:.0f} Mbps each)'
+            else:
+                step_name += f' (Single VM @ {service_capacity:.0f} Mbps)'
+
         steps.append({
-            'name': f'{service["name"]} Capacity',
+            'name': step_name,
             'value': -service_reduction,
             'cumulative': service_limited_bandwidth,
             'type': 'reduction',
             'layer': 'service',
-            'step_number': step_number
+            'step_number': step_number,
+            'details': f"Service capacity: {service_capacity:.0f} Mbps, Network available: {protocol_adjusted_bandwidth:.0f} Mbps"
         })
-        step_number += 1
         
         # Step 11: Application Efficiency
         app_efficiency = service.get('application_efficiency', 0.9)
@@ -1637,6 +1685,184 @@ class EnhancedNetworkAnalyzer:
             'migration_complexity': 'high' if priority_score > 40 else 'medium' if priority_score > 20 else 'low',
             'confidence_level': 'high' if len(recommendations) <= 3 else 'medium'
         }
+    
+    # ADD these methods to the EnhancedNetworkAnalyzer class
+# Insert around line 800-900, after existing methods but before "# NEW METHODS FOR AI AND COST ANALYSIS"
+
+def calculate_optimal_datasync_instances(self, available_bandwidth_mbps: float, data_size_gb: int, target_transfer_time_hours: float) -> Dict:
+    """Calculate optimal number of DataSync instances for production workloads"""
+    
+    # Get DataSync VM specs from migration services
+    datasync_service = self.migration_services['datasync']
+    
+    # Calculate required throughput
+    required_throughput_mbps = (data_size_gb * 8) / (target_transfer_time_hours * 3600) * 1000
+    
+    recommendations = {}
+    
+    # Analyze each size configuration
+    for size_name, size_config in datasync_service['sizes'].items():
+        vmware_overhead = size_config.get('vmware_overhead', 0.1)
+        base_throughput = size_config['throughput_mbps']
+        effective_throughput = size_config.get('effective_throughput_mbps', 
+                                              base_throughput * (1 - vmware_overhead))
+        
+        # Calculate instances needed
+        instances_needed = math.ceil(required_throughput_mbps / effective_throughput)
+        
+        # Check against available bandwidth
+        max_possible_instances = min(instances_needed, 
+                                   available_bandwidth_mbps // effective_throughput)
+        
+        total_throughput = max_possible_instances * effective_throughput
+        
+        recommendations[size_name] = {
+            'instances_needed': instances_needed,
+            'instances_possible': max_possible_instances,
+            'effective_throughput_per_vm': effective_throughput,
+            'total_throughput_mbps': total_throughput,
+            'meets_requirement': total_throughput >= required_throughput_mbps,
+            'vmware_requirements': {
+                'total_cpu_cores': max_possible_instances * size_config['vcpu'],
+                'total_memory_gb': max_possible_instances * size_config['memory_gb'],
+                'network_bandwidth_mbps': max_possible_instances * base_throughput
+            },
+            'is_bottleneck': required_throughput_mbps > total_throughput
+        }
+    
+    # Find best recommendation
+    viable_options = {k: v for k, v in recommendations.items() if v['meets_requirement']}
+    
+    if viable_options:
+        best_option_key = min(viable_options.keys(), 
+                             key=lambda k: viable_options[k]['vmware_requirements']['total_cpu_cores'])
+    else:
+        best_option_key = max(recommendations.keys(),
+                             key=lambda k: recommendations[k]['total_throughput_mbps'])
+    
+    return {
+        'required_throughput_mbps': required_throughput_mbps,
+        'available_bandwidth_mbps': available_bandwidth_mbps,
+        'recommendations': recommendations,
+        'best_option': best_option_key,
+        'best_option_details': recommendations[best_option_key],
+        'is_datasync_bottleneck': any(rec['is_bottleneck'] for rec in recommendations.values())
+    }
+
+def analyze_datasync_bottleneck_by_pattern(self, pattern_key: str, migration_service: str, 
+                                          service_size: str, num_instances: int, 
+                                          data_size_gb: int, target_hours: float) -> Dict:
+    """Analyze if DataSync is the bottleneck for a specific pattern"""
+    
+    # Calculate network capacity
+    waterfall_data = self.calculate_realistic_bandwidth_waterfall(
+        pattern_key, migration_service, service_size, num_instances
+    )
+    
+    available_bandwidth = waterfall_data['summary']['final_effective_mbps']
+    
+    # Only analyze if it's DataSync
+    if migration_service == 'datasync':
+        datasync_analysis = self.calculate_optimal_datasync_instances(
+            available_bandwidth, data_size_gb, target_hours
+        )
+        
+        return {
+            'waterfall_data': waterfall_data,
+            'datasync_analysis': datasync_analysis,
+            'bottleneck_layer': 'service' if datasync_analysis['is_datasync_bottleneck'] else 'network',
+            'bottleneck_explanation': self._explain_datasync_bottleneck(datasync_analysis, waterfall_data)
+        }
+    else:
+        return {
+            'waterfall_data': waterfall_data,
+            'datasync_analysis': None,
+            'bottleneck_layer': waterfall_data['summary']['bottleneck'],
+            'bottleneck_explanation': f"Service: {migration_service} (not DataSync)"
+        }
+
+def _explain_datasync_bottleneck(self, datasync_analysis: Dict, waterfall_data: Dict) -> str:
+    """Generate explanation for DataSync bottleneck analysis"""
+    
+    best_option = datasync_analysis['best_option_details']
+    required = datasync_analysis['required_throughput_mbps']
+    available_network = datasync_analysis['available_bandwidth_mbps']
+    
+    if datasync_analysis['is_datasync_bottleneck']:
+        if best_option['instances_possible'] < best_option['instances_needed']:
+            return (f"DataSync bottleneck: Need {best_option['instances_needed']} instances "
+                   f"({required:,.0f} Mbps required) but network only supports "
+                   f"{best_option['instances_possible']} instances ({available_network:,.0f} Mbps)")
+        else:
+            return (f"DataSync bottleneck: Single VM limited to {best_option['effective_throughput_per_vm']:,.0f} Mbps, "
+                   f"need {best_option['instances_needed']} instances for {required:,.0f} Mbps requirement")
+    else:
+        return (f"Network bottleneck: DataSync can provide {best_option['total_throughput_mbps']:,.0f} Mbps "
+                f"but network limits to {available_network:,.0f} Mbps")
+
+def get_datasync_scaling_recommendations(self, pattern_key: str, config: Dict) -> Dict:
+    """Get DataSync scaling recommendations for the current configuration"""
+    
+    if config['migration_service'] != 'datasync':
+        return {'applicable': False, 'reason': 'Not using DataSync service'}
+    
+    # Calculate target transfer time
+    target_hours = config.get('max_downtime_hours', 8)
+    
+    analysis = self.analyze_datasync_bottleneck_by_pattern(
+        pattern_key, 
+        config['migration_service'],
+        config['service_size'],
+        config['num_instances'],
+        config['data_size_gb'],
+        target_hours
+    )
+    
+    if analysis['datasync_analysis']:
+        datasync_data = analysis['datasync_analysis']
+        best_option = datasync_data['best_option_details']
+        
+        recommendations = []
+        
+        if datasync_data['is_datasync_bottleneck']:
+            recommendations.append({
+                'type': 'scaling',
+                'priority': 'high',
+                'description': f"Scale to {best_option['instances_needed']} DataSync VMs to meet {target_hours}h transfer window",
+                'vmware_impact': f"Requires {best_option['vmware_requirements']['total_cpu_cores']} CPU cores, "
+                               f"{best_option['vmware_requirements']['total_memory_gb']} GB RAM",
+                'cost_impact': f"Estimated {best_option['instances_needed']}x cost increase"
+            })
+        
+        if best_option['instances_needed'] > 1:
+            recommendations.append({
+                'type': 'architecture',
+                'priority': 'medium', 
+                'description': "Deploy multiple DataSync VMs across different VMware hosts for better performance",
+                'vmware_impact': "Distribute VMs to avoid resource contention",
+                'cost_impact': "Minimal additional cost for VM distribution"
+            })
+        
+        return {
+            'applicable': True,
+            'is_bottleneck': datasync_data['is_datasync_bottleneck'],
+            'current_config': {
+                'size': config['service_size'],
+                'instances': config['num_instances'],
+                'effective_throughput': best_option['total_throughput_mbps']
+            },
+            'optimal_config': {
+                'size': datasync_data['best_option'],
+                'instances': best_option['instances_needed'],
+                'effective_throughput': best_option['total_throughput_mbps']
+            },
+            'recommendations': recommendations,
+            'explanation': analysis['bottleneck_explanation']
+        }
+    
+    return {'applicable': False, 'reason': 'Could not analyze DataSync configuration'}
+    
+    
     
     # NEW METHODS FOR AI AND COST ANALYSIS
     def analyze_all_patterns(self, config: Dict) -> List[PatternAnalysis]:
@@ -2689,6 +2915,98 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
         </div>
         """, unsafe_allow_html=True)
     
+        # ADD this section in render_realistic_analysis_tab() 
+    # Insert after the database requirements check (around line 1400):
+
+    # Enhanced DataSync Analysis (ADD THIS SECTION)
+    if config['migration_service'] == 'datasync':
+        datasync_scaling = analyzer.get_datasync_scaling_recommendations(pattern_key, config)
+        
+        if datasync_scaling['applicable']:
+            # DataSync-specific analysis card
+            card_type = "status-card-warning" if datasync_scaling['is_bottleneck'] else "status-card-success"
+            
+            current_config = datasync_scaling['current_config']
+            optimal_config = datasync_scaling['optimal_config']
+            
+            scaling_content = f"""
+            <h3>🚀 DataSync Scaling Analysis</h3>
+            <p><strong>Current Configuration:</strong> {current_config['instances']} × {config['service_size']} VM(s) = {current_config['effective_throughput']:,.0f} Mbps</p>
+            <p><strong>Optimal Configuration:</strong> {optimal_config['instances']} × {optimal_config['size']} VM(s) = {optimal_config['effective_throughput']:,.0f} Mbps</p>
+            <p><strong>Analysis:</strong> {datasync_scaling['explanation']}</p>
+            """
+            
+            if datasync_scaling['recommendations']:
+                scaling_content += "<h4>💡 Scaling Recommendations:</h4>"
+                for rec in datasync_scaling['recommendations']:
+                    priority_icon = {"high": "🔴", "medium": "🟡", "low": "🟢"}.get(rec['priority'], "⚪")
+                    scaling_content += f"""
+                    <p>{priority_icon} <strong>{rec['type'].title()}:</strong> {rec['description']}</p>
+                    <p style="margin-left: 1rem; font-size: 0.9em; color: var(--medium-gray);">
+                    VMware Impact: {rec['vmware_impact']}<br>
+                    Cost Impact: {rec['cost_impact']}
+                    </p>
+                    """
+            
+            st.markdown(f"""
+            <div class="corporate-card {card_type}">
+                {scaling_content}
+            </div>
+            """, unsafe_allow_html=True)
+
+    # ADD this DataSync VMware deployment information section as well:
+    if config['migration_service'] == 'datasync':
+        with st.expander("🖥️ VMware Deployment Details", expanded=False):
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("""
+                **📋 VMware Requirements per DataSync VM:**
+                - **vCPU:** 4-32 cores (depending on size)
+                - **Memory:** 16-128 GB RAM 
+                - **Storage:** 80 GB minimum
+                - **Network:** Dedicated vSwitch recommended
+                - **Hypervisor:** VMware ESXi 6.5+ supported
+                """)
+                
+                st.markdown("""
+                **⚙️ Performance Optimization:**
+                - Enable hardware acceleration
+                - Reserve 50% CPU, 100% memory
+                - Use SSD storage for VM files
+                - Configure jumbo frames (9000 MTU)
+                - Separate VMs across different hosts
+                """)
+            
+            with col2:
+                # Calculate total VMware requirements
+                if datasync_scaling['applicable']:
+                    optimal = datasync_scaling['optimal_config']
+                    service_spec = analyzer.migration_services['datasync']['sizes'][optimal['size']]
+                    
+                    total_vcpu = service_spec['vcpu'] * optimal['instances']
+                    total_memory = service_spec['memory_gb'] * optimal['instances']
+                    total_storage = 80 * optimal['instances']  # 80GB per VM
+                    
+                    st.markdown(f"""
+                    **🏗️ Total VMware Resource Requirements:**
+                    - **Total vCPU:** {total_vcpu} cores
+                    - **Total Memory:** {total_memory} GB
+                    - **Total Storage:** {total_storage} GB
+                    - **Network Bandwidth:** {optimal['effective_throughput']:,.0f} Mbps
+                    - **Recommended Hosts:** {math.ceil(optimal['instances'] / 2)} (max 2 VMs per host)
+                    """)
+                    
+                    st.markdown(f"""
+                    **💾 Resource Planning:**
+                    - **Physical CPU ratio:** 2:1 overcommit max
+                    - **Memory overcommit:** 1.2:1 max  
+                    - **Network ports:** {optimal['instances']} × 10GbE
+                    - **Storage IOPS:** 500 IOPS per VM minimum
+                    """)
+        
+    
+    
     # Sequential flow diagram
     create_sequential_flow_diagram(waterfall_data)
     
@@ -3022,6 +3340,110 @@ def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer
                 <p><strong>Expected Impact:</strong> {rec['impact']}</p>
             </div>
             """, unsafe_allow_html=True)
+    
+        # ADD this section to render_ai_recommendations_tab() 
+    # Insert after the existing recommendations sections (around line 1650):
+
+    # Enhanced DataSync AI Recommendations (ADD THIS SECTION)
+    if config['migration_service'] == 'datasync':
+        pattern_key = analyzer.determine_optimal_pattern(
+            config['source_location'], 
+            config['environment'], 
+            config['migration_service']
+        )
+        
+        datasync_scaling = analyzer.get_datasync_scaling_recommendations(pattern_key, config)
+        
+        if datasync_scaling['applicable']:
+            st.markdown("### 🚀 DataSync-Specific AI Recommendations")
+            
+            # Performance recommendations
+            if datasync_scaling['is_bottleneck']:
+                st.markdown(f"""
+                <div class="corporate-card status-card-error">
+                    <h4>🔴 DataSync Performance Bottleneck Detected</h4>
+                    <p><strong>Issue:</strong> DataSync VM capacity is limiting your migration performance</p>
+                    <p><strong>Current:</strong> {datasync_scaling['current_config']['instances']} × {config['service_size']} VM(s)</p>
+                    <p><strong>Recommended:</strong> {datasync_scaling['optimal_config']['instances']} × {datasync_scaling['optimal_config']['size']} VM(s)</p>
+                    <p><strong>Expected Improvement:</strong> {(datasync_scaling['optimal_config']['effective_throughput'] / datasync_scaling['current_config']['effective_throughput'] - 1) * 100:.0f}% faster transfer</p>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="corporate-card status-card-success">
+                    <h4>✅ DataSync Configuration Optimal</h4>
+                    <p>Your current DataSync configuration is not the bottleneck in your migration pipeline.</p>
+                    <p><strong>Effective Throughput:</strong> {datasync_scaling['current_config']['effective_throughput']:,.0f} Mbps</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # VMware-specific recommendations
+            optimal_instances = datasync_scaling['optimal_config']['instances']
+            if optimal_instances > 1:
+                st.markdown(f"""
+                <div class="corporate-card status-card-info">
+                    <h4>🖥️ VMware Deployment Strategy</h4>
+                    <p><strong>Multi-VM Deployment:</strong> Deploy {optimal_instances} DataSync VMs for optimal performance</p>
+                    <p><strong>Host Distribution:</strong> Spread VMs across {math.ceil(optimal_instances / 2)} VMware hosts</p>
+                    <p><strong>Resource Isolation:</strong> Use CPU and memory reservations to guarantee performance</p>
+                    <p><strong>Network Optimization:</strong> Dedicated vSwitches and port groups for DataSync traffic</p>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            # Cost vs Performance Analysis
+            current_throughput = datasync_scaling['current_config']['effective_throughput']
+            optimal_throughput = datasync_scaling['optimal_config']['effective_throughput']
+            performance_gain = (optimal_throughput / current_throughput - 1) * 100 if current_throughput > 0 else 0
+            
+            # Estimate cost difference
+            current_instances = datasync_scaling['current_config']['instances']
+            optimal_instances = datasync_scaling['optimal_config']['instances']
+            cost_multiplier = optimal_instances / current_instances if current_instances > 0 else optimal_instances
+            
+            st.markdown(f"""
+            <div class="corporate-card">
+                <h4>💰 Cost vs Performance Trade-off Analysis</h4>
+                <p><strong>Performance Gain:</strong> {performance_gain:.0f}% faster migration</p>
+                <p><strong>Cost Impact:</strong> {cost_multiplier:.1f}x DataSync VM costs</p>
+                <p><strong>Migration Time Reduction:</strong> {(1 - 1/cost_multiplier) * 100:.0f}% shorter window</p>
+                <p><strong>ROI Consideration:</strong> Shorter migration window may offset higher VM costs</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # Also ADD this to the generate_ai_recommendations method in the EnhancedNetworkAnalyzer class
+    # Add around line 900 in the generate_ai_recommendations method:
+
+    def generate_ai_recommendations(self, config: Dict, analysis_results: Dict) -> Dict:
+        """Generate AI-powered recommendations (ENHANCED VERSION)"""
+        migration_time = analysis_results['migration_time']
+        waterfall_data = analysis_results['waterfall_data']
+        service_compatibility = analysis_results.get('service_compatibility', {})
+        
+        recommendations = []
+        priority_score = 0
+        
+        # NEW: DataSync-specific recommendations
+        if config['migration_service'] == 'datasync':
+            pattern_key = self.determine_optimal_pattern(
+                config['source_location'], 
+                config['environment'], 
+                config['migration_service']
+            )
+            
+            datasync_scaling = self.get_datasync_scaling_recommendations(pattern_key, config)
+            
+            if datasync_scaling['applicable'] and datasync_scaling['is_bottleneck']:
+                recommendations.append({
+                    'type': 'datasync_scaling',
+                    'priority': 'high',
+                    'description': f'DataSync bottleneck detected. Scale to {datasync_scaling["optimal_config"]["instances"]} VMs for optimal performance.',
+                    'impact': f'{(datasync_scaling["optimal_config"]["effective_throughput"] / datasync_scaling["current_config"]["effective_throughput"] - 1) * 100:.0f}% performance improvement'
+                })
+                priority_score += 25
+        
+        # ... rest of existing recommendation logic ...
+    
+    
     
     # Summary card
     waterfall_summary = analysis_results['waterfall_data']['summary']
