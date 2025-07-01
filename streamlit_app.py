@@ -1306,9 +1306,13 @@ def initialize_integrations():
             else:
                 claude_status = "⚠️ Connection Failed"
                 claude_message = message
+                claude_integration = None  # Set to None if initialization failed
         except Exception as e:
             claude_status = "⚠️ Connection Failed"
             claude_message = str(e)
+            claude_integration = None  # Set to None if initialization failed
+    else:
+        claude_integration = None  # Set to None if no API key
     
     return {
         'aws_integration': aws_integration,
@@ -1380,51 +1384,60 @@ def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_mana
     # Initialize placement analyzer
     placement_analyzer = AgentPlacementAnalyzer()
     
-    # Analyze placement options
-    placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
+    try:
+        # Analyze placement options
+        placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
+    except Exception as e:
+        st.error(f"Error analyzing placement options: {str(e)}")
+        return
     
     # Render placement options
     st.markdown("### 📍 Placement Strategy Comparison")
     
-    # Create placement comparison chart
-    placement_df = pd.DataFrame([
-        {
-            'Strategy': opt['strategy']['name'],
-            'Performance Score': opt['placement_score'],
-            'Throughput (Mbps)': opt['throughput_mbps'],
-            'Monthly Cost ($)': opt['monthly_cost'],
-            'Security Score': opt['security_score'] * 100,
-            'Management Complexity': (1 - opt['management_complexity']) * 100
-        }
-        for opt in placement_options
-    ])
-    
-    # Placement score chart
-    fig_placement = px.bar(
-        placement_df,
-        x='Strategy',
-        y='Performance Score',
-        title='Agent Placement Strategy Scores',
-        color='Performance Score',
-        color_continuous_scale='RdYlGn',
-        text='Performance Score'
-    )
-    
-    fig_placement.update_traces(
-        texttemplate='%{text:.1f}',
-        textposition='outside',
-        textfont=dict(size=14, family="Arial Black")
-    )
-    
-    fig_placement.update_layout(
-        height=400,
-        title=dict(font=dict(size=18, family="Arial Black")),
-        xaxis=dict(title=dict(text='Placement Strategy', font=dict(size=14))),
-        yaxis=dict(title=dict(text='Overall Score (0-100)', font=dict(size=14))),
-        font=dict(size=12)
-    )
-    
-    st.plotly_chart(fig_placement, use_container_width=True)
+    try:
+        # Create placement comparison chart
+        placement_df = pd.DataFrame([
+            {
+                'Strategy': opt['strategy']['name'],
+                'Performance Score': opt['placement_score'],
+                'Throughput (Mbps)': opt['throughput_mbps'],
+                'Monthly Cost ($)': opt['monthly_cost'],
+                'Security Score': opt['security_score'] * 100,
+                'Management Complexity': (1 - opt['management_complexity']) * 100
+            }
+            for opt in placement_options
+        ])
+        
+        # Placement score chart
+        fig_placement = px.bar(
+            placement_df,
+            x='Strategy',
+            y='Performance Score',
+            title='Agent Placement Strategy Scores',
+            color='Performance Score',
+            color_continuous_scale='RdYlGn',
+            text='Performance Score'
+        )
+        
+        fig_placement.update_traces(
+            texttemplate='%{text:.1f}',
+            textposition='outside',
+            textfont=dict(size=14, family="Arial Black")
+        )
+        
+        fig_placement.update_layout(
+            height=400,
+            title=dict(font=dict(size=18, family="Arial Black")),
+            xaxis=dict(title=dict(text='Placement Strategy', font=dict(size=14))),
+            yaxis=dict(title=dict(text='Overall Score (0-100)', font=dict(size=14))),
+            font=dict(size=12)
+        )
+        
+        st.plotly_chart(fig_placement, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Error creating placement chart: {str(e)}")
+        st.info("Placement analysis data is still available below.")
     
     # Detailed placement analysis
     st.markdown("### 🔍 Detailed Placement Analysis")
@@ -1528,13 +1541,28 @@ def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_mana
     if claude_integration and claude_integration.client:
         st.markdown("### 🧠 AI-Powered Placement Recommendations")
         
-        with st.spinner("🔄 Analyzing placement strategies..."):
-            ai_recommendations = claude_integration.get_placement_recommendations(config, placement_options)
-        
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4>🎯 Strategic Placement Analysis</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{ai_recommendations.replace(chr(10), '<br>')}</div>
+        try:
+            with st.spinner("🔄 Analyzing placement strategies..."):
+                ai_recommendations = claude_integration.get_placement_recommendations(config, placement_options)
+            
+            st.markdown(f"""
+            <div class="ai-section">
+                <h4>🎯 Strategic Placement Analysis</h4>
+                <div style="font-size: 15px; line-height: 1.8; color: #374151;">{ai_recommendations.replace(chr(10), '<br>')}</div>
+            </div>
+            """, unsafe_allow_html=True)
+        except Exception as e:
+            st.markdown(f"""
+            <div class="warning-card">
+                <strong>⚠️ Error getting AI recommendations: {str(e)}</strong><br>
+                <small>Claude AI analysis may not be fully available. Check your API configuration.</small>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="warning-card">
+            <strong>ℹ️ AI-Powered Recommendations</strong><br>
+            Claude AI integration not available. Connect Claude AI in the sidebar to get intelligent placement recommendations.
         </div>
         """, unsafe_allow_html=True)
 
@@ -3062,9 +3090,22 @@ def main():
     # Initialize integrations
     if 'integrations_initialized' not in st.session_state:
         with st.spinner("🔄 Initializing API integrations..."):
-            integration_status = initialize_integrations()
-            st.session_state.update(integration_status)
-            st.session_state['integrations_initialized'] = True
+            try:
+                integration_status = initialize_integrations()
+                st.session_state.update(integration_status)
+                st.session_state['integrations_initialized'] = True
+            except Exception as e:
+                st.error(f"Error initializing integrations: {str(e)}")
+                # Set default values if initialization fails
+                st.session_state.update({
+                    'aws_integration': None,
+                    'claude_integration': None,
+                    'aws_status': '❌ Initialization Error',
+                    'aws_message': str(e),
+                    'claude_status': '❌ Initialization Error', 
+                    'claude_message': str(e),
+                    'integrations_initialized': True
+                })
 
     # Get configuration
     config = render_enhanced_sidebar()
@@ -3402,24 +3443,33 @@ def main():
         
         claude_integration = st.session_state.get('claude_integration')
         if claude_integration and claude_integration.client:
-            placement_analyzer = AgentPlacementAnalyzer()
-            placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
-            
-            with st.spinner("🔄 Analyzing migration configuration with placement optimization..."):
-                analysis = claude_integration.analyze_migration_performance(
-                    config, network_perf, agent_perf, placement_options[0], {}
-                )
-            
-            st.markdown(f"""
-            <div class="ai-section">
-                <h4>🧠 Comprehensive Migration Analysis</h4>
-                <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            try:
+                placement_analyzer = AgentPlacementAnalyzer()
+                placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
+                
+                with st.spinner("🔄 Analyzing migration configuration with placement optimization..."):
+                    analysis = claude_integration.analyze_migration_performance(
+                        config, network_perf, agent_perf, placement_options[0], {}
+                    )
+                
+                st.markdown(f"""
+                <div class="ai-section">
+                    <h4>🧠 Comprehensive Migration Analysis</h4>
+                    <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            except Exception as e:
+                st.markdown(f"""
+                <div class="warning-card">
+                    <strong>⚠️ Error during AI analysis: {str(e)}</strong><br>
+                    <small>Claude AI analysis may not be fully available. Check your API configuration.</small>
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.markdown("""
             <div class="warning-card">
-                <strong>⚠️ Claude AI integration not connected. Check sidebar for connection status.</strong>
+                <strong>ℹ️ Enhanced AI Analysis</strong><br>
+                Claude AI integration not connected. Check sidebar for connection status and configure your Claude API key to get intelligent migration analysis.
             </div>
             """, unsafe_allow_html=True)
     
