@@ -1232,17 +1232,17 @@ class AnthropicAIManager:
             total_throughput *= vpc_performance_bonus
         
     def _calculate_vpc_performance_bonus(self, config: Dict) -> float:
-    """Calculate VPC endpoint performance bonus"""
-    if not config.get('use_vpc_endpoint', False):
-        return 1.0  # No bonus
-    
-    destination_storage = config.get('destination_storage_type', 'S3')
-    
-    if destination_storage == 'S3':
-        return 1.3  # 30% boost for S3
-    else:
-        return 1.15  # 15% boost for other services
-    
+        """Calculate VPC endpoint performance bonus"""
+        if not config.get('use_vpc_endpoint', False):
+            return 1.0  # No bonus
+        
+        destination_storage = config.get('destination_storage_type', 'S3')
+        
+        if destination_storage == 'S3':
+            return 1.3  # 30% boost for S3
+        else:
+            return 1.15  # 15% boost for other services
+        
     def _generate_best_practices(self, config: Dict, complexity_score: int) -> List[str]:
         """Generate specific best practices"""
         practices = []
