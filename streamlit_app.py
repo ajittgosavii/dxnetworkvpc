@@ -971,249 +971,603 @@ def render_connection_status(status_info: Dict):
         DataSync/DMS resources are located.
         """)
 
-def render_network_path_visualization(network_perf: Dict):
-    """Render enhanced network path visualization with bandwidth flow"""
-    st.markdown("**🌐 Network Path Performance Flow**")
+def render_network_path_visualization(network_perf: Dict, config: Dict, agent_perf: Dict):
+    """Render comprehensive network path visualization with detailed infrastructure components"""
+    st.markdown("**🌐 Comprehensive Network Infrastructure & Migration Path Analysis**")
     
     segments = network_perf['segments']
+    agent_type = config['migration_type']
+    num_agents = config['number_of_agents']
+    agent_size = config['agent_size']
     
-    # Create Sankey-like flow diagram
-    fig = go.Figure()
+    # Create detailed network topology diagram
+    st.markdown("### 🏗️ Complete Infrastructure Topology")
     
-    # Calculate cumulative bandwidth degradation
-    bandwidth_flow = []
-    current_bandwidth = 10000  # Starting bandwidth
+    # Build comprehensive network flow with all components
+    topology_components = []
     
-    for i, segment in enumerate(segments):
-        bandwidth_flow.append({
-            'segment': f"Segment {i+1}",
-            'name': segment['name'],
-            'start_bandwidth': current_bandwidth,
-            'end_bandwidth': segment['effective_bandwidth_mbps'],
-            'loss': current_bandwidth - segment['effective_bandwidth_mbps'],
-            'latency': segment['effective_latency_ms'],
-            'reliability': segment['reliability'] * 100,
-            'protocol_efficiency': segment.get('protocol_efficiency', 1.0) * 100
-        })
-        current_bandwidth = segment['effective_bandwidth_mbps']
+    # Source Infrastructure
+    source_storage_type = network_perf.get('storage_mount_type', 'nfs').upper()
+    source_os = network_perf.get('os_type', 'linux').title()
     
-    # Create waterfall chart for bandwidth
-    fig_bandwidth = go.Figure()
+    topology_components.extend([
+        {
+            'layer': 'Source Storage',
+            'component': f'{source_storage_type} Storage Server',
+            'details': f"{config.get('database_size_gb', 1000)} GB {config.get('source_database_engine', 'MySQL').upper()}",
+            'bandwidth_in': 10000,
+            'bandwidth_out': 10000,
+            'latency_ms': 0.5,
+            'status': 'Operational',
+            'icon': '🗄️'
+        },
+        {
+            'layer': 'Source Network',
+            'component': f'{source_os} File System Layer',
+            'details': f"{source_storage_type} Protocol Handler",
+            'bandwidth_in': 10000,
+            'bandwidth_out': segments[0]['effective_bandwidth_mbps'] if segments else 9500,
+            'latency_ms': 1.0,
+            'status': 'Active',
+            'icon': '📁'
+        }
+    ])
     
-    x_labels = ['Start'] + [f"After\n{flow['name'].split('(')[0].strip()}" for flow in bandwidth_flow]
-    y_values = [10000] + [flow['end_bandwidth'] for flow in bandwidth_flow]
+    # Network Infrastructure Components
+    if len(segments) > 1:  # Multi-segment path
+        topology_components.extend([
+            {
+                'layer': 'Local Network',
+                'component': 'Source Site Core Switch',
+                'details': '10GbE Aggregation Layer',
+                'bandwidth_in': segments[0]['effective_bandwidth_mbps'] if segments else 9500,
+                'bandwidth_out': segments[0]['effective_bandwidth_mbps'] if segments else 9400,
+                'latency_ms': 0.2,
+                'status': 'Operational',
+                'icon': '🔀'
+            },
+            {
+                'layer': 'Local Network',
+                'component': 'Site Border Router/Firewall',
+                'details': 'Security & Routing Layer',
+                'bandwidth_in': segments[0]['effective_bandwidth_mbps'] if segments else 9400,
+                'bandwidth_out': segments[0]['effective_bandwidth_mbps'] if segments else 9200,
+                'latency_ms': 1.5,
+                'status': 'Protected',
+                'icon': '🛡️'
+            },
+            {
+                'layer': 'WAN',
+                'component': 'Private Line/MPLS Network',
+                'details': f"Segment: {segments[1]['name'] if len(segments) > 1 else 'Direct'}",
+                'bandwidth_in': segments[1]['effective_bandwidth_mbps'] if len(segments) > 1 else 9200,
+                'bandwidth_out': segments[1]['effective_bandwidth_mbps'] if len(segments) > 1 else 8800,
+                'latency_ms': segments[1]['effective_latency_ms'] if len(segments) > 1 else 10,
+                'status': 'Connected',
+                'icon': '🌐'
+            }
+        ])
     
-    # Add bars for each segment
-    colors = ['lightblue'] + ['lightcoral' if y_values[i] < y_values[i-1] else 'lightgreen' 
-                             for i in range(1, len(y_values))]
+    # Jump Server & Migration Agents
+    platform_type = config.get('server_type', 'vmware').title()
     
-    fig_bandwidth.add_trace(go.Bar(
-        x=x_labels,
-        y=y_values,
-        text=[f"{val:,.0f} Mbps" for val in y_values],
-        textposition='outside',
-        marker_color=colors,
-        name='Bandwidth Flow'
-    ))
+    topology_components.extend([
+        {
+            'layer': 'Migration Platform',
+            'component': f'{platform_type} Jump Server',
+            'details': f"{config.get('ram_gb', 32)}GB RAM, {config.get('cpu_cores', 8)} vCPU",
+            'bandwidth_in': segments[-1]['effective_bandwidth_mbps'] if segments else 8800,
+            'bandwidth_out': agent_perf['total_agent_throughput_mbps'],
+            'latency_ms': 2.0 if platform_type == 'Vmware' else 1.0,
+            'status': 'Ready',
+            'icon': '🖥️'
+        },
+        {
+            'layer': 'Migration Agents',
+            'component': f'{num_agents}x {agent_type.upper()} {agent_size.title()} Agents',
+            'details': f"Total Capacity: {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
+            'bandwidth_in': agent_perf['total_agent_throughput_mbps'],
+            'bandwidth_out': agent_perf['total_agent_throughput_mbps'],
+            'latency_ms': 1.5,
+            'status': f"Scaling: {agent_perf['scaling_efficiency']*100:.0f}%",
+            'icon': '🤖'
+        }
+    ])
     
-    fig_bandwidth.update_layout(
-        title="Network Path Bandwidth Degradation",
-        xaxis_title="Network Segments",
-        yaxis_title="Bandwidth (Mbps)",
-        height=400,
-        showlegend=False
+    # AWS Infrastructure
+    aws_region = "US-West-2"  # Default region
+    final_bandwidth = min(network_perf['effective_bandwidth_mbps'], agent_perf['total_agent_throughput_mbps'])
+    
+    topology_components.extend([
+        {
+            'layer': 'AWS Edge',
+            'component': 'AWS Direct Connect Gateway',
+            'details': f'Region: {aws_region}',
+            'bandwidth_in': agent_perf['total_agent_throughput_mbps'],
+            'bandwidth_out': final_bandwidth,
+            'latency_ms': 5.0,
+            'status': 'Connected',
+            'icon': '🌉'
+        },
+        {
+            'layer': 'AWS VPC',
+            'component': 'VPC Transit Gateway',
+            'details': 'Multi-AZ Routing',
+            'bandwidth_in': final_bandwidth,
+            'bandwidth_out': final_bandwidth * 0.98,
+            'latency_ms': 1.0,
+            'status': 'Routing',
+            'icon': '🔗'
+        },
+        {
+            'layer': 'AWS Services',
+            'component': f'Target: {config.get("database_engine", "MySQL").upper()}',
+            'details': f"RDS/Aurora in {aws_region}",
+            'bandwidth_in': final_bandwidth * 0.98,
+            'bandwidth_out': final_bandwidth * 0.98,
+            'latency_ms': 2.0,
+            'status': 'Receiving',
+            'icon': '🗃️'
+        }
+    ])
+    
+    # Create interactive network flow diagram
+    create_detailed_network_diagram(topology_components)
+    
+    # Performance metrics dashboard
+    render_network_performance_dashboard(topology_components, network_perf, agent_perf)
+    
+    # Detailed component analysis
+    render_infrastructure_component_analysis(topology_components, config)
+    
+    # Network bottleneck identification
+    identify_network_bottlenecks(topology_components, network_perf, agent_perf)
+
+def create_detailed_network_diagram(components):
+    """Create detailed network topology diagram"""
+    st.markdown("#### 🗺️ Network Topology Flow Diagram")
+    
+    # Create Sankey diagram for network flow
+    import plotly.graph_objects as go
+    
+    # Prepare data for Sankey diagram
+    labels = []
+    sources = []
+    targets = []
+    values = []
+    colors = []
+    
+    color_map = {
+        'Source Storage': 'rgba(255, 99, 132, 0.8)',
+        'Source Network': 'rgba(255, 159, 64, 0.8)', 
+        'Local Network': 'rgba(255, 205, 86, 0.8)',
+        'WAN': 'rgba(75, 192, 192, 0.8)',
+        'Migration Platform': 'rgba(54, 162, 235, 0.8)',
+        'Migration Agents': 'rgba(153, 102, 255, 0.8)',
+        'AWS Edge': 'rgba(201, 203, 207, 0.8)',
+        'AWS VPC': 'rgba(255, 99, 132, 0.6)',
+        'AWS Services': 'rgba(46, 204, 113, 0.8)'
+    }
+    
+    for i, comp in enumerate(components):
+        labels.append(f"{comp['icon']} {comp['component']}")
+        if i > 0:
+            sources.append(i-1)
+            targets.append(i)
+            values.append(comp['bandwidth_in'])
+        colors.append(color_map.get(comp['layer'], 'rgba(128, 128, 128, 0.8)'))
+    
+    # Create Sankey diagram
+    fig_sankey = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=labels,
+            color=colors
+        ),
+        link=dict(
+            source=sources,
+            target=targets,
+            value=values,
+            color=[f'rgba(100, 100, 100, 0.3)' for _ in values]
+        )
+    )])
+    
+    fig_sankey.update_layout(
+        title_text="Network Infrastructure Flow - Bandwidth Progression",
+        font_size=12,
+        height=500
     )
     
-    st.plotly_chart(fig_bandwidth, use_container_width=True)
+    st.plotly_chart(fig_sankey, use_container_width=True)
     
-    # Detailed segment analysis
-    st.markdown("**📊 Segment-by-Segment Analysis**")
+    # Create detailed component grid
+    st.markdown("#### 🧩 Infrastructure Component Details")
     
-    for i, (segment, flow) in enumerate(zip(segments, bandwidth_flow)):
-        with st.expander(f"🔗 Segment {i+1}: {segment['name']}"):
-            col1, col2, col3, col4 = st.columns(4)
+    # Group components by layer
+    layers = {}
+    for comp in components:
+        layer = comp['layer']
+        if layer not in layers:
+            layers[layer] = []
+        layers[layer].append(comp)
+    
+    # Display each layer
+    for layer_name, layer_comps in layers.items():
+        with st.expander(f"🔍 {layer_name} Layer Details", expanded=False):
+            cols = st.columns(min(len(layer_comps), 3))
             
-            with col1:
-                st.metric(
-                    "Bandwidth Impact",
-                    f"{flow['end_bandwidth']:,.0f} Mbps",
-                    delta=f"-{flow['loss']:,.0f} Mbps" if flow['loss'] > 0 else "No loss"
-                )
-            
-            with col2:
-                st.metric(
-                    "Latency Added",
-                    f"{flow['latency']:.1f} ms",
-                    delta=f"vs {segment['latency_ms']:.1f} ms base"
-                )
-            
-            with col3:
-                st.metric(
-                    "Reliability",
-                    f"{flow['reliability']:.2f}%",
-                    delta=""
-                )
-            
-            with col4:
-                st.metric(
-                    "Protocol Efficiency", 
-                    f"{flow['protocol_efficiency']:.1f}%",
-                    delta=""
-                )
-            
-            # Additional details
+            for idx, comp in enumerate(layer_comps):
+                col_idx = idx % 3
+                with cols[col_idx]:
+                    bandwidth_change = comp['bandwidth_out'] - comp['bandwidth_in']
+                    bandwidth_pct = (bandwidth_change / comp['bandwidth_in']) * 100 if comp['bandwidth_in'] > 0 else 0
+                    
+                    st.markdown(f"""
+                    <div class="network-segment-card">
+                        <h5>{comp['icon']} {comp['component']}</h5>
+                        <p><strong>Function:</strong> {comp['details']}</p>
+                        <div class="segment-performance">
+                            <div>
+                                <strong>Input:</strong> {comp['bandwidth_in']:,.0f} Mbps<br>
+                                <strong>Output:</strong> {comp['bandwidth_out']:,.0f} Mbps<br>
+                                <strong>Loss:</strong> {abs(bandwidth_change):,.0f} Mbps ({abs(bandwidth_pct):.1f}%)<br>
+                                <strong>Latency:</strong> {comp['latency_ms']:.1f} ms<br>
+                                <strong>Status:</strong> <span style="color: green;">{comp['status']}</span>
+                            </div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+def render_network_performance_dashboard(components, network_perf, agent_perf):
+    """Render comprehensive performance dashboard"""
+    st.markdown("#### 📊 Network Performance Dashboard")
+    
+    # Key metrics row
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        total_latency = sum(comp['latency_ms'] for comp in components)
+        st.metric(
+            "🕐 Total Latency",
+            f"{total_latency:.1f} ms",
+            delta=f"vs {network_perf['total_latency_ms']:.1f} ms calculated"
+        )
+    
+    with col2:
+        initial_bw = components[0]['bandwidth_in'] if components else 0
+        final_bw = components[-1]['bandwidth_out'] if components else 0
+        total_loss = initial_bw - final_bw
+        st.metric(
+            "📉 Total BW Loss",
+            f"{total_loss:,.0f} Mbps",
+            delta=f"{(total_loss/initial_bw)*100:.1f}%" if initial_bw > 0 else "0%"
+        )
+    
+    with col3:
+        bottleneck_bw = min(comp['bandwidth_out'] for comp in components)
+        bottleneck_comp = next(comp for comp in components if comp['bandwidth_out'] == bottleneck_bw)
+        st.metric(
+            "🚧 Bottleneck",
+            f"{bottleneck_bw:,.0f} Mbps",
+            delta=f"{bottleneck_comp['component'][:20]}..."
+        )
+    
+    with col4:
+        agent_efficiency = (agent_perf['total_agent_throughput_mbps'] / agent_perf['base_throughput_mbps']) * 100 if agent_perf.get('base_throughput_mbps') else 0
+        st.metric(
+            "🤖 Agent Efficiency",
+            f"{agent_efficiency:.1f}%",
+            delta=f"{agent_perf['num_agents']} agents"
+        )
+    
+    with col5:
+        overall_efficiency = (final_bw / initial_bw) * 100 if initial_bw > 0 else 0
+        st.metric(
+            "🎯 Overall Efficiency",
+            f"{overall_efficiency:.1f}%",
+            delta="End-to-End"
+        )
+    
+    # Performance timeline chart
+    st.markdown("#### ⏱️ Bandwidth Progression Through Infrastructure")
+    
+    timeline_data = []
+    cumulative_latency = 0
+    
+    for i, comp in enumerate(components):
+        cumulative_latency += comp['latency_ms']
+        timeline_data.append({
+            'Step': i + 1,
+            'Component': comp['component'],
+            'Layer': comp['layer'],
+            'Bandwidth_In': comp['bandwidth_in'],
+            'Bandwidth_Out': comp['bandwidth_out'],
+            'Cumulative_Latency': cumulative_latency,
+            'Component_Latency': comp['latency_ms']
+        })
+    
+    df_timeline = pd.DataFrame(timeline_data)
+    
+    # Create dual-axis chart for bandwidth and latency
+    fig = go.Figure()
+    
+    # Bandwidth progression
+    fig.add_trace(go.Scatter(
+        x=df_timeline['Step'],
+        y=df_timeline['Bandwidth_Out'],
+        mode='lines+markers',
+        name='Bandwidth (Mbps)',
+        line=dict(color='blue', width=3),
+        marker=dict(size=8),
+        text=df_timeline['Component'],
+        hovertemplate='<b>%{text}</b><br>Bandwidth: %{y:,.0f} Mbps<extra></extra>'
+    ))
+    
+    # Add latency on secondary y-axis
+    fig.add_trace(go.Scatter(
+        x=df_timeline['Step'],
+        y=df_timeline['Cumulative_Latency'],
+        mode='lines+markers',
+        name='Cumulative Latency (ms)',
+        line=dict(color='red', width=2, dash='dash'),
+        marker=dict(size=6),
+        yaxis='y2',
+        text=df_timeline['Component'],
+        hovertemplate='<b>%{text}</b><br>Latency: %{y:.1f} ms<extra></extra>'
+    ))
+    
+    # Update layout for dual axis
+    fig.update_layout(
+        title='Network Performance Progression Through Infrastructure',
+        xaxis_title='Infrastructure Component Sequence',
+        yaxis=dict(title='Bandwidth (Mbps)', side='left'),
+        yaxis2=dict(title='Cumulative Latency (ms)', side='right', overlaying='y'),
+        height=400,
+        hovermode='x unified'
+    )
+    
+    # Add component labels on x-axis
+    fig.update_xaxes(
+        tickmode='array',
+        tickvals=df_timeline['Step'],
+        ticktext=[f"{comp[:15]}..." if len(comp) > 15 else comp for comp in df_timeline['Component']],
+        tickangle=45
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+def render_infrastructure_component_analysis(components, config):
+    """Render detailed infrastructure component analysis"""
+    st.markdown("#### 🔬 Infrastructure Component Deep Dive")
+    
+    # Migration-specific components analysis
+    agent_type = config['migration_type']
+    
+    if agent_type == 'datasync':
+        st.markdown("##### 📦 AWS DataSync Agent Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            <div class="network-card">
+                <h6>🔄 DataSync Agent Characteristics</h6>
+                <ul>
+                    <li><strong>Protocol:</strong> Custom AWS protocol over HTTPS</li>
+                    <li><strong>Compression:</strong> Real-time data compression</li>
+                    <li><strong>Verification:</strong> Checksum validation</li>
+                    <li><strong>Encryption:</strong> TLS 1.2 in transit</li>
+                    <li><strong>Optimization:</strong> Sparse file detection</li>
+                    <li><strong>Throttling:</strong> Configurable bandwidth control</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
             st.markdown(f"""
-            **Connection Type:** {segment['connection_type'].replace('_', ' ').title()}  
-            **Congestion Factor:** {segment['congestion_factor']:.2f}x  
-            **Cost Factor:** {segment['cost_factor']:.1f}  
-            """)
+            <div class="performance-card">
+                <h6>⚡ Current DataSync Configuration</h6>
+                <p><strong>Agent Count:</strong> {config['number_of_agents']}</p>
+                <p><strong>Agent Size:</strong> {config['agent_size'].title()}</p>
+                <p><strong>Platform:</strong> {config['server_type'].title()}</p>
+                <p><strong>File System:</strong> {config.get('storage_type', 'NFS').upper()}</p>
+                <p><strong>Source Size:</strong> {config['database_size_gb']:,} GB</p>
+                <p><strong>Expected Transfer:</strong> File-level synchronization</p>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # Network path summary
+    else:  # DMS
+        st.markdown("##### 🔄 AWS DMS Instance Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("""
+            <div class="network-card">
+                <h6>🗃️ DMS Instance Characteristics</h6>
+                <ul>
+                    <li><strong>Migration:</strong> Database-level replication</li>
+                    <li><strong>CDC:</strong> Change Data Capture support</li>
+                    <li><strong>Schema:</strong> Automatic schema conversion</li>
+                    <li><strong>Validation:</strong> Data validation tools</li>
+                    <li><strong>Monitoring:</strong> CloudWatch integration</li>
+                    <li><strong>Filtering:</strong> Table and column filtering</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+            <div class="performance-card">
+                <h6>⚡ Current DMS Configuration</h6>
+                <p><strong>Instance Count:</strong> {config['number_of_agents']}</p>
+                <p><strong>Instance Size:</strong> {config['agent_size'].title()}</p>
+                <p><strong>Source DB:</strong> {config.get('source_database_engine', 'MySQL').upper()}</p>
+                <p><strong>Target DB:</strong> {config.get('database_engine', 'MySQL').upper()}</p>
+                <p><strong>Data Size:</strong> {config['database_size_gb']:,} GB</p>
+                <p><strong>Migration Type:</strong> {'Homogeneous' if config.get('is_homogeneous') else 'Heterogeneous'}</p>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Network infrastructure details
+    st.markdown("##### 🌐 Network Infrastructure Components")
+    
+    infrastructure_tabs = st.tabs(["🔀 Switching", "🛡️ Security", "🌉 Connectivity", "☁️ AWS Services"])
+    
+    with infrastructure_tabs[0]:
+        st.markdown("""
+        **Core Network Switching Infrastructure:**
+        
+        • **Access Layer:** Server-to-switch connectivity (typically 1/10 GbE)
+        • **Aggregation Layer:** VLAN aggregation and policy enforcement  
+        • **Core Layer:** High-speed backbone (10/25/40 GbE)
+        • **Redundancy:** Link aggregation and spanning tree protocols
+        • **QoS:** Traffic prioritization for migration flows
+        """)
+    
+    with infrastructure_tabs[1]:
+        st.markdown("""
+        **Security Infrastructure Components:**
+        
+        • **Firewalls:** Stateful inspection and application awareness
+        • **IPS/IDS:** Intrusion prevention and detection systems
+        • **VPN Concentrators:** Encrypted tunnel termination
+        • **NAT Gateways:** Network address translation services
+        • **Certificate Management:** PKI and SSL/TLS certificate handling
+        """)
+    
+    with infrastructure_tabs[2]:
+        st.markdown("""
+        **Wide Area Network Connectivity:**
+        
+        • **MPLS Networks:** Private label-switched paths
+        • **Direct Connect:** Dedicated AWS connectivity
+        • **SD-WAN:** Software-defined WAN optimization
+        • **Load Balancers:** Traffic distribution and failover
+        • **WAN Optimization:** Compression and caching appliances
+        """)
+    
+    with infrastructure_tabs[3]:
+        st.markdown("""
+        **AWS Cloud Services Integration:**
+        
+        • **VPC Transit Gateway:** Multi-VPC routing hub
+        • **Direct Connect Gateway:** Cross-region connectivity
+        • **Route 53:** DNS resolution and health checks
+        • **CloudFront:** Global content delivery network
+        • **WAF/Shield:** Web application firewall and DDoS protection
+        """)
+
+def identify_network_bottlenecks(components, network_perf, agent_perf):
+    """Identify and analyze network bottlenecks"""
+    st.markdown("#### 🚧 Bottleneck Analysis & Optimization Opportunities")
+    
+    # Find bandwidth bottlenecks
+    bandwidth_drops = []
+    for i in range(len(components) - 1):
+        current_comp = components[i]
+        next_comp = components[i + 1]
+        
+        bandwidth_drop = current_comp['bandwidth_out'] - next_comp['bandwidth_in']
+        if bandwidth_drop > 10:  # Significant drop
+            bandwidth_drops.append({
+                'from_component': current_comp['component'],
+                'to_component': next_comp['component'],
+                'bandwidth_loss': bandwidth_drop,
+                'loss_percentage': (bandwidth_drop / current_comp['bandwidth_out']) * 100
+            })
+    
+    # Find latency hotspots
+    latency_hotspots = [comp for comp in components if comp['latency_ms'] > 5.0]
+    
+    # Analysis results
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown(f"""
-        <div class="network-segment-card">
-            <h4>🎯 Path Summary</h4>
-            <p><strong>Total Segments:</strong> {len(segments)}</p>
-            <p><strong>Initial Bandwidth:</strong> 10,000 Mbps</p>
-            <p><strong>Final Bandwidth:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</p>
-            <p><strong>Total Bandwidth Loss:</strong> {10000 - network_perf['effective_bandwidth_mbps']:,.0f} Mbps ({((10000 - network_perf['effective_bandwidth_mbps'])/10000)*100:.1f}%)</p>
-            <p><strong>Total Latency:</strong> {network_perf['total_latency_ms']:.1f} ms</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("##### 📉 Bandwidth Bottlenecks")
+        
+        if bandwidth_drops:
+            for drop in bandwidth_drops:
+                st.warning(f"""
+                **Bandwidth Drop Detected:**
+                • **From:** {drop['from_component']}
+                • **To:** {drop['to_component']}  
+                • **Loss:** {drop['bandwidth_loss']:,.0f} Mbps ({drop['loss_percentage']:.1f}%)
+                """)
+        else:
+            st.success("✅ No significant bandwidth drops detected")
     
     with col2:
-        st.markdown(f"""
-        <div class="network-segment-card">
-            <h4>⚡ Performance Characteristics</h4>
-            <p><strong>Environment:</strong> {network_perf['environment'].title()}</p>
-            <p><strong>OS Type:</strong> {network_perf['os_type'].title()}</p>
-            <p><strong>Storage Protocol:</strong> {network_perf['storage_mount_type'].upper()}</p>
-            <p><strong>Quality Score:</strong> {network_perf['network_quality_score']:.1f}/100</p>
-            <p><strong>Reliability:</strong> {network_perf['total_reliability']*100:.2f}%</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-def parse_ai_analysis(analysis_text: str) -> Dict:
-    """Parse Claude AI analysis into structured sections"""
-    sections = {
-        'performance_bottleneck': '',
-        'optimization_recommendations': '',
-        'expected_vs_actual': '',
-        'cost_optimization': '',
-        'risk_assessment': ''
-    }
-    
-    current_section = None
-    lines = analysis_text.split('\n')
-    
-    for line in lines:
-        line = line.strip()
+        st.markdown("##### 🕐 Latency Hotspots")
         
-        # Identify section headers
-        if 'PERFORMANCE BOTTLENECK' in line.upper():
-            current_section = 'performance_bottleneck'
-        elif 'OPTIMIZATION RECOMMENDATION' in line.upper():
-            current_section = 'optimization_recommendations'
-        elif 'EXPECTED VS ACTUAL' in line.upper():
-            current_section = 'expected_vs_actual'
-        elif 'COST OPTIMIZATION' in line.upper():
-            current_section = 'cost_optimization'
-        elif 'RISK ASSESSMENT' in line.upper():
-            current_section = 'risk_assessment'
-        elif current_section and line:
-            sections[current_section] += line + '\n'
+        if latency_hotspots:
+            for hotspot in latency_hotspots:
+                st.warning(f"""
+                **High Latency Component:**
+                • **Component:** {hotspot['component']}
+                • **Latency:** {hotspot['latency_ms']:.1f} ms
+                • **Layer:** {hotspot['layer']}
+                """)
+        else:
+            st.success("✅ All components within acceptable latency ranges")
     
-    # If sections aren't clearly defined, put everything in performance_bottleneck
-    if not any(sections.values()):
-        sections['performance_bottleneck'] = analysis_text
+    # Optimization recommendations
+    st.markdown("##### 🎯 Optimization Recommendations")
     
-    return sections
-
-def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
-                                   network_perf: Dict, agent_perf: Dict, aws_data: Dict):
-    """Render professionally formatted Claude AI analysis"""
-    st.markdown("**🤖 AI-Powered Performance Analysis**")
+    final_throughput = min(network_perf['effective_bandwidth_mbps'], agent_perf['total_agent_throughput_mbps'])
     
-    if not claude_integration.client:
-        st.info("Claude AI integration not connected. Check sidebar for connection status.")
-        return
-    
-    with st.spinner("Analyzing migration configuration..."):
-        analysis = claude_integration.analyze_migration_performance(
-            config, network_perf, agent_perf, aws_data
-        )
-    
-    # Parse the analysis into sections
-    sections = parse_ai_analysis(analysis)
-    
-    # Render sections professionally
-    if sections['performance_bottleneck']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4>🔍 Performance Bottleneck Analysis</h4>
-            <div>{sections['performance_bottleneck'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['optimization_recommendations']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4>🚀 Optimization Recommendations</h4>
-            <div>{sections['optimization_recommendations'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['expected_vs_actual']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4>📊 Expected vs Actual Performance</h4>
-            <div>{sections['expected_vs_actual'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['cost_optimization']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4>💰 Cost Optimization Suggestions</h4>
-            <div>{sections['cost_optimization'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['risk_assessment']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4>⚠️ Risk Assessment & Mitigation</h4>
-            <div>{sections['risk_assessment'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # If no sections were parsed, show the full analysis
-    if not any(sections.values()):
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4>🧠 Complete Analysis</h4>
-            <div>{analysis.replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Get specific optimization recommendations
+    # Determine primary bottleneck
     if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
-        bottleneck_type = "network"
+        primary_bottleneck = "network"
+        bottleneck_value = network_perf['effective_bandwidth_mbps']
+        potential_gain = agent_perf['total_agent_throughput_mbps'] - network_perf['effective_bandwidth_mbps']
     else:
-        bottleneck_type = "agent"
+        primary_bottleneck = "agent"
+        bottleneck_value = agent_perf['total_agent_throughput_mbps']
+        potential_gain = network_perf['effective_bandwidth_mbps'] - agent_perf['total_agent_throughput_mbps']
     
-    with st.expander("🎯 Targeted Optimization Recommendations"):
-        with st.spinner("Getting optimization recommendations..."):
-            recommendations = claude_integration.get_optimization_recommendations(
-                bottleneck_type, config
-            )
-        
+    optimization_cols = st.columns(3)
+    
+    with optimization_cols[0]:
         st.markdown(f"""
-        <div class="ai-section">
-            <h4>🔧 {bottleneck_type.title()} Bottleneck Solutions</h4>
-            <div>{recommendations.replace(chr(10), '<br>')}</div>
+        <div class="{'warning-card' if primary_bottleneck == 'network' else 'network-card'}">
+            <h6>🌐 Network Optimization</h6>
+            <p><strong>Current:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</p>
+            <p><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'network' else 'No'}</p>
+            <p><strong>Recommendations:</strong></p>
+            <ul>
+                <li>Upgrade WAN bandwidth</li>
+                <li>Optimize routing paths</li>
+                <li>Implement QoS policies</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with optimization_cols[1]:
+        st.markdown(f"""
+        <div class="{'warning-card' if primary_bottleneck == 'agent' else 'network-card'}">
+            <h6>🤖 Agent Optimization</h6>
+            <p><strong>Current:</strong> {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</p>
+            <p><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'agent' else 'No'}</p>
+            <p><strong>Recommendations:</strong></p>
+            <ul>
+                <li>Scale agent instances</li>
+                <li>Upgrade instance sizes</li>
+                <li>Optimize configurations</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with optimization_cols[2]:
+        st.markdown(f"""
+        <div class="performance-card">
+            <h6>📊 Potential Improvement</h6>
+            <p><strong>Current Performance:</strong> {final_throughput:,.0f} Mbps</p>
+            <p><strong>Potential Gain:</strong> {potential_gain:,.0f} Mbps</p>
+            <p><strong>Improvement:</strong> {(potential_gain/final_throughput)*100:.1f}%</p>
+            <p><strong>Primary Focus:</strong> {primary_bottleneck.title()} Layer</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -1492,6 +1846,128 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
                        len([t for t in dms_tasks if t['status'] == 'ready']),
         'region': current_region
     }
+
+def parse_ai_analysis(analysis_text: str) -> Dict:
+    """Parse Claude AI analysis into structured sections"""
+    sections = {
+        'performance_bottleneck': '',
+        'optimization_recommendations': '',
+        'expected_vs_actual': '',
+        'cost_optimization': '',
+        'risk_assessment': ''
+    }
+    
+    current_section = None
+    lines = analysis_text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Identify section headers
+        if 'PERFORMANCE BOTTLENECK' in line.upper():
+            current_section = 'performance_bottleneck'
+        elif 'OPTIMIZATION RECOMMENDATION' in line.upper():
+            current_section = 'optimization_recommendations'
+        elif 'EXPECTED VS ACTUAL' in line.upper():
+            current_section = 'expected_vs_actual'
+        elif 'COST OPTIMIZATION' in line.upper():
+            current_section = 'cost_optimization'
+        elif 'RISK ASSESSMENT' in line.upper():
+            current_section = 'risk_assessment'
+        elif current_section and line:
+            sections[current_section] += line + '\n'
+    
+    # If sections aren't clearly defined, put everything in performance_bottleneck
+    if not any(sections.values()):
+        sections['performance_bottleneck'] = analysis_text
+    
+    return sections
+
+def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
+                                   network_perf: Dict, agent_perf: Dict, aws_data: Dict):
+    """Render professionally formatted Claude AI analysis"""
+    st.markdown("**🤖 AI-Powered Performance Analysis**")
+    
+    if not claude_integration.client:
+        st.info("Claude AI integration not connected. Check sidebar for connection status.")
+        return
+    
+    with st.spinner("Analyzing migration configuration..."):
+        analysis = claude_integration.analyze_migration_performance(
+            config, network_perf, agent_perf, aws_data
+        )
+    
+    # Parse the analysis into sections
+    sections = parse_ai_analysis(analysis)
+    
+    # Render sections professionally
+    if sections['performance_bottleneck']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🔍 Performance Bottleneck Analysis</h4>
+            <div>{sections['performance_bottleneck'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['optimization_recommendations']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🚀 Optimization Recommendations</h4>
+            <div>{sections['optimization_recommendations'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['expected_vs_actual']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>📊 Expected vs Actual Performance</h4>
+            <div>{sections['expected_vs_actual'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['cost_optimization']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>💰 Cost Optimization Suggestions</h4>
+            <div>{sections['cost_optimization'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['risk_assessment']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>⚠️ Risk Assessment & Mitigation</h4>
+            <div>{sections['risk_assessment'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # If no sections were parsed, show the full analysis
+    if not any(sections.values()):
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🧠 Complete Analysis</h4>
+            <div>{analysis.replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Get specific optimization recommendations
+    if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
+        bottleneck_type = "network"
+    else:
+        bottleneck_type = "agent"
+    
+    with st.expander("🎯 Targeted Optimization Recommendations"):
+        with st.spinner("Getting optimization recommendations..."):
+            recommendations = claude_integration.get_optimization_recommendations(
+                bottleneck_type, config
+            )
+        
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4>🔧 {bottleneck_type.title()} Bottleneck Solutions</h4>
+            <div>{recommendations.replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
 def render_enhanced_sidebar():
     """Enhanced sidebar with connection status and configuration"""
@@ -1796,7 +2272,7 @@ def main():
     
     with tab3:
         st.subheader("🌐 Enhanced Network Path Visualization")
-        render_network_path_visualization(network_perf)
+        render_network_path_visualization(network_perf, config, agent_perf)
         
         col1, col2, col3, col4 = st.columns(4)
         
