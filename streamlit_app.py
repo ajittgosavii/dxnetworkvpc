@@ -1201,8 +1201,8 @@ class EnhancedNetworkAnalyzer:
     }
         
         # Initialize new clients
-        self.pricing_client = AWSPricingClient()
-        self.ai_client = ClaudeAIClient()
+    self.pricing_client = AWSPricingClient()
+    self.ai_client = ClaudeAIClient()
     
     def determine_optimal_pattern(self, source_location: str, environment: str, migration_service: str) -> str:
         """Determine optimal network pattern based on requirements"""
