@@ -93,6 +93,31 @@ st.markdown("""
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         border-left: 3px solid #d97706;
     }
+
+    .connection-status {
+        padding: 0.5rem 1rem;
+        border-radius: 4px;
+        margin: 0.5rem 0;
+        font-weight: bold;
+    }
+    
+    .status-connected {
+        background-color: #d1fae5;
+        color: #065f46;
+        border: 1px solid #10b981;
+    }
+    
+    .status-disconnected {
+        background-color: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #ef4444;
+    }
+    
+    .status-partial {
+        background-color: #fef3c7;
+        color: #92400e;
+        border: 1px solid #f59e0b;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -763,6 +788,130 @@ def get_nic_efficiency(nic_type: str) -> float:
     }
     return efficiencies.get(nic_type, 0.90)
 
+def get_secrets_safely() -> Dict:
+    """Safely retrieve secrets with error handling"""
+    secrets = {}
+    
+    try:
+        # AWS secrets
+        secrets['aws_access_key'] = st.secrets.get("AWS_ACCESS_KEY", None)
+        secrets['aws_secret_key'] = st.secrets.get("AWS_SECRET_KEY", None)
+        secrets['aws_region'] = st.secrets.get("AWS_REGION", "us-west-2")
+        
+        # Claude AI secret
+        secrets['claude_api_key'] = st.secrets.get("CLAUDE_API_KEY", None)
+        
+    except Exception as e:
+        st.warning(f"Note: Some secrets are not configured in Streamlit Cloud: {str(e)}")
+    
+    return secrets
+
+def initialize_integrations():
+    """Initialize AWS and Claude integrations using secrets"""
+    secrets = get_secrets_safely()
+    
+    # Initialize AWS Integration
+    aws_integration = AWSIntegration()
+    aws_status = "❌ Not Connected"
+    aws_message = "AWS secrets not configured"
+    
+    if secrets.get('aws_access_key') and secrets.get('aws_secret_key'):
+        try:
+            success, message = aws_integration.initialize_aws_session(
+                secrets['aws_access_key'], 
+                secrets['aws_secret_key'], 
+                secrets['aws_region']
+            )
+            if success:
+                aws_status = "✅ Connected"
+                aws_message = message
+            else:
+                aws_status = "⚠️ Connection Failed"
+                aws_message = message
+        except Exception as e:
+            aws_status = "⚠️ Connection Failed"
+            aws_message = str(e)
+    
+    # Initialize Claude AI Integration
+    claude_integration = ClaudeAIIntegration()
+    claude_status = "❌ Not Connected"
+    claude_message = "Claude API key not configured"
+    
+    if secrets.get('claude_api_key'):
+        try:
+            success, message = claude_integration.initialize_claude(secrets['claude_api_key'])
+            if success:
+                claude_status = "✅ Connected"
+                claude_message = message
+            else:
+                claude_status = "⚠️ Connection Failed"
+                claude_message = message
+        except Exception as e:
+            claude_status = "⚠️ Connection Failed"
+            claude_message = str(e)
+    
+    return {
+        'aws_integration': aws_integration,
+        'claude_integration': claude_integration,
+        'aws_status': aws_status,
+        'aws_message': aws_message,
+        'claude_status': claude_status,
+        'claude_message': claude_message
+    }
+
+def render_connection_status(status_info: Dict):
+    """Render connection status in sidebar"""
+    st.sidebar.subheader("🔗 API Connection Status")
+    
+    # AWS Status
+    aws_status_class = "status-connected" if "✅" in status_info['aws_status'] else (
+        "status-partial" if "⚠️" in status_info['aws_status'] else "status-disconnected"
+    )
+    
+    st.sidebar.markdown(f"""
+    <div class="connection-status {aws_status_class}">
+        <strong>AWS Integration</strong><br>
+        {status_info['aws_status']}<br>
+        <small>{status_info['aws_message']}</small>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Claude AI Status
+    claude_status_class = "status-connected" if "✅" in status_info['claude_status'] else (
+        "status-partial" if "⚠️" in status_info['claude_status'] else "status-disconnected"
+    )
+    
+    st.sidebar.markdown(f"""
+    <div class="connection-status {claude_status_class}">
+        <strong>Claude AI Integration</strong><br>
+        {status_info['claude_status']}<br>
+        <small>{status_info['claude_message']}</small>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Manual refresh button
+    if st.sidebar.button("🔄 Refresh Connections"):
+        st.rerun()
+    
+    # Configuration info
+    with st.sidebar.expander("ℹ️ Configuration Info"):
+        st.markdown("""
+        **Required Streamlit Secrets:**
+        
+        For AWS Integration:
+        - `AWS_ACCESS_KEY`
+        - `AWS_SECRET_KEY`
+        - `AWS_REGION` (optional, defaults to us-west-2)
+        
+        For Claude AI Integration:
+        - `CLAUDE_API_KEY`
+        
+        **How to configure:**
+        1. Go to your Streamlit Cloud app settings
+        2. Navigate to the "Secrets" section
+        3. Add the required keys as shown above
+        """)
+
 def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_perf: Dict):
     """Enhanced bandwidth waterfall with storage type analysis"""
     st.markdown("**🌊 Enhanced Bandwidth Waterfall: Complete Performance Analysis**")
@@ -984,7 +1133,7 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
     st.markdown("**☁️ AWS Real-Time Integration**")
     
     if not aws_integration.session:
-        st.info("AWS integration not configured. Enter credentials in sidebar to enable real-time monitoring.")
+        st.info("AWS integration not connected. Check sidebar for connection status.")
         return {}
     
     col1, col2 = st.columns(2)
@@ -1032,7 +1181,7 @@ def render_claude_ai_analysis(claude_integration: ClaudeAIIntegration, config: D
     st.markdown("**🤖 Claude AI Performance Analysis**")
     
     if not claude_integration.client:
-        st.info("Claude AI integration not configured. Enter API key in sidebar for intelligent analysis.")
+        st.info("Claude AI integration not connected. Check sidebar for connection status.")
         return
     
     with st.spinner("Getting AI analysis..."):
@@ -1061,47 +1210,10 @@ def render_claude_ai_analysis(claude_integration: ClaudeAIIntegration, config: D
         st.markdown(recommendations)
 
 def render_enhanced_sidebar():
-    """Enhanced sidebar with API integrations"""
+    """Enhanced sidebar with connection status and configuration"""
     st.sidebar.header("🌐 Enhanced Migration Analyzer")
     
-    # API Integration Section
-    st.sidebar.subheader("🔗 API Integrations")
-    
-    # AWS Integration
-    with st.sidebar.expander("☁️ AWS Integration"):
-        aws_access_key = st.text_input("AWS Access Key", type="password")
-        aws_secret_key = st.text_input("AWS Secret Key", type="password")
-        aws_region = st.selectbox("AWS Region", 
-                                 ["us-west-2", "us-east-1", "eu-west-1", "ap-southeast-1"],
-                                 index=0)
-        
-        if st.button("Connect to AWS"):
-            aws_integration = AWSIntegration()
-            success, message = aws_integration.initialize_aws_session(
-                aws_access_key, aws_secret_key, aws_region
-            )
-            if success:
-                st.success(message)
-                st.session_state['aws_integration'] = aws_integration
-            else:
-                st.error(message)
-    
-    # Claude AI Integration
-    with st.sidebar.expander("🤖 Claude AI Integration"):
-        claude_api_key = st.text_input("Claude AI API Key", type="password")
-        
-        if st.button("Connect to Claude AI"):
-            claude_integration = ClaudeAIIntegration()
-            success, message = claude_integration.initialize_claude(claude_api_key)
-            if success:
-                st.success(message)
-                st.session_state['claude_integration'] = claude_integration
-            else:
-                st.error(message)
-    
-    st.sidebar.divider()
-    
-    # Original configuration options
+    # Configuration section
     st.sidebar.subheader("💻 System Configuration")
     
     # Operating System
@@ -1257,7 +1369,7 @@ def render_enhanced_sidebar():
     }
 
 def main():
-    """Enhanced main application"""
+    """Enhanced main application with automatic secret integration"""
     # Header
     st.markdown("""
     <div class="main-header">
@@ -1266,14 +1378,23 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Initialize session state for integrations
-    if 'aws_integration' not in st.session_state:
-        st.session_state['aws_integration'] = AWSIntegration()
-    if 'claude_integration' not in st.session_state:
-        st.session_state['claude_integration'] = ClaudeAIIntegration()
-    
+    # Initialize integrations using secrets
+    if 'integrations_initialized' not in st.session_state:
+        with st.spinner("Initializing API integrations..."):
+            integration_status = initialize_integrations()
+            st.session_state.update(integration_status)
+            st.session_state['integrations_initialized'] = True
+
     # Get configuration
     config = render_enhanced_sidebar()
+    
+    # Render connection status in sidebar
+    render_connection_status({
+        'aws_status': st.session_state.get('aws_status', '❌ Not Connected'),
+        'aws_message': st.session_state.get('aws_message', 'Not initialized'),
+        'claude_status': st.session_state.get('claude_status', '❌ Not Connected'),
+        'claude_message': st.session_state.get('claude_message', 'Not initialized')
+    })
     
     # Initialize enhanced managers
     network_manager = EnhancedNetworkPathManager()
@@ -1303,7 +1424,7 @@ def main():
     
     # Get AWS real-time data
     aws_data = {}
-    if st.session_state['aws_integration'].session:
+    if st.session_state.get('aws_integration') and st.session_state['aws_integration'].session:
         aws_data = render_aws_integration_panel(st.session_state['aws_integration'])
     
     # Main content tabs
@@ -1478,8 +1599,9 @@ def main():
     with tab5:
         st.subheader("☁️ AWS Real-Time Integration")
         
-        if st.session_state['aws_integration'].session:
-            aws_data_detailed = render_aws_integration_panel(st.session_state['aws_integration'])
+        aws_integration = st.session_state.get('aws_integration')
+        if aws_integration and aws_integration.session:
+            aws_data_detailed = render_aws_integration_panel(aws_integration)
             
             # CloudWatch metrics visualization
             st.markdown("**📊 CloudWatch Metrics**")
@@ -1488,32 +1610,33 @@ def main():
             
             with metrics_col1:
                 if agent_type == 'datasync':
-                    datasync_metrics = st.session_state['aws_integration'].get_cloudwatch_metrics('datasync')
+                    datasync_metrics = aws_integration.get_cloudwatch_metrics('datasync')
                     if datasync_metrics:
                         st.success(f"Found {len(datasync_metrics)} DataSync metrics")
                     else:
                         st.info("No recent DataSync metrics available")
             
             with metrics_col2:
-                dms_metrics = st.session_state['aws_integration'].get_cloudwatch_metrics('dms')
+                dms_metrics = aws_integration.get_cloudwatch_metrics('dms')
                 if dms_metrics:
                     st.success(f"Found {len(dms_metrics)} DMS metrics") 
                 else:
                     st.info("No recent DMS metrics available")
         else:
-            st.warning("AWS integration not configured. Configure in the sidebar to enable real-time monitoring.")
+            st.warning("AWS integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.")
             aws_data_detailed = {}
     
     with tab6:
         st.subheader("🧠 Claude AI Performance Analysis")
         
-        if st.session_state['claude_integration'].client:
+        claude_integration = st.session_state.get('claude_integration')
+        if claude_integration and claude_integration.client:
             render_claude_ai_analysis(
-                st.session_state['claude_integration'], 
+                claude_integration, 
                 config, network_perf, agent_perf, aws_data
             )
         else:
-            st.warning("Claude AI integration not configured. Configure in the sidebar for intelligent analysis.")
+            st.warning("Claude AI integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.")
     
     # Final recommendations summary
     st.markdown("---")
