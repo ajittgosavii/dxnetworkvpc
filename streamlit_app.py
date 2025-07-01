@@ -796,7 +796,7 @@ def get_secrets_safely() -> Dict:
         # AWS secrets
         secrets['aws_access_key'] = st.secrets.get("AWS_ACCESS_KEY", None)
         secrets['aws_secret_key'] = st.secrets.get("AWS_SECRET_KEY", None)
-        secrets['aws_region'] = st.secrets.get("AWS_REGION", "us-west-2")
+        secrets['aws_region'] = st.secrets.get("AWS_REGION", "us-east-1")
         
         # Claude AI secret
         secrets['claude_api_key'] = st.secrets.get("CLAUDE_API_KEY", None)
@@ -901,7 +901,13 @@ def render_connection_status(status_info: Dict):
         For AWS Integration:
         - `AWS_ACCESS_KEY`
         - `AWS_SECRET_KEY`
-        - `AWS_REGION` (optional, defaults to us-west-2)
+        - `AWS_REGION` (optional, defaults to us-east-1)
+        
+        **Common AWS Regions:**
+        - `us-east-1` (N. Virginia)
+        - `us-west-2` (Oregon)
+        - `eu-west-1` (Ireland)
+        - `ap-southeast-1` (Singapore)
         
         For Claude AI Integration:
         - `CLAUDE_API_KEY`
@@ -910,6 +916,9 @@ def render_connection_status(status_info: Dict):
         1. Go to your Streamlit Cloud app settings
         2. Navigate to the "Secrets" section
         3. Add the required keys as shown above
+        
+        **Note:** Make sure AWS_REGION matches where your 
+        DataSync/DMS resources are located.
         """)
 
 def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_perf: Dict):
@@ -1136,6 +1145,10 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
         st.info("AWS integration not connected. Check sidebar for connection status.")
         return {}
     
+    # Show current region
+    current_region = aws_integration.session.region_name
+    st.info(f"📍 **Connected to AWS Region:** {current_region}")
+    
     col1, col2 = st.columns(2)
     
     with col1:
@@ -1143,36 +1156,45 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
         datasync_tasks = aws_integration.get_datasync_tasks()
         
         if datasync_tasks:
+            st.success(f"Found {len(datasync_tasks)} DataSync tasks in {current_region}")
             for task in datasync_tasks[:3]:  # Show first 3 tasks
                 with st.expander(f"Task: {task['name']}"):
                     st.write(f"**Status:** {task['status']}")
-                    st.write(f"**Source:** {task['source_location']}")
-                    st.write(f"**Destination:** {task['destination_location']}")
+                    # Extract location names from ARNs for better readability
+                    source_loc = task['source_location'].split('/')[-1] if task['source_location'] != 'Unknown' else 'Unknown'
+                    dest_loc = task['destination_location'].split('/')[-1] if task['destination_location'] != 'Unknown' else 'Unknown'
+                    st.write(f"**Source Location:** {source_loc}")
+                    st.write(f"**Destination Location:** {dest_loc}")
                     if task['executions']:
                         latest_execution = task['executions'][0]
                         st.write(f"**Latest Execution:** {latest_execution.get('Status', 'Unknown')}")
         else:
-            st.info("No DataSync tasks found in the current region.")
+            st.warning(f"No DataSync tasks found in {current_region}")
     
     with col2:
         st.markdown("**🔄 DMS Tasks**")
         dms_tasks = aws_integration.get_dms_tasks()
         
         if dms_tasks:
+            st.success(f"Found {len(dms_tasks)} DMS tasks in {current_region}")
             for task in dms_tasks[:3]:  # Show first 3 tasks
                 with st.expander(f"Task: {task['name']}"):
                     st.write(f"**Status:** {task['status']}")
                     st.write(f"**Migration Type:** {task['migration_type']}")
-                    st.write(f"**Source:** {task['source_endpoint']}")
-                    st.write(f"**Target:** {task['target_endpoint']}")
+                    # Extract endpoint names from ARNs for better readability
+                    source_ep = task['source_endpoint'].split('/')[-1] if task['source_endpoint'] != 'Unknown' else 'Unknown'
+                    target_ep = task['target_endpoint'].split('/')[-1] if task['target_endpoint'] != 'Unknown' else 'Unknown'
+                    st.write(f"**Source Endpoint:** {source_ep}")
+                    st.write(f"**Target Endpoint:** {target_ep}")
         else:
-            st.info("No DMS tasks found in the current region.")
+            st.warning(f"No DMS tasks found in {current_region}")
     
     return {
         'datasync_tasks': len(datasync_tasks),
         'dms_tasks': len(dms_tasks),
         'active_tasks': len([t for t in datasync_tasks if t['status'] == 'AVAILABLE']) + 
-                       len([t for t in dms_tasks if t['status'] == 'ready'])
+                       len([t for t in dms_tasks if t['status'] == 'ready']),
+        'region': current_region
     }
 
 def render_claude_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
