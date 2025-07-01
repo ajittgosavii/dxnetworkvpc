@@ -357,7 +357,7 @@ class ClaudeAIIntegration:
             return f"Error getting placement recommendations: {str(e)}"
 
 class WaterfallBandwidthAnalyzer:
-    """NEW: Waterfall bandwidth analysis for network path segments"""
+    """Enhanced waterfall bandwidth analysis for detailed end-to-end network path segments"""
     
     def __init__(self):
         self.bottleneck_thresholds = {
@@ -473,13 +473,13 @@ class WaterfallBandwidthAnalyzer:
         }
 
 class EnhancedNetworkPathManager:
-    """Enhanced network path manager with database backup storage focus"""
+    """Enhanced network path manager with detailed end-to-end database backup storage focus"""
     
     def __init__(self):
         self.network_paths = {
-            # SQL Server backup paths (Windows Share)
+            # SQL Server backup paths (Windows Share) - Non-Production with full end-to-end view
             'nonprod_sj_sqlserver_windows_share_s3': {
-                'name': 'Non-Prod: SQL Server Backups (Windows Share) → AWS S3',
+                'name': 'Non-Prod: SQL Server Backups → AWS S3 (End-to-End)',
                 'destination_storage': 'S3',
                 'source': 'San Jose',
                 'destination': 'AWS US-West-2 S3',
@@ -491,38 +491,100 @@ class EnhancedNetworkPathManager:
                 'backup_location': 'Windows File Share',
                 'segments': [
                     {
-                        'name': 'SQL Server Backup to Windows Share (SMB)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 4,
-                        'reliability': 0.995,
-                        'connection_type': 'internal_lan',
+                        'name': 'OS: Windows Server SQL Backup Process',
+                        'bandwidth_mbps': 25000,
+                        'latency_ms': 0.2,
+                        'reliability': 0.9999,
+                        'connection_type': 'os_layer',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.85,
+                        'optimization_potential': 0.95,
+                        'protocol_efficiency': 0.92
+                    },
+                    {
+                        'name': 'NIC: 10Gbps Ethernet Interface',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.1,
+                        'reliability': 0.9998,
+                        'connection_type': 'nic_layer',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.88,
+                        'protocol_efficiency': 0.85
+                    },
+                    {
+                        'name': 'LAN Switch: Access Layer (SMB)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.8,
+                        'reliability': 0.9996,
+                        'connection_type': 'lan_switch',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.82,
                         'protocol_efficiency': 0.78
                     },
                     {
-                        'name': 'Windows Share to DataSync Agent (SMB)',
+                        'name': 'LAN Switch: Distribution Layer',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.996,
-                        'connection_type': 'internal_lan',
+                        'latency_ms': 1.2,
+                        'reliability': 0.9995,
+                        'connection_type': 'lan_switch',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.82,
-                        'protocol_efficiency': 0.75
+                        'optimization_potential': 0.85,
+                        'protocol_efficiency': 0.82
                     },
                     {
-                        'name': 'DataSync Agent to AWS S3 (HTTPS)',
+                        'name': 'Network Link: Campus Backbone',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2.5,
+                        'reliability': 0.9994,
+                        'connection_type': 'network_link',
+                        'cost_factor': 1.0,
+                        'optimization_potential': 0.88,
+                        'protocol_efficiency': 0.85
+                    },
+                    {
+                        'name': 'Router: Core Network Router',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.8,
+                        'reliability': 0.9997,
+                        'connection_type': 'router',
+                        'cost_factor': 0.5,
+                        'optimization_potential': 0.90,
+                        'protocol_efficiency': 0.88
+                    },
+                    {
+                        'name': 'Firewall: Enterprise Security Gateway',
+                        'bandwidth_mbps': 8000,
+                        'latency_ms': 3.2,
+                        'reliability': 0.9993,
+                        'connection_type': 'firewall',
+                        'cost_factor': 1.5,
+                        'optimization_potential': 0.75,
+                        'protocol_efficiency': 0.72
+                    },
+                    {
+                        'name': 'Network Link: Internet Gateway',
                         'bandwidth_mbps': 2000,
-                        'latency_ms': 18,
+                        'latency_ms': 8.5,
                         'reliability': 0.998,
-                        'connection_type': 'direct_connect',
+                        'connection_type': 'internet_gateway',
                         'cost_factor': 2.0,
-                        'optimization_potential': 0.88
+                        'optimization_potential': 0.85,
+                        'protocol_efficiency': 0.82
+                    },
+                    {
+                        'name': 'AWS: Internet Gateway → S3',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 5.2,
+                        'reliability': 0.9999,
+                        'connection_type': 'aws_service',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.95,
+                        'protocol_efficiency': 0.92
                     }
                 ]
             },
+            # SQL Server backup paths (Windows Share) - Production with full end-to-end view
             'prod_sa_sqlserver_windows_share_s3': {
-                'name': 'Prod: SQL Server Backups (Windows Share) → San Jose → AWS S3',
+                'name': 'Prod: SQL Server Backups → San Jose → AWS S3 (End-to-End)',
                 'destination_storage': 'S3',
                 'source': 'San Antonio',
                 'destination': 'AWS US-West-2 Production VPC S3',
@@ -534,48 +596,120 @@ class EnhancedNetworkPathManager:
                 'backup_location': 'Windows File Share',
                 'segments': [
                     {
-                        'name': 'SQL Server Backup to Windows Share (SMB)',
+                        'name': 'OS: Windows Server SQL Backup Process',
+                        'bandwidth_mbps': 25000,
+                        'latency_ms': 0.1,
+                        'reliability': 0.99995,
+                        'connection_type': 'os_layer',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.96,
+                        'protocol_efficiency': 0.94
+                    },
+                    {
+                        'name': 'NIC: 10Gbps Fiber Interface',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.996,
-                        'connection_type': 'internal_lan',
+                        'latency_ms': 0.08,
+                        'reliability': 0.9999,
+                        'connection_type': 'nic_layer',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.92,
+                        'protocol_efficiency': 0.89
+                    },
+                    {
+                        'name': 'LAN Switch: Access Layer (SMB)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.6,
+                        'reliability': 0.9998,
+                        'connection_type': 'lan_switch',
                         'cost_factor': 0.0,
                         'optimization_potential': 0.86,
-                        'protocol_efficiency': 0.80
+                        'protocol_efficiency': 0.82
                     },
                     {
-                        'name': 'Windows Share to DataSync Agent (SMB)',
+                        'name': 'LAN Switch: Distribution Layer',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 4,
-                        'reliability': 0.995,
-                        'connection_type': 'internal_lan',
+                        'latency_ms': 0.9,
+                        'reliability': 0.9997,
+                        'connection_type': 'lan_switch',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.84,
-                        'protocol_efficiency': 0.77
+                        'optimization_potential': 0.88,
+                        'protocol_efficiency': 0.85
                     },
                     {
-                        'name': 'San Antonio to San Jose (Private Line)',
+                        'name': 'Network Link: Data Center Backbone',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 12,
+                        'latency_ms': 1.8,
+                        'reliability': 0.9996,
+                        'connection_type': 'network_link',
+                        'cost_factor': 1.0,
+                        'optimization_potential': 0.91,
+                        'protocol_efficiency': 0.88
+                    },
+                    {
+                        'name': 'Router: WAN Edge Router (San Antonio)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2.2,
+                        'reliability': 0.9998,
+                        'connection_type': 'router',
+                        'cost_factor': 1.5,
+                        'optimization_potential': 0.93,
+                        'protocol_efficiency': 0.90
+                    },
+                    {
+                        'name': 'Network Link: San Antonio ↔ San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 8.5,
                         'reliability': 0.9995,
                         'connection_type': 'private_line',
                         'cost_factor': 3.0,
-                        'optimization_potential': 0.94
+                        'optimization_potential': 0.94,
+                        'protocol_efficiency': 0.92
                     },
                     {
-                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'name': 'Router: WAN Edge Router (San Jose)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 8,
+                        'latency_ms': 1.8,
+                        'reliability': 0.9998,
+                        'connection_type': 'router',
+                        'cost_factor': 1.5,
+                        'optimization_potential': 0.93,
+                        'protocol_efficiency': 0.90
+                    },
+                    {
+                        'name': 'Firewall: Production Security Gateway',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2.5,
+                        'reliability': 0.9996,
+                        'connection_type': 'firewall',
+                        'cost_factor': 2.0,
+                        'optimization_potential': 0.85,
+                        'protocol_efficiency': 0.82
+                    },
+                    {
+                        'name': 'DX Link: AWS Direct Connect (10Gbps)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2.8,
                         'reliability': 0.9999,
                         'connection_type': 'direct_connect',
                         'cost_factor': 4.0,
-                        'optimization_potential': 0.95
+                        'optimization_potential': 0.96,
+                        'protocol_efficiency': 0.94
+                    },
+                    {
+                        'name': 'AWS: Direct Connect → Production VPC S3',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.2,
+                        'reliability': 0.99999,
+                        'connection_type': 'aws_service',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.98,
+                        'protocol_efficiency': 0.96
                     }
                 ]
             },
-            # Oracle/PostgreSQL backup paths (Linux NAS)
+            # Oracle/PostgreSQL backup paths (Linux NAS) - Non-Production with full end-to-end view
             'nonprod_sj_oracle_linux_nas_s3': {
-                'name': 'Non-Prod: Oracle/PostgreSQL Backups (Linux NAS) → AWS S3',
+                'name': 'Non-Prod: Oracle/PostgreSQL Backups → AWS S3 (End-to-End)',
                 'destination_storage': 'S3',
                 'source': 'San Jose',
                 'destination': 'AWS US-West-2 S3',
@@ -587,38 +721,100 @@ class EnhancedNetworkPathManager:
                 'backup_location': 'Linux NAS',
                 'segments': [
                     {
-                        'name': 'Oracle/PostgreSQL Backup to Linux NAS (NFS)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 1.5,
-                        'reliability': 0.9995,
-                        'connection_type': 'internal_lan',
+                        'name': 'OS: Linux Database Backup Process',
+                        'bandwidth_mbps': 25000,
+                        'latency_ms': 0.15,
+                        'reliability': 0.99995,
+                        'connection_type': 'os_layer',
                         'cost_factor': 0.0,
                         'optimization_potential': 0.97,
                         'protocol_efficiency': 0.95
                     },
                     {
-                        'name': 'Linux NAS to DataSync Agent (NFS)',
+                        'name': 'NIC: 10Gbps Ethernet Interface',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 1.2,
+                        'latency_ms': 0.08,
+                        'reliability': 0.9999,
+                        'connection_type': 'nic_layer',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.92,
+                        'protocol_efficiency': 0.89
+                    },
+                    {
+                        'name': 'LAN Switch: Access Layer (NFS)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.5,
+                        'reliability': 0.9998,
+                        'connection_type': 'lan_switch',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.94,
+                        'protocol_efficiency': 0.91
+                    },
+                    {
+                        'name': 'LAN Switch: Distribution Layer',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.7,
+                        'reliability': 0.9997,
+                        'connection_type': 'lan_switch',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.92,
+                        'protocol_efficiency': 0.89
+                    },
+                    {
+                        'name': 'Network Link: Campus Backbone',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.8,
                         'reliability': 0.9996,
-                        'connection_type': 'internal_lan',
+                        'connection_type': 'network_link',
+                        'cost_factor': 1.0,
+                        'optimization_potential': 0.90,
+                        'protocol_efficiency': 0.87
+                    },
+                    {
+                        'name': 'Router: Core Network Router',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.5,
+                        'reliability': 0.9998,
+                        'connection_type': 'router',
+                        'cost_factor': 0.5,
+                        'optimization_potential': 0.92,
+                        'protocol_efficiency': 0.89
+                    },
+                    {
+                        'name': 'Firewall: Enterprise Security Gateway',
+                        'bandwidth_mbps': 8000,
+                        'latency_ms': 2.8,
+                        'reliability': 0.9994,
+                        'connection_type': 'firewall',
+                        'cost_factor': 1.5,
+                        'optimization_potential': 0.78,
+                        'protocol_efficiency': 0.75
+                    },
+                    {
+                        'name': 'Network Link: Internet Gateway',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 7.2,
+                        'reliability': 0.998,
+                        'connection_type': 'internet_gateway',
+                        'cost_factor': 2.0,
+                        'optimization_potential': 0.88,
+                        'protocol_efficiency': 0.85
+                    },
+                    {
+                        'name': 'AWS: Internet Gateway → S3',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 4.5,
+                        'reliability': 0.9999,
+                        'connection_type': 'aws_service',
                         'cost_factor': 0.0,
                         'optimization_potential': 0.96,
                         'protocol_efficiency': 0.93
-                    },
-                    {
-                        'name': 'DataSync Agent to AWS S3 (HTTPS)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 12,
-                        'reliability': 0.998,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 2.0,
-                        'optimization_potential': 0.94
                     }
                 ]
             },
+            # Oracle/PostgreSQL backup paths (Linux NAS) - Production with full end-to-end view
             'prod_sa_oracle_linux_nas_s3': {
-                'name': 'Prod: Oracle/PostgreSQL Backups (Linux NAS) → San Jose → AWS S3',
+                'name': 'Prod: Oracle/PostgreSQL Backups → San Jose → AWS S3 (End-to-End)',
                 'destination_storage': 'S3',
                 'source': 'San Antonio',
                 'destination': 'AWS US-West-2 Production VPC S3',
@@ -630,42 +826,114 @@ class EnhancedNetworkPathManager:
                 'backup_location': 'Linux NAS',
                 'segments': [
                     {
-                        'name': 'Oracle/PostgreSQL Backup to Linux NAS (NFS)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 0.8,
-                        'reliability': 0.9998,
-                        'connection_type': 'internal_lan',
+                        'name': 'OS: Linux Database Backup Process',
+                        'bandwidth_mbps': 25000,
+                        'latency_ms': 0.08,
+                        'reliability': 0.99998,
+                        'connection_type': 'os_layer',
                         'cost_factor': 0.0,
                         'optimization_potential': 0.98,
                         'protocol_efficiency': 0.96
                     },
                     {
-                        'name': 'Linux NAS to DataSync Agent (NFS)',
+                        'name': 'NIC: 10Gbps Fiber Interface',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 1.0,
-                        'reliability': 0.9997,
-                        'connection_type': 'internal_lan',
+                        'latency_ms': 0.06,
+                        'reliability': 0.99995,
+                        'connection_type': 'nic_layer',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.97,
-                        'protocol_efficiency': 0.94
+                        'optimization_potential': 0.94,
+                        'protocol_efficiency': 0.91
                     },
                     {
-                        'name': 'San Antonio to San Jose (Private Line)',
+                        'name': 'LAN Switch: Access Layer (NFS)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 10,
-                        'reliability': 0.9995,
+                        'latency_ms': 0.4,
+                        'reliability': 0.9999,
+                        'connection_type': 'lan_switch',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.96,
+                        'protocol_efficiency': 0.93
+                    },
+                    {
+                        'name': 'LAN Switch: Distribution Layer',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.5,
+                        'reliability': 0.9998,
+                        'connection_type': 'lan_switch',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.94,
+                        'protocol_efficiency': 0.91
+                    },
+                    {
+                        'name': 'Network Link: Data Center Backbone',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.2,
+                        'reliability': 0.9997,
+                        'connection_type': 'network_link',
+                        'cost_factor': 1.0,
+                        'optimization_potential': 0.93,
+                        'protocol_efficiency': 0.90
+                    },
+                    {
+                        'name': 'Router: WAN Edge Router (San Antonio)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.5,
+                        'reliability': 0.9999,
+                        'connection_type': 'router',
+                        'cost_factor': 1.5,
+                        'optimization_potential': 0.95,
+                        'protocol_efficiency': 0.92
+                    },
+                    {
+                        'name': 'Network Link: San Antonio ↔ San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 7.8,
+                        'reliability': 0.9996,
                         'connection_type': 'private_line',
                         'cost_factor': 3.0,
-                        'optimization_potential': 0.96
+                        'optimization_potential': 0.96,
+                        'protocol_efficiency': 0.93
                     },
                     {
-                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'name': 'Router: WAN Edge Router (San Jose)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 6,
+                        'latency_ms': 1.2,
                         'reliability': 0.9999,
+                        'connection_type': 'router',
+                        'cost_factor': 1.5,
+                        'optimization_potential': 0.95,
+                        'protocol_efficiency': 0.92
+                    },
+                    {
+                        'name': 'Firewall: Production Security Gateway',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2.0,
+                        'reliability': 0.9997,
+                        'connection_type': 'firewall',
+                        'cost_factor': 2.0,
+                        'optimization_potential': 0.88,
+                        'protocol_efficiency': 0.85
+                    },
+                    {
+                        'name': 'DX Link: AWS Direct Connect (10Gbps)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2.2,
+                        'reliability': 0.99995,
                         'connection_type': 'direct_connect',
                         'cost_factor': 4.0,
-                        'optimization_potential': 0.97
+                        'optimization_potential': 0.97,
+                        'protocol_efficiency': 0.95
+                    },
+                    {
+                        'name': 'AWS: Direct Connect → Production VPC S3',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.8,
+                        'reliability': 0.99999,
+                        'connection_type': 'aws_service',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.99,
+                        'protocol_efficiency': 0.97
                     }
                 ]
             }
@@ -713,11 +981,11 @@ class EnhancedNetworkPathManager:
             effective_bandwidth = segment_bandwidth * protocol_efficiency
             
             # Time-of-day congestion adjustments
-            if segment['connection_type'] == 'internal_lan':
+            if segment['connection_type'] in ['os_layer', 'nic_layer', 'lan_switch']:
                 congestion_factor = 1.15 if 9 <= time_of_day <= 17 else 0.92
-            elif segment['connection_type'] == 'private_line':
+            elif segment['connection_type'] in ['network_link', 'private_line']:
                 congestion_factor = 1.25 if 9 <= time_of_day <= 17 else 0.88
-            elif segment['connection_type'] == 'direct_connect':
+            elif segment['connection_type'] in ['router', 'firewall', 'direct_connect']:
                 congestion_factor = 1.08 if 9 <= time_of_day <= 17 else 0.96
             else:
                 congestion_factor = 1.0
@@ -729,12 +997,14 @@ class EnhancedNetworkPathManager:
             # Database backup specific adjustments
             if path['storage_mount_type'] == 'smb':
                 # SMB has higher overhead for large backup files
-                effective_bandwidth *= 0.78  # More aggressive reduction for backup files
-                effective_latency *= 1.4
+                if 'SMB' in segment['name'] or 'Windows' in segment['name']:
+                    effective_bandwidth *= 0.78  # More aggressive reduction for backup files
+                    effective_latency *= 1.4
             elif path['storage_mount_type'] == 'nfs':
                 # NFS performs better with large sequential reads (backup files)
-                effective_bandwidth *= 0.94
-                effective_latency *= 1.1
+                if 'NFS' in segment['name'] or 'Linux' in segment['name']:
+                    effective_bandwidth *= 0.94
+                    effective_latency *= 1.1
             
             optimization_score *= segment['optimization_potential']
             
@@ -1688,117 +1958,237 @@ def render_s3_storage_optimization(config: Dict, agent_perf: Dict):
         st.write("• **Best For:** Regulatory requirements")
 
 def render_waterfall_analysis(network_perf: Dict):
-    """Render waterfall bandwidth analysis using native Streamlit components"""
-    st.subheader("🌊 Waterfall Bandwidth Analysis")
+    """Render detailed end-to-end waterfall bandwidth analysis using native Streamlit components"""
+    st.subheader("🌊 End-to-End Network Waterfall Analysis")
+    
+    # Environment and path information
+    env_type = "🏭 Production" if network_perf['environment'] == 'production' else "🔧 Non-Production"
+    st.info(f"**Network Path:** {network_perf['path_name']}")
+    st.write(f"**Environment:** {env_type} | **Database:** {network_perf['database_engine'].upper()} | **Storage:** {network_perf['backup_location']}")
     
     # Initialize waterfall analyzer
     waterfall_analyzer = WaterfallBandwidthAnalyzer()
     waterfall_analysis = waterfall_analyzer.analyze_waterfall(network_perf['segments'])
     
-    # Create waterfall visualization
+    # Create enhanced waterfall visualization with network layer icons
     fig = go.Figure()
     
-    # Add waterfall bars
+    # Add waterfall bars with detailed labels
     x_labels = []
     y_values = []
     colors = []
+    hover_texts = []
+    
+    # Network layer icons mapping
+    layer_icons = {
+        'os_layer': '💻',
+        'nic_layer': '🔌',
+        'lan_switch': '🔀',
+        'network_link': '🌐',
+        'router': '📡',
+        'firewall': '🛡️',
+        'private_line': '🚄',
+        'internet_gateway': '🌍',
+        'direct_connect': '⚡',
+        'aws_service': '☁️'
+    }
     
     for i, segment in enumerate(waterfall_analysis['waterfall_segments']):
-        x_labels.append(f"Step {i+1}")
+        layer_icon = layer_icons.get(segment['connection_type'], '🔗')
+        x_labels.append(f"{layer_icon} {i+1}")
         y_values.append(segment['cumulative_bandwidth'])
         colors.append(segment['status_color'])
+        
+        hover_text = (f"<b>{segment['segment_name']}</b><br>"
+                     f"Individual: {segment['segment_bandwidth']:,.0f} Mbps<br>"
+                     f"Cumulative: {segment['cumulative_bandwidth']:,.0f} Mbps<br>"
+                     f"Latency: +{segment['latency_contribution']:.1f} ms<br>"
+                     f"Status: {segment['bottleneck_status']}")
+        hover_texts.append(hover_text)
     
     fig.add_trace(go.Bar(
         x=x_labels,
         y=y_values,
         marker_color=colors,
-        text=[f"{val:,.0f} Mbps" for val in y_values],
+        text=[f"{val:,.0f}" for val in y_values],
         textposition='outside',
-        name='Cumulative Bandwidth'
+        name='Cumulative Bandwidth (Mbps)',
+        hovertemplate='%{hovertext}<extra></extra>',
+        hovertext=hover_texts
     ))
     
     fig.update_layout(
-        title="Network Path Bandwidth Waterfall",
-        xaxis_title="Network Segments",
+        title=f"End-to-End Network Bandwidth Waterfall: {network_perf['database_engine'].upper()} Backup Migration",
+        xaxis_title="Network Segments (OS → NIC → LAN → Routers → Firewalls → DX/Internet → AWS)",
         yaxis_title="Cumulative Bandwidth (Mbps)",
-        height=400,
+        height=500,
         showlegend=False,
-        plot_bgcolor='white'
+        plot_bgcolor='white',
+        xaxis=dict(tickangle=45)
     )
     
     st.plotly_chart(fig, use_container_width=True)
     
-    # Detailed segment analysis
-    st.markdown("#### 📋 Detailed Segment Analysis")
+    # Network layer summary
+    st.markdown("#### 🏗️ Network Architecture Overview")
+    
+    layer_summary = {}
+    for segment in waterfall_analysis['waterfall_segments']:
+        layer_type = segment['connection_type']
+        if layer_type not in layer_summary:
+            layer_summary[layer_type] = {
+                'count': 0,
+                'min_bandwidth': float('inf'),
+                'total_latency': 0,
+                'avg_reliability': []
+            }
+        layer_summary[layer_type]['count'] += 1
+        layer_summary[layer_type]['min_bandwidth'] = min(layer_summary[layer_type]['min_bandwidth'], segment['segment_bandwidth'])
+        layer_summary[layer_type]['total_latency'] += segment['latency_contribution']
+        layer_summary[layer_type]['avg_reliability'].append(segment['reliability_impact'])
+    
+    # Display layer summary in columns
+    layer_cols = st.columns(3)
+    layer_names = {
+        'os_layer': '💻 OS Layer',
+        'nic_layer': '🔌 NIC Layer', 
+        'lan_switch': '🔀 LAN Switches',
+        'network_link': '🌐 Network Links',
+        'router': '📡 Routers',
+        'firewall': '🛡️ Firewalls',
+        'private_line': '🚄 Private Lines',
+        'internet_gateway': '🌍 Internet Gateway',
+        'direct_connect': '⚡ Direct Connect',
+        'aws_service': '☁️ AWS Services'
+    }
+    
+    col_idx = 0
+    for layer_type, summary in layer_summary.items():
+        with layer_cols[col_idx % 3]:
+            layer_name = layer_names.get(layer_type, layer_type.replace('_', ' ').title())
+            avg_reliability = sum(summary['avg_reliability']) / len(summary['avg_reliability']) if summary['avg_reliability'] else 0
+            
+            st.metric(
+                layer_name,
+                f"{summary['min_bandwidth']:,.0f} Mbps",
+                help=f"Segments: {summary['count']} | Latency: {summary['total_latency']:.1f}ms | Reliability: {avg_reliability*100:.2f}%"
+            )
+        col_idx += 1
+    
+    # Detailed segment analysis with network context
+    st.markdown("#### 📋 Detailed End-to-End Segment Analysis")
     
     for i, segment in enumerate(waterfall_analysis['waterfall_segments']):
         with st.container():
-            col1, col2, col3, col4 = st.columns([3, 2, 2, 2])
+            # Get layer icon and type
+            layer_icon = layer_icons.get(segment['connection_type'], '🔗')
+            layer_name = layer_names.get(segment['connection_type'], segment['connection_type'].replace('_', ' ').title())
+            
+            col1, col2, col3, col4, col5 = st.columns([4, 2, 2, 1.5, 1.5])
             
             with col1:
                 if "Critical" in segment['bottleneck_status']:
-                    st.error(f"**Step {i+1}: {segment['segment_name']}**")
-                    st.write(f"Status: {segment['bottleneck_status']}")
+                    st.error(f"**{layer_icon} Step {i+1}: {segment['segment_name']}**")
+                    st.write(f"**Layer:** {layer_name}")
+                    st.write(f"**Status:** {segment['bottleneck_status']}")
                 elif "Concern" in segment['bottleneck_status']:
-                    st.warning(f"**Step {i+1}: {segment['segment_name']}**")
-                    st.write(f"Status: {segment['bottleneck_status']}")
+                    st.warning(f"**{layer_icon} Step {i+1}: {segment['segment_name']}**")
+                    st.write(f"**Layer:** {layer_name}")
+                    st.write(f"**Status:** {segment['bottleneck_status']}")
                 else:
-                    st.success(f"**Step {i+1}: {segment['segment_name']}**")
-                    st.write(f"Status: {segment['bottleneck_status']}")
+                    st.success(f"**{layer_icon} Step {i+1}: {segment['segment_name']}**")
+                    st.write(f"**Layer:** {layer_name}")
+                    st.write(f"**Status:** {segment['bottleneck_status']}")
             
             with col2:
                 st.metric(
-                    "Segment Bandwidth",
-                    f"{segment['segment_bandwidth']:,.0f} Mbps",
-                    help="Individual segment bandwidth"
+                    "Segment BW",
+                    f"{segment['segment_bandwidth']:,.0f}",
+                    help="Individual segment bandwidth (Mbps)"
                 )
             
             with col3:
                 st.metric(
-                    "Cumulative Bandwidth",
-                    f"{segment['cumulative_bandwidth']:,.0f} Mbps",
-                    help="Bandwidth after this segment"
+                    "Cumulative BW", 
+                    f"{segment['cumulative_bandwidth']:,.0f}",
+                    help="Bandwidth after this segment (Mbps)"
                 )
             
             with col4:
                 st.metric(
-                    "Latency Contribution",
-                    f"{segment['latency_contribution']:.1f} ms",
+                    "Latency",
+                    f"{segment['latency_contribution']:.1f}ms",
                     help="Latency added by this segment"
                 )
             
+            with col5:
+                st.metric(
+                    "Reliability",
+                    f"{segment['reliability_impact']*100:.2f}%",
+                    help="Segment reliability factor"
+                )
+            
+            # Show flow arrow except for last segment
             if i < len(waterfall_analysis['waterfall_segments']) - 1:
-                st.markdown("**⬇️**")
+                st.markdown("**⬇️ Data Flow**")
     
-    # Optimization recommendations
+    # Enhanced optimization recommendations with layer-specific advice
     optimization = waterfall_analysis['optimization_potential']
     
-    st.markdown("#### 🎯 Optimization Opportunities")
+    st.markdown("#### 🎯 Layer-Specific Optimization Opportunities")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.info("**📊 Optimization Summary**")
-        st.write(f"• **Current Bandwidth:** {optimization['current_bandwidth']:,.0f} Mbps")
+        st.info("**📊 Overall Performance Summary**")
+        st.write(f"• **Final Bandwidth:** {optimization['current_bandwidth']:,.0f} Mbps")
         st.write(f"• **Maximum Possible:** {optimization['max_possible_bandwidth']:,.0f} Mbps")
         st.write(f"• **Improvement Potential:** {optimization['total_potential']:.1f}%")
         st.write(f"• **Critical Bottlenecks:** {waterfall_analysis['bottleneck_count']}")
+        st.write(f"• **Total Network Segments:** {len(waterfall_analysis['waterfall_segments'])}")
+        st.write(f"• **End-to-End Latency:** {waterfall_analysis['final_latency']:.1f} ms")
     
     with col2:
         if optimization['recommendations']:
-            st.markdown("**Priority Recommendations:**")
+            st.markdown("**🔧 Priority Optimization Targets:**")
             for rec in optimization['recommendations']:
                 priority_color = "🔴" if rec['priority'] == 'High' else "🟡"
-                st.write(f"{priority_color} **{rec['segment']}** ({rec['priority']} Priority): {rec['improvement_type']}")
+                # Find the layer type for this segment
+                matching_segment = next((s for s in waterfall_analysis['waterfall_segments'] if s['segment_name'] == rec['segment']), None)
+                if matching_segment:
+                    layer_icon = layer_icons.get(matching_segment['connection_type'], '🔗')
+                    st.write(f"{priority_color} {layer_icon} **{rec['segment']}**")
+                    st.write(f"   └─ {rec['improvement_type']} ({rec['priority']} Priority)")
+                else:
+                    st.write(f"{priority_color} **{rec['segment']}** ({rec['priority']} Priority): {rec['improvement_type']}")
         else:
-            st.success("✅ Network path is well optimized!")
+            st.success("✅ End-to-end network path is well optimized!")
+            st.write("All network layers are performing within acceptable parameters.")
+    
+    # Environment-specific insights
+    st.markdown("#### 💡 Environment-Specific Network Insights")
+    
+    if network_perf['environment'] == 'production':
+        st.success("**🏭 Production Environment Characteristics**")
+        st.write("• **Direct Connect:** Dedicated high-speed AWS connection")
+        st.write("• **Redundant Path:** San Antonio → San Jose → AWS for reliability")
+        st.write("• **Enhanced Security:** Multiple firewall layers and VPC isolation")
+        st.write("• **Higher Reliability:** Enterprise-grade network infrastructure")
+        st.write("• **Cost Trade-off:** Higher cost for premium performance and reliability")
+    else:
+        st.warning("**🔧 Non-Production Environment Characteristics**")
+        st.write("• **Internet Gateway:** Cost-effective but shared bandwidth")
+        st.write("• **Direct Path:** San Jose → AWS for simplicity")
+        st.write("• **Standard Security:** Basic firewall protection")
+        st.write("• **Cost Optimized:** Lower cost but potentially variable performance")
+        st.write("• **Suitable for:** Development, testing, and non-critical backup transfers")
 
 def main():
-    """Enhanced main application with native Streamlit styling and all original features"""
+    """Enhanced main application with native Streamlit styling and ALL original features preserved"""
     
     # Header using native Streamlit components
     st.title("🗄️ AWS DataSync Database Backup Migration Analyzer")
-    st.markdown("### Professional Database Backup Transfer Optimization • DataSync Agent Placement • Waterfall Network Analysis • SQL Server & Oracle/PostgreSQL Support")
+    st.markdown("### Professional Database Backup Transfer Optimization • DataSync Agent Placement • End-to-End Waterfall Network Analysis • SQL Server & Oracle/PostgreSQL Support")
     
     # Initialize integrations
     if 'integrations_initialized' not in st.session_state:
@@ -1856,9 +2246,9 @@ def main():
         config['backup_size_gb']
     )
     
-    # Enhanced tabs with NEW waterfall analysis tab
+    # Enhanced tabs with END-TO-END waterfall analysis tab FIRST
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "🌊 Waterfall Analysis",  # NEW
+        "🌊 End-to-End Waterfall Analysis",  # NOW FIRST with detailed analysis
         "🎯 DataSync Agent Placement",
         "📊 Backup Performance Analysis",
         "☁️ S3 Storage Optimization", 
@@ -1868,7 +2258,7 @@ def main():
     ])
     
     with tab1:
-        # NEW: Waterfall bandwidth analysis
+        # ENHANCED: End-to-End waterfall bandwidth analysis with full detail
         render_waterfall_analysis(network_perf)
     
     with tab2:
@@ -2174,7 +2564,7 @@ def main():
         else:
             st.info("Claude AI integration not connected. Configure Claude API key for intelligent backup migration analysis.")
     
-    # Executive Summary for Backup Migration (preserved)
+    # Executive Summary for Backup Migration (preserved and enhanced)
     st.markdown("---")
     st.markdown("### 🎯 Database Backup Migration Executive Summary")
     
