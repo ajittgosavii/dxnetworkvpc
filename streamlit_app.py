@@ -11,6 +11,12 @@ from typing import Dict, List, Tuple, Optional
 import asyncio
 from dataclasses import dataclass
 import numpy as np
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.subplots import make_subplots  # ADD THIS LINE
+from datetime import datetime, timedelta
 
 # Page configuration
 st.set_page_config(
@@ -3207,6 +3213,421 @@ def render_database_guidance_tab(config: Dict):
         }
     }
     
+    def create_network_topology_diagram():
+        """Create a comprehensive network topology diagram for production and non-production environments"""
+        
+        # Create subplots for both environments
+        fig = make_subplots(
+            rows=2, cols=1,
+            subplot_titles=("Production Environment: San Antonio → San Jose → AWS West 2", 
+                        "Non-Production Environment: San Jose → AWS West 2"),
+            vertical_spacing=0.15,
+            specs=[[{"type": "scatter"}], [{"type": "scatter"}]]
+        )
+        
+        # Production Environment Nodes
+        prod_nodes = {
+            'San Antonio DC': {'x': 1, 'y': 2, 'color': '#dc2626', 'size': 25},
+            'San Jose DC': {'x': 3, 'y': 2, 'color': '#d97706', 'size': 25},
+            'AWS West 2': {'x': 5, 'y': 2, 'color': '#059669', 'size': 30},
+            'Production VPC': {'x': 5, 'y': 1.5, 'color': '#1e40af', 'size': 20},
+            'DataSync (SA)': {'x': 1, 'y': 1.5, 'color': '#7c3aed', 'size': 15},
+            'DataSync (SJ)': {'x': 3, 'y': 1.5, 'color': '#7c3aed', 'size': 15},
+        }
+        
+        # Non-Production Environment Nodes
+        nonprod_nodes = {
+            'San Jose DC': {'x': 2, 'y': 1, 'color': '#d97706', 'size': 25},
+            'AWS West 2': {'x': 4, 'y': 1, 'color': '#059669', 'size': 30},
+            'Non-Prod VPC': {'x': 4, 'y': 0.5, 'color': '#3b82f6', 'size': 20},
+            'DataSync (SJ)': {'x': 2, 'y': 0.5, 'color': '#7c3aed', 'size': 15},
+        }
+        
+        # Add Production Environment nodes
+        for name, props in prod_nodes.items():
+            fig.add_trace(go.Scatter(
+                x=[props['x']], y=[props['y']],
+                mode='markers+text',
+                marker=dict(size=props['size'], color=props['color']),
+                text=[name],
+                textposition="top center",
+                name=name,
+                showlegend=False,
+                hovertemplate=f"<b>{name}</b><br>Environment: Production<extra></extra>"
+            ), row=1, col=1)
+        
+        # Add Non-Production Environment nodes
+        for name, props in nonprod_nodes.items():
+            fig.add_trace(go.Scatter(
+                x=[props['x']], y=[props['y']],
+                mode='markers+text',
+                marker=dict(size=props['size'], color=props['color']),
+                text=[name],
+                textposition="top center",
+                name=name,
+                showlegend=False,
+                hovertemplate=f"<b>{name}</b><br>Environment: Non-Production<extra></extra>"
+            ), row=2, col=1)
+        
+        # Production Environment Connections
+        prod_connections = [
+            {'from': 'San Antonio DC', 'to': 'San Jose DC', 'label': '10Gbps Shared Link', 'color': '#dc2626'},
+            {'from': 'San Jose DC', 'to': 'AWS West 2', 'label': '10Gbps DX Link', 'color': '#059669'},
+            {'from': 'AWS West 2', 'to': 'Production VPC', 'label': 'VPC Connection', 'color': '#1e40af'},
+        ]
+        
+        # Non-Production Environment Connections
+        nonprod_connections = [
+            {'from': 'San Jose DC', 'to': 'AWS West 2', 'label': '2Gbps DX Link', 'color': '#d97706'},
+            {'from': 'AWS West 2', 'to': 'Non-Prod VPC', 'label': 'VPC Connection', 'color': '#3b82f6'},
+        ]
+        
+        # Add production connections
+        for conn in prod_connections:
+            from_node = prod_nodes[conn['from']]
+            to_node = prod_nodes[conn['to']]
+            
+            fig.add_trace(go.Scatter(
+                x=[from_node['x'], to_node['x']],
+                y=[from_node['y'], to_node['y']],
+                mode='lines',
+                line=dict(color=conn['color'], width=4),
+                name=conn['label'],
+                showlegend=False,
+                hovertemplate=f"<b>{conn['label']}</b><extra></extra>"
+            ), row=1, col=1)
+            
+            # Add connection label
+            mid_x = (from_node['x'] + to_node['x']) / 2
+            mid_y = (from_node['y'] + to_node['y']) / 2 + 0.1
+            
+            fig.add_trace(go.Scatter(
+                x=[mid_x], y=[mid_y],
+                mode='text',
+                text=[conn['label']],
+                textfont=dict(size=10, color=conn['color']),
+                showlegend=False,
+                hoverinfo='skip'
+            ), row=1, col=1)
+        
+        # Add non-production connections
+        for conn in nonprod_connections:
+            from_node = nonprod_nodes[conn['from']]
+            to_node = nonprod_nodes[conn['to']]
+            
+            fig.add_trace(go.Scatter(
+                x=[from_node['x'], to_node['x']],
+                y=[from_node['y'], to_node['y']],
+                mode='lines',
+                line=dict(color=conn['color'], width=4),
+                name=conn['label'],
+                showlegend=False,
+                hovertemplate=f"<b>{conn['label']}</b><extra></extra>"
+            ), row=2, col=1)
+            
+            # Add connection label
+            mid_x = (from_node['x'] + to_node['x']) / 2
+            mid_y = (from_node['y'] + to_node['y']) / 2 + 0.1
+            
+            fig.add_trace(go.Scatter(
+                x=[mid_x], y=[mid_y],
+                mode='text',
+                text=[conn['label']],
+                textfont=dict(size=10, color=conn['color']),
+                showlegend=False,
+                hoverinfo='skip'
+            ), row=2, col=1)
+        
+        # Update layout
+        fig.update_layout(
+            title={
+                'text': "Enterprise Network Architecture: Production & Non-Production Environments",
+                'x': 0.5,
+                'xanchor': 'center',
+                'font': {'size': 20, 'color': '#1e3a8a'}
+            },
+            height=800,
+            template="plotly_white",
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            margin=dict(t=100, b=50, l=50, r=50)
+        )
+        
+        # Update axes
+        for i in range(1, 3):
+            fig.update_xaxes(showgrid=False, showticklabels=False, zeroline=False, row=i, col=1)
+            fig.update_yaxes(showgrid=False, showticklabels=False, zeroline=False, row=i, col=1)
+        
+        return fig
+
+def create_service_flows_diagram():
+    """Create detailed service flow diagrams"""
+    
+    # Service flow data
+    services = ['VPC Endpoint', 'FSx', 'DataSync', 'DMS', 'Storage Gateway']
+    
+    flow_data = {
+        'Production': {
+            'VPC Endpoint': {'source': 'San Antonio/San Jose', 'target': 'S3', 'path': 'Direct to S3', 'bandwidth': '10Gbps'},
+            'FSx': {'source': 'San Antonio/San Jose', 'target': 'S3', 'path': 'Via Production VPC', 'bandwidth': '10Gbps'},
+            'DataSync': {'source': 'VMware DC', 'target': 'S3', 'path': 'Direct to S3', 'bandwidth': '10Gbps'},
+            'DMS': {'source': 'Database', 'target': 'S3', 'path': 'Via Production VPC', 'bandwidth': '10Gbps'},
+            'Storage Gateway': {'source': 'Production VPC', 'target': 'S3', 'path': 'VPC to S3', 'bandwidth': '10Gbps'}
+        },
+        'Non-Production': {
+            'VPC Endpoint': {'source': 'San Jose', 'target': 'S3', 'path': 'Direct to S3', 'bandwidth': '2Gbps'},
+            'FSx': {'source': 'San Jose', 'target': 'S3', 'path': 'Via Non-Prod VPC', 'bandwidth': '2Gbps'},
+            'DataSync': {'source': 'VMware DC', 'target': 'S3', 'path': 'Direct to S3', 'bandwidth': '2Gbps'},
+            'DMS': {'source': 'Database', 'target': 'S3', 'path': 'Via Non-Prod VPC', 'bandwidth': '2Gbps'},
+            'Storage Gateway': {'source': 'Non-Prod VPC', 'target': 'S3', 'path': 'VPC to S3', 'bandwidth': '2Gbps'}
+        }
+    }
+    
+    # Create flow diagram
+    fig = go.Figure()
+    
+    # Service positioning
+    service_positions = {
+        'VPC Endpoint': {'x': 1, 'y': 5, 'color': '#1e40af'},
+        'FSx': {'x': 2, 'y': 4, 'color': '#059669'},
+        'DataSync': {'x': 1.5, 'y': 3, 'color': '#7c3aed'},
+        'DMS': {'x': 2, 'y': 2, 'color': '#dc2626'},
+        'Storage Gateway': {'x': 1, 'y': 1, 'color': '#d97706'}
+    }
+    
+    # S3 target
+    s3_pos = {'x': 4, 'y': 3, 'color': '#16a34a'}
+    
+    # Add service nodes
+    for service, pos in service_positions.items():
+        fig.add_trace(go.Scatter(
+            x=[pos['x']], y=[pos['y']],
+            mode='markers+text',
+            marker=dict(size=30, color=pos['color']),
+            text=[service],
+            textposition="middle center",
+            name=service,
+            showlegend=False,
+            hovertemplate=f"<b>{service}</b><br>AWS Migration Service<extra></extra>"
+        ))
+    
+    # Add S3 target
+    fig.add_trace(go.Scatter(
+        x=[s3_pos['x']], y=[s3_pos['y']],
+        mode='markers+text',
+        marker=dict(size=40, color=s3_pos['color']),
+        text=['Amazon S3'],
+        textposition="middle center",
+        name='S3',
+        showlegend=False,
+        hovertemplate="<b>Amazon S3</b><br>Target Storage Service<extra></extra>"
+    ))
+    
+    # Add flow arrows
+    for service, pos in service_positions.items():
+        fig.add_annotation(
+            x=s3_pos['x'], y=s3_pos['y'],
+            ax=pos['x'], ay=pos['y'],
+            xref="x", yref="y",
+            axref="x", ayref="y",
+            arrowhead=2,
+            arrowsize=1,
+            arrowwidth=3,
+            arrowcolor=pos['color'],
+            text=""
+        )
+    
+    fig.update_layout(
+        title={
+            'text': "AWS Migration Services → S3 Data Flow Patterns",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 18, 'color': '#1e3a8a'}
+        },
+        height=600,
+        template="plotly_white",
+        plot_bgcolor='rgba(0,0,0,0)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        showlegend=False,
+        xaxis=dict(showgrid=False, showticklabels=False, zeroline=False),
+        yaxis=dict(showgrid=False, showticklabels=False, zeroline=False)
+    )
+    
+    return fig
+
+def create_service_comparison_table():
+    """Create service comparison table"""
+    
+    service_data = [
+        {
+            'Service': 'VPC Endpoint',
+            'Production Path': 'San Antonio → San Jose → AWS (10Gbps)',
+            'Non-Prod Path': 'San Jose → AWS (2Gbps)',
+            'Target': 'S3',
+            'Location': 'AWS Managed',
+            'Use Case': 'Private connectivity to S3'
+        },
+        {
+            'Service': 'FSx',
+            'Production Path': 'San Antonio → San Jose → Production VPC',
+            'Non-Prod Path': 'San Jose → Non-Prod VPC',
+            'Target': 'S3',
+            'Location': 'Production/Non-Prod VPC',
+            'Use Case': 'High-performance file systems'
+        },
+        {
+            'Service': 'DataSync',
+            'Production Path': 'VMware DC (SA/SJ) → S3',
+            'Non-Prod Path': 'VMware DC (SJ) → S3',
+            'Target': 'S3',
+            'Location': 'On-premises VMware',
+            'Use Case': 'One-time and scheduled data transfer'
+        },
+        {
+            'Service': 'DMS',
+            'Production Path': 'Database → Production VPC → S3',
+            'Non-Prod Path': 'Database → Non-Prod VPC → S3',
+            'Target': 'S3',
+            'Location': 'Production/Non-Prod VPC',
+            'Use Case': 'Database migration and replication'
+        },
+        {
+            'Service': 'Storage Gateway',
+            'Production Path': 'Production VPC → S3',
+            'Non-Prod Path': 'Non-Prod VPC → S3',
+            'Target': 'S3',
+            'Location': 'Production/Non-Prod VPC',
+            'Use Case': 'Hybrid cloud storage integration'
+        }
+    ]
+    
+    return pd.DataFrame(service_data)
+
+def render_network_path_diagram_tab():
+    """Render the complete network path diagram tab"""
+    
+    st.header("🌐 Network Path Architecture")
+    st.markdown("Comprehensive view of enterprise network architecture for AWS migration services")
+    
+    # Environment overview
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **🏢 Production Environment**
+        - **Source:** San Antonio Data Center
+        - **Transit:** San Jose Data Center  
+        - **Link:** 10Gbps Shared + 10Gbps DX
+        - **Target:** AWS West 2 Production VPC
+        - **DataSync Location:** VMware (SA/SJ)
+        """)
+    
+    with col2:
+        st.markdown("""
+        **🔧 Non-Production Environment**
+        - **Source:** San Jose Data Center
+        - **Link:** 2Gbps Direct Connect
+        - **Target:** AWS West 2 Non-Prod VPC
+        - **DataSync Location:** VMware (SJ)
+        """)
+    
+    # Network topology diagram
+    st.subheader("🏗️ Network Topology")
+    topology_fig = create_network_topology_diagram()
+    st.plotly_chart(topology_fig, use_container_width=True)
+    
+    # Service flows
+    st.subheader("🔄 Service Flow Patterns")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        service_flows_fig = create_service_flows_diagram()
+        st.plotly_chart(service_flows_fig, use_container_width=True)
+    
+    with col2:
+        st.markdown("""
+        **Service Locations:**
+        
+        **🏢 On-Premises (VMware)**
+        - DataSync Agent
+        
+        **☁️ AWS VPC**
+        - FSx File Systems
+        - DMS Replication Instances  
+        - Storage Gateway
+        
+        **🌐 AWS Managed**
+        - VPC Endpoints
+        - S3 Target Storage
+        """)
+    
+    # Service comparison table
+    st.subheader("📊 Service Path Comparison")
+    service_df = create_service_comparison_table()
+    st.dataframe(service_df, use_container_width=True, hide_index=True)
+    
+    # Key insights
+    st.subheader("💡 Architecture Insights")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        **🚀 Performance Characteristics**
+        - Production: 10Gbps bandwidth
+        - Non-Production: 2Gbps bandwidth
+        - DataSync: On-premises agent
+        - Low latency via Direct Connect
+        """)
+    
+    with col2:
+        st.markdown("""
+        **🔒 Security & Compliance**
+        - Private connectivity via DX
+        - VPC isolation for environments
+        - Encrypted data in transit
+        - AWS managed endpoints
+        """)
+    
+    with col3:
+        st.markdown("""
+        **💰 Cost Optimization**
+        - Shared San Jose infrastructure
+        - Right-sized DX connections
+        - Service-specific routing
+        - Efficient data transfer patterns
+        """)
+    
+    # Network path details
+    with st.expander("📋 Detailed Network Path Analysis", expanded=False):
+        
+        st.markdown("### Production Environment Data Flow")
+        st.markdown("""
+        1. **San Antonio DC** → 10Gbps Shared Link → **San Jose DC**
+        2. **San Jose DC** → 10Gbps Direct Connect → **AWS West 2**
+        3. **AWS West 2** → **Production VPC** → **Target Services (S3)**
+        
+        **DataSync Agent:** Deployed on VMware infrastructure in San Antonio or San Jose
+        """)
+        
+        st.markdown("### Non-Production Environment Data Flow")
+        st.markdown("""
+        1. **San Jose DC** → 2Gbps Direct Connect → **AWS West 2**
+        2. **AWS West 2** → **Non-Prod VPC** → **Target Services (S3)**
+        
+        **DataSync Agent:** Deployed on VMware infrastructure in San Jose
+        """)
+        
+        st.markdown("### Service-Specific Routing")
+        st.markdown("""
+        - **VPC Endpoint:** Direct private connection to S3, bypassing internet
+        - **FSx:** File system service within VPC, syncs to S3
+        - **DataSync:** On-premises agent transfers directly to S3
+        - **DMS:** Database replication through VPC to S3
+        - **Storage Gateway:** Hybrid storage bridge from VPC to S3
+        """)
+    
     selected_guidance = guidance_content.get(database_scenario, guidance_content['mysql_oltp_rds'])
     
     # Display guidance
@@ -3297,13 +3718,14 @@ def main():
     if config.get('claude_api_key'):
         analyzer.ai_client.api_key = config['claude_api_key']
     
-    # Main tabs - 5 TABS PRESERVING ALL ORIGINAL FUNCTIONALITY + NEW FEATURES
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    # Main tabs - 6 TABS including new Network Architecture
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "💧 Infrastructure Analysis",    # Enhanced version of original Realistic Analysis
         "⏱️ Migration Analysis",         # Enhanced version of original Migration Analysis 
         "🤖 AI Recommendations",         # Enhanced version of original AI Recommendations
-        "🔄 Pattern Comparison",         # NEW - Enhanced comparison with corporate styling
-        "📚 Database Guide"              # NEW - Database engineer guidance
+        "🔄 Pattern Comparison",         # Enhanced comparison with corporate styling
+        "🌐 Network Architecture",       # NEW - Network Path Diagram
+        "📚 Database Guide"              # Database engineer guidance
     ])
     
     with tab1:
@@ -3340,6 +3762,10 @@ def main():
             st.session_state['ai_recommendation'] = ai_recommendation
     
     with tab5:
+        # NEW TAB: Network Architecture Diagram
+        render_network_path_diagram_tab()
+    
+    with tab6:
         render_database_guidance_tab(config)
         
         # Optional: Show AI insights if pattern comparison has been run
