@@ -1228,6 +1228,7 @@ class EnhancedDataSyncAgentManager:
             'network_efficiency': network_efficiency,
             'agent_backup_efficiency': agent_backup_efficiency,
             'placement_bonus': placement_char['backup_access_efficiency'],
+            'backup_access_efficiency': placement_char['backup_access_efficiency'],
             'performance_loss_pct': performance_loss,
             'per_agent_monthly_cost': per_agent_cost,
             'total_monthly_cost': total_monthly_cost,
