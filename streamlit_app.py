@@ -1208,28 +1208,40 @@ class AnthropicAIManager:
     
     def _calculate_vpc_endpoint_cost(self, config: Dict) -> float:
         """Calculate VPC endpoint costs"""
-    if not config.get('use_vpc_endpoint', False):
-        return 0.0
-    
-    endpoint_type = config.get('vpc_endpoint_type', 'Gateway')
-    
-    if endpoint_type == 'Interface':
-        # Interface endpoint pricing: $0.01/hour + $0.01/GB processed
-        base_cost = 0.01 * 24 * 30  # $7.20/month base
-        data_processing_gb = config.get('database_size_gb', 0) * 1.5  # Estimate
-        processing_cost = data_processing_gb * 0.01
-        return base_cost + processing_cost
-    else:
-        # Gateway endpoints are free
+        if not config.get('use_vpc_endpoint', False):
             return 0.0
-        # In the agent configuration calculation
-    if config.get('use_vpc_endpoint', False):
-        if config.get('destination_storage_type') == 'S3':
-            vpc_performance_bonus = 1.3  # 30% boost for S3
-        else:
-            vpc_performance_bonus = 1.15  # 15% boost for other services
         
-        total_throughput *= vpc_performance_bonus
+        endpoint_type = config.get('vpc_endpoint_type', 'Gateway')
+        
+        if endpoint_type == 'Interface':
+            # Interface endpoint pricing: $0.01/hour + $0.01/GB processed
+            base_cost = 0.01 * 24 * 30  # $7.20/month base
+            data_processing_gb = config.get('database_size_gb', 0) * 1.5  # Estimate
+            processing_cost = data_processing_gb * 0.01
+            return base_cost + processing_cost
+        else:
+            # Gateway endpoints are free
+            return 0.0
+            # In the agent configuration calculation
+        if config.get('use_vpc_endpoint', False):
+            if config.get('destination_storage_type') == 'S3':
+                vpc_performance_bonus = 1.3  # 30% boost for S3
+            else:
+                vpc_performance_bonus = 1.15  # 15% boost for other services
+            
+            total_throughput *= vpc_performance_bonus
+        
+    def _calculate_vpc_performance_bonus(self, config: Dict) -> float:
+    """Calculate VPC endpoint performance bonus"""
+    if not config.get('use_vpc_endpoint', False):
+        return 1.0  # No bonus
+    
+    destination_storage = config.get('destination_storage_type', 'S3')
+    
+    if destination_storage == 'S3':
+        return 1.3  # 30% boost for S3
+    else:
+        return 1.15  # 15% boost for other services
     
     def _generate_best_practices(self, config: Dict, complexity_score: int) -> List[str]:
         """Generate specific best practices"""
@@ -3362,6 +3374,28 @@ class EnhancedAgentSizingManager:
             'scaling_recommendations': self._get_scaling_recommendations(agent_size, number_of_agents, destination_storage),
             'optimal_configuration': self._assess_configuration_optimality(agent_size, number_of_agents, destination_storage)
         }
+            
+        # Apply VPC endpoint performance bonus
+        vpc_performance_bonus = 1.0
+        if config and config.get('use_vpc_endpoint', False):
+            if destination_storage == 'S3':
+                vpc_performance_bonus = 1.3  # 30% boost for S3
+            else:
+                vpc_performance_bonus = 1.15  # 15% boost for other services
+        
+        # Apply VPC bonus to total throughput
+        total_throughput_with_vpc = total_throughput * vpc_performance_bonus
+        
+        return {
+            # ... existing return values ...
+            'vpc_performance_bonus': vpc_performance_bonus,
+            'total_max_throughput_mbps_with_vpc': total_throughput_with_vpc,
+            'vpc_enabled': config.get('use_vpc_endpoint', False) if config else False,
+            # ... rest of existing return values ...
+        }
+    
+    
+    
     
     def _calculate_s3_copy_scaling_efficiency(self, number_of_agents: int) -> float:
         """Calculate scaling efficiency for S3 copy - better scaling due to direct S3 access"""
@@ -5388,6 +5422,29 @@ async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizin
                 'storage_efficiency_bonus': storage_efficiency_bonus,
                 'potential_additional_savings': f"{len(ai_optimization_potential) * 2 + int(agent_efficiency_bonus * 10) + int(storage_efficiency_bonus * 10)}% through AI, agent, and storage optimization"
             }
+            
+            # Add VPC endpoint costs
+        vpc_endpoint_cost = self._calculate_vpc_endpoint_cost(config)
+        
+        # Update total monthly cost
+        total_monthly_cost = (aws_compute_cost + aws_storage_cost + total_agent_cost + 
+                            destination_storage_cost + optimized_network_cost + 
+                            os_licensing_cost + management_cost + vpc_endpoint_cost)
+        
+        return {
+            'aws_compute_cost': aws_compute_cost,
+            'aws_storage_cost': aws_storage_cost,
+            'agent_cost': total_agent_cost,
+            'destination_storage_cost': destination_storage_cost,
+            'network_cost': optimized_network_cost,
+            'vpc_endpoint_cost': vpc_endpoint_cost,  # Add this line
+            'os_licensing_cost': os_licensing_cost,
+            'management_cost': management_cost,
+            'total_monthly_cost': total_monthly_cost,
+            # ... rest of existing return values ...
+    }
+        
+        
         }
     
 def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
@@ -6442,28 +6499,65 @@ def render_enhanced_header():
     """, unsafe_allow_html=True)
 
 
-def render_vpc_endpoint_analysis(config: Dict, analysis: Dict):
-    """Render VPC endpoint analysis section"""
-    st.subheader("🔗 VPC Endpoint Impact Analysis")
-    
-    if config.get('use_vpc_endpoint', False):
-        col1, col2, col3 = st.columns(3)
+    def render_vpc_endpoint_analysis(config: Dict, analysis: Dict):
+        """Render VPC endpoint analysis section"""
+        st.subheader("🔗 VPC Endpoint Impact Analysis")
         
-        with col1:
-            st.success("✅ VPC Endpoint Enabled")
-            st.write(f"**Type:** {config.get('vpc_endpoint_type', 'Gateway')}")
-            st.write(f"**Policy:** {config.get('vpc_endpoint_policy', 'Full Access')}")
-        
-        with col2:
-            vpc_cost = calculate_vpc_endpoint_cost(config)
-            st.metric("💰 Monthly VPC Cost", f"${vpc_cost:.2f}")
-        
-        with col3:
-            performance_boost = 30 if config.get('destination_storage_type') == 'S3' else 15
-            st.metric("📈 Performance Boost", f"+{performance_boost}%")
-    else:
-        st.warning("⚠️ VPC Endpoint Disabled - Consider enabling for better performance")
-
+        if config.get('use_vpc_endpoint', False):
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.success("✅ VPC Endpoint Enabled")
+                st.write(f"**Type:** {config.get('vpc_endpoint_type', 'Gateway')}")
+                st.write(f"**Policy:** {config.get('vpc_endpoint_policy', 'Full Access')}")
+            
+            with col2:
+                # Calculate VPC endpoint cost
+                endpoint_type = config.get('vpc_endpoint_type', 'Gateway')
+                if endpoint_type == 'Interface':
+                    base_cost = 0.01 * 24 * 30  # $7.20/month
+                    data_gb = config.get('database_size_gb', 0) * 1.5
+                    processing_cost = data_gb * 0.01
+                    total_cost = base_cost + processing_cost
+                else:
+                    total_cost = 0.0
+                
+                st.metric("💰 Monthly VPC Cost", f"${total_cost:.2f}")
+                if endpoint_type == 'Interface':
+                    st.caption(f"Base: ${base_cost:.2f} + Data: ${processing_cost:.2f}")
+            
+            with col3:
+                destination_storage = config.get('destination_storage_type', 'S3')
+                performance_boost = 30 if destination_storage == 'S3' else 15
+                st.metric("📈 Performance Boost", f"+{performance_boost}%")
+                st.caption(f"Optimized for {destination_storage}")
+            
+            # Show detailed benefits
+            with st.expander("💡 VPC Endpoint Benefits", expanded=False):
+                st.write("**Performance Benefits:**")
+                st.write("• Reduced latency for AWS service calls")
+                st.write("• Higher bandwidth utilization")
+                st.write("• More predictable network performance")
+                
+                st.write("**Security Benefits:**")
+                st.write("• Traffic stays within AWS network")
+                st.write("• Reduced internet gateway dependency")
+                st.write("• Enhanced security posture")
+                
+                st.write("**Cost Benefits:**")
+                if endpoint_type == 'Gateway':
+                    st.write("• No additional charges for Gateway endpoints")
+                    st.write("• Reduced NAT Gateway costs")
+                else:
+                    st.write("• Reduced data transfer costs")
+                    st.write("• More predictable billing")
+                    
+        else:
+            st.warning("⚠️ VPC Endpoint Disabled")
+            st.info("💡 Consider enabling VPC endpoints for:")
+            st.write("• Better performance (up to 30% improvement)")
+            st.write("• Enhanced security (traffic stays in AWS)")
+            st.write("• Potentially lower costs (reduced NAT usage)")
 
 def render_api_status_sidebar():
     """Enhanced API status sidebar"""
@@ -9237,6 +9331,17 @@ def render_cost_pricing_tab(analysis: Dict, config: Dict):
         )
         st.plotly_chart(fig_bar, use_container_width=True)
     
+        # In the cost breakdown section
+        cost_breakdown = {
+            'Compute': cost_analysis.get('aws_compute_cost', 0),
+            'Storage': cost_analysis.get('aws_storage_cost', 0),
+            'Network': cost_analysis.get('network_cost', 0),
+            'Agents': cost_analysis.get('agent_cost', 0),
+            'Destination Storage': cost_analysis.get('destination_storage_cost', 0),
+            'VPC Endpoints': cost_analysis.get('vpc_endpoint_cost', 0),  # Add this line
+            'OS Licensing': cost_analysis.get('os_licensing_cost', 0),
+            'Management': cost_analysis.get('management_cost', 0)
+}
     # Detailed Cost Analysis using native components
     st.markdown("**🔍 Detailed Cost Analysis:**")
     
