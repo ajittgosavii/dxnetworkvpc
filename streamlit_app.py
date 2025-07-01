@@ -2129,70 +2129,171 @@ def create_enhanced_waterfall_chart(waterfall_data: Dict):
     return fig
 
 def create_sequential_flow_diagram(waterfall_data: Dict):
-    """Create a visual flow diagram showing the sequential bandwidth reduction with enhanced styling"""
+    """Create a sequential bar chart showing the bandwidth reduction flow - NO TEXT, ONLY CHARTS"""
     steps = waterfall_data['steps']
-    
-    # Filter and prepare steps
-    flow_steps = [step for step in steps if step['type'] in ['starting', 'reduction', 'final']]
     
     st.markdown("### 📊 Sequential Infrastructure Flow")
     
+    # Filter and prepare steps for the chart
+    flow_steps = [step for step in steps if step['type'] in ['starting', 'reduction', 'final']]
+    
+    # Prepare data for the sequential flow chart
+    x_labels = []
+    y_values = []
+    colors = []
+    text_labels = []
+    cumulative_values = []
+    
+    # Layer colors for corporate theme
+    layer_colors = {
+        'nic': '#1e3a8a',      # Primary blue
+        'os': '#3b82f6',       # Secondary blue  
+        'lan': '#059669',      # Success green
+        'wan': '#d97706',      # Warning orange
+        'dx': '#dc2626',       # Error red
+        'vpc': '#7c3aed',      # Purple
+        'protocol': '#0891b2', # Cyan
+        'service': '#16a34a',  # Dark green
+        'final': '#1e40af'     # Dark blue
+    }
+    
+    # Process each step for the chart
     for i, step in enumerate(flow_steps):
         step_num = step.get('step_number', i + 1)
+        short_name = step['name'].replace('(', '<br>(').replace(' - ', '<br>')[:50] + ('...' if len(step['name']) > 50 else '')
+        x_labels.append(f"Step {step_num}<br>{short_name}")
+        cumulative_values.append(step['cumulative'])
         
         if step['type'] == 'starting':
-            st.markdown(f"""
-            <div class="flow-step flow-step-starting">
-                <div class="flow-step-header">
-                    <div class="flow-step-number">{step_num}</div>
-                    <div class="flow-step-title">{step['name']}</div>
-                </div>
-                <div class="flow-step-details">
-                    <div class="flow-step-value" style="color: var(--success-green);">{step['value']:,.0f} Mbps</div>
-                    <div class="flow-step-description">Starting theoretical maximum bandwidth</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
+            y_values.append(step['value'])
+            colors.append('#059669')  # Success green
+            text_labels.append(f"{step['value']:,.0f}<br>Mbps<br>Starting")
+            
         elif step['type'] == 'reduction':
+            y_values.append(step['value'])  # Negative value
+            colors.append(layer_colors.get(step['layer'], '#dc2626'))
             reduction_pct = (abs(step['value']) / flow_steps[0]['value']) * 100 if flow_steps[0]['value'] > 0 else 0
+            text_labels.append(f"{step['value']:,.0f}<br>Mbps<br>({reduction_pct:.1f}% loss)")
             
-            st.markdown(f"""
-            <div class="flow-step flow-step-reduction-type">
-                <div class="flow-step-header">
-                    <div class="flow-step-number">{step_num}</div>
-                    <div class="flow-step-title">{step['name']}</div>
-                </div>
-                <div class="flow-step-details">
-                    <div class="flow-step-value flow-step-reduction">-{abs(step['value']):,.0f} Mbps ({reduction_pct:.1f}%)</div>
-                    <div class="flow-step-description">Infrastructure layer overhead and limitations</div>
-                    <div class="flow-step-remaining">{step['cumulative']:,.0f} Mbps remaining</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
         elif step['type'] == 'final':
+            y_values.append(step['value'])
+            colors.append('#1e40af')  # Final blue
             efficiency = (step['value'] / flow_steps[0]['value']) * 100 if flow_steps[0]['value'] > 0 else 0
-            
-            st.markdown(f"""
-            <div class="flow-step flow-step-final">
-                <div class="flow-step-header">
-                    <div class="flow-step-number">{step_num}</div>
-                    <div class="flow-step-title">{step['name']}</div>
-                </div>
-                <div class="flow-step-details">
-                    <div class="flow-step-value" style="color: var(--primary-blue);">{step['value']:,.0f} Mbps</div>
-                    <div class="flow-step-description">Final effective bandwidth after all reductions</div>
-                    <div class="flow-step-remaining">Overall efficiency: {efficiency:.1f}%</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Add arrow between steps (except for last step)
-        if i < len(flow_steps) - 1:
-            st.markdown("""
-            <div class="flow-arrow">↓</div>
-            """, unsafe_allow_html=True)
+            text_labels.append(f"{step['value']:,.0f}<br>Mbps<br>({efficiency:.1f}% eff.)")
+    
+    # Create the figure
+    fig = go.Figure()
+    
+    # Add the main bars
+    fig.add_trace(go.Bar(
+        x=x_labels,
+        y=y_values,
+        marker_color=colors,
+        text=text_labels,
+        textposition='outside',
+        textfont=dict(size=10, color='black'),
+        name='Bandwidth Impact',
+        hovertemplate="<b>%{x}</b><br>Impact: %{y:,.0f} Mbps<extra></extra>",
+        opacity=0.85
+    ))
+    
+    # Add cumulative bandwidth line
+    fig.add_trace(go.Scatter(
+        x=x_labels,
+        y=cumulative_values,
+        mode='lines+markers',
+        line=dict(color='#1e3a8a', width=4, dash='dot'),
+        marker=dict(size=10, color='#1e3a8a', symbol='diamond'),
+        name='Cumulative Bandwidth',
+        yaxis='y2',
+        hovertemplate="<b>Cumulative</b><br>%{y:,.0f} Mbps<extra></extra>"
+    ))
+    
+    # Update layout for dual axis
+    fig.update_layout(
+        title={
+            'text': "🔄 Infrastructure Impact Sequential Analysis",
+            'x': 0.5,
+            'xanchor': 'center',
+            'font': {'size': 20, 'color': '#1e3a8a', 'family': 'Arial Black'}
+        },
+        xaxis_title="Infrastructure Processing Steps",
+        yaxis_title="Bandwidth Impact (Mbps)",
+        yaxis2=dict(
+            title="Cumulative Available Bandwidth (Mbps)",
+            overlaying='y',
+            side='right',
+            showgrid=False,
+            titlefont=dict(color='#1e3a8a'),
+            tickfont=dict(color='#1e3a8a')
+        ),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        height=600,
+        xaxis=dict(
+            tickangle=0,
+            tickfont=dict(size=9),
+            showgrid=False
+        ),
+        yaxis=dict(
+            tickformat=",.0f",
+            zeroline=True,
+            zerolinecolor='rgba(128,128,128,0.5)',
+            zerolinewidth=2,
+            showgrid=True,
+            gridcolor='rgba(128,128,128,0.2)'
+        ),
+        template="plotly_white",
+        plot_bgcolor='rgba(248,250,252,0.8)',
+        paper_bgcolor='rgba(0,0,0,0)',
+        margin=dict(t=100, b=100, l=80, r=100),
+        bargap=0.4
+    )
+    
+    # Add annotations for clarity
+    max_value = max([abs(v) for v in y_values])
+    for i, (label, value, color) in enumerate(zip(x_labels, y_values, colors)):
+        if value < 0:  # Reduction step
+            fig.add_annotation(
+                x=i,
+                y=value - max_value * 0.1,
+                text="↓ REDUCTION",
+                showarrow=False,
+                font=dict(size=8, color=color, family="Arial Black"),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor=color,
+                borderwidth=1
+            )
+        elif i == 0:  # Starting step
+            fig.add_annotation(
+                x=i,
+                y=value + max_value * 0.1,
+                text="🚀 START",
+                showarrow=False,
+                font=dict(size=8, color=color, family="Arial Black"),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor=color,
+                borderwidth=1
+            )
+        elif i == len(y_values) - 1:  # Final step
+            fig.add_annotation(
+                x=i,
+                y=value + max_value * 0.1,
+                text="🎯 FINAL",
+                showarrow=False,
+                font=dict(size=8, color=color, family="Arial Black"),
+                bgcolor="rgba(255,255,255,0.8)",
+                bordercolor=color,
+                borderwidth=1
+            )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
 def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyzer):
     """Render realistic bandwidth analysis tab with enhanced corporate styling"""
