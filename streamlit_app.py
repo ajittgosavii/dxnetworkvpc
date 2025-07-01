@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional
 import asyncio
 from dataclasses import dataclass
 import numpy as np
-import math  # Required for the new DataSync scaling calculations
+
 # =============================================================================
 # PAGE CONFIGURATION
 # =============================================================================
@@ -661,323 +661,421 @@ class EnhancedNetworkAnalyzer:
     
     def __init__(self):
         # Operating System Network Stack Characteristics
-            self.os_characteristics = {
-                'windows_server_2019': {
-                    'name': 'Windows Server 2019',
-                    'tcp_stack_efficiency': 0.94,
-                    'memory_copy_overhead': 0.08,
-                    'interrupt_overhead': 0.05,
-                    'kernel_bypass_support': False,
-                    'max_tcp_window_size': '64KB',
-                    'rss_support': True,
-                    'network_virtualization_overhead': 0.12
+        self.os_characteristics = {
+            'windows_server_2019': {
+                'name': 'Windows Server 2019',
+                'tcp_stack_efficiency': 0.94,
+                'memory_copy_overhead': 0.08,
+                'interrupt_overhead': 0.05,
+                'kernel_bypass_support': False,
+                'max_tcp_window_size': '64KB',
+                'rss_support': True,
+                'network_virtualization_overhead': 0.12
+            },
+            'windows_server_2022': {
+                'name': 'Windows Server 2022',
+                'tcp_stack_efficiency': 0.96,
+                'memory_copy_overhead': 0.06,
+                'interrupt_overhead': 0.04,
+                'kernel_bypass_support': True,
+                'max_tcp_window_size': '1MB',
+                'rss_support': True,
+                'network_virtualization_overhead': 0.08
+            },
+            'linux_rhel8': {
+                'name': 'Red Hat Enterprise Linux 8',
+                'tcp_stack_efficiency': 0.97,
+                'memory_copy_overhead': 0.04,
+                'interrupt_overhead': 0.03,
+                'kernel_bypass_support': True,
+                'max_tcp_window_size': '16MB',
+                'rss_support': True,
+                'network_virtualization_overhead': 0.05
+            },
+            'linux_ubuntu': {
+                'name': 'Ubuntu Linux (Latest)',
+                'tcp_stack_efficiency': 0.98,
+                'memory_copy_overhead': 0.03,
+                'interrupt_overhead': 0.02,
+                'kernel_bypass_support': True,
+                'max_tcp_window_size': '16MB',
+                'rss_support': True,
+                'network_virtualization_overhead': 0.04
+            }
+        }
+        
+        # Network Interface Card Characteristics
+        self.nic_characteristics = {
+            '1gbps_standard': {
+                'name': '1 Gbps Standard NIC',
+                'theoretical_bandwidth_mbps': 1000,
+                'real_world_efficiency': 0.94,
+                'cpu_utilization_per_gbps': 0.15,
+                'pcie_gen': '2.0',
+                'pcie_lanes': 1,
+                'hardware_offload_support': ['checksum'],
+                'mtu_support': 1500,
+                'buffer_size_mb': 1,
+                'interrupt_coalescing': False
+            },
+            '10gbps_standard': {
+                'name': '10 Gbps Standard NIC',
+                'theoretical_bandwidth_mbps': 10000,
+                'real_world_efficiency': 0.92,
+                'cpu_utilization_per_gbps': 0.08,
+                'pcie_gen': '3.0',
+                'pcie_lanes': 4,
+                'hardware_offload_support': ['checksum', 'segmentation', 'rss'],
+                'mtu_support': 9000,
+                'buffer_size_mb': 4,
+                'interrupt_coalescing': True
+            },
+            '25gbps_high_performance': {
+                'name': '25 Gbps High-Performance NIC',
+                'theoretical_bandwidth_mbps': 25000,
+                'real_world_efficiency': 0.96,
+                'cpu_utilization_per_gbps': 0.04,
+                'pcie_gen': '3.0',
+                'pcie_lanes': 8,
+                'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma'],
+                'mtu_support': 9000,
+                'buffer_size_mb': 16,
+                'interrupt_coalescing': True
+            },
+            '100gbps_enterprise': {
+                'name': '100 Gbps Enterprise NIC',
+                'theoretical_bandwidth_mbps': 100000,
+                'real_world_efficiency': 0.98,
+                'cpu_utilization_per_gbps': 0.02,
+                'pcie_gen': '4.0',
+                'pcie_lanes': 16,
+                'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma', 'encryption'],
+                'mtu_support': 9000,
+                'buffer_size_mb': 64,
+                'interrupt_coalescing': True
+            }
+        }
+        
+        # LAN Infrastructure Characteristics
+        self.lan_characteristics = {
+            'gigabit_switch': {
+                'name': 'Gigabit Ethernet Switch',
+                'switching_capacity_gbps': 48,
+                'port_buffer_mb': 12,
+                'switching_latency_us': 5,
+                'oversubscription_ratio': '3:1',
+                'congestion_threshold': 0.8,
+                'qos_support': True,
+                'vlan_overhead': 0.01
+            },
+            '10gb_switch': {
+                'name': '10 Gigabit Ethernet Switch',
+                'switching_capacity_gbps': 480,
+                'port_buffer_mb': 48,
+                'switching_latency_us': 2,
+                'oversubscription_ratio': '2:1',
+                'congestion_threshold': 0.85,
+                'qos_support': True,
+                'vlan_overhead': 0.005
+            },
+            '25gb_switch': {
+                'name': '25 Gigabit Ethernet Switch',
+                'switching_capacity_gbps': 1200,
+                'port_buffer_mb': 128,
+                'switching_latency_us': 1,
+                'oversubscription_ratio': '1.5:1',
+                'congestion_threshold': 0.9,
+                'qos_support': True,
+                'vlan_overhead': 0.003
+            },
+            'spine_leaf_fabric': {
+                'name': 'Spine-Leaf Fabric',
+                'switching_capacity_gbps': 5000,
+                'port_buffer_mb': 256,
+                'switching_latency_us': 0.5,
+                'oversubscription_ratio': '1:1',
+                'congestion_threshold': 0.95,
+                'qos_support': True,
+                'vlan_overhead': 0.001
+            }
+        }
+        
+        # WAN Provider Characteristics
+        self.wan_characteristics = {
+            'mpls_tier1': {
+                'name': 'MPLS Tier-1 Provider',
+                'bandwidth_efficiency': 0.96,
+                'latency_consistency': 0.98,
+                'packet_loss_rate': 0.0001,
+                'jitter_ms': 2,
+                'burstable_overhead': 0.1,
+                'qos_classes': 4,
+                'sla_availability': 0.9999
+            },
+            'fiber_metro': {
+                'name': 'Metro Fiber Ethernet',
+                'bandwidth_efficiency': 0.98,
+                'latency_consistency': 0.99,
+                'packet_loss_rate': 0.00005,
+                'jitter_ms': 1,
+                'burstable_overhead': 0.05,
+                'qos_classes': 8,
+                'sla_availability': 0.99995
+            },
+            'internet_transit': {
+                'name': 'Internet Transit',
+                'bandwidth_efficiency': 0.85,
+                'latency_consistency': 0.9,
+                'packet_loss_rate': 0.001,
+                'jitter_ms': 10,
+                'burstable_overhead': 0.2,
+                'qos_classes': 0,
+                'sla_availability': 0.999
+            },
+            'aws_dx_dedicated': {
+                'name': 'AWS Direct Connect Dedicated',
+                'bandwidth_efficiency': 0.99,
+                'latency_consistency': 0.999,
+                'packet_loss_rate': 0.00001,
+                'jitter_ms': 0.5,
+                'burstable_overhead': 0.02,
+                'qos_classes': 8,
+                'sla_availability': 0.9999
+            }
+        }
+        
+        # AWS Direct Connect Specific Factors
+        self.dx_characteristics = {
+            '1gbps_dedicated': {
+                'name': '1 Gbps Dedicated Connection',
+                'committed_bandwidth_mbps': 1000,
+                'burst_capability': 1.0,
+                'aws_edge_processing_overhead': 0.02,
+                'cross_connect_latency_ms': 1,
+                'bgp_convergence_impact': 0.01,
+                'virtual_interface_overhead': 0.005
+            },
+            '10gbps_dedicated': {
+                'name': '10 Gbps Dedicated Connection',
+                'committed_bandwidth_mbps': 10000,
+                'burst_capability': 1.0,
+                'aws_edge_processing_overhead': 0.01,
+                'cross_connect_latency_ms': 0.8,
+                'bgp_convergence_impact': 0.005,
+                'virtual_interface_overhead': 0.003
+            },
+            '100gbps_dedicated': {
+                'name': '100 Gbps Dedicated Connection',
+                'committed_bandwidth_mbps': 100000,
+                'burst_capability': 1.0,
+                'aws_edge_processing_overhead': 0.005,
+                'cross_connect_latency_ms': 0.5,
+                'bgp_convergence_impact': 0.002,
+                'virtual_interface_overhead': 0.001
+            }
+        }
+        
+        # Enhanced Network Patterns with realistic infrastructure + database scenarios
+        self.network_patterns = {
+            'sj_nonprod_vpc_endpoint': {
+                'name': 'San Jose Non-Prod → AWS VPC Endpoint',
+                'source': 'San Jose',
+                'environment': 'non-production',
+                'pattern_type': 'vpc_endpoint',
+                'os_type': 'linux_rhel8',
+                'nic_type': '10gbps_standard',
+                'lan_type': '10gb_switch',
+                'wan_type': 'fiber_metro',
+                'dx_type': None,
+                'committed_bandwidth_mbps': 2000,
+                'baseline_latency_ms': 8,
+                'cost_factor': 1.5,
+                'security_level': 'high',
+                'reliability_score': 0.85,
+                'complexity_score': 0.3,
+                'vpc_endpoint_limitations': {
+                    'ipv4_only': True,
+                    'no_shared_vpc': True,
+                    'privatelink_routing_overhead': 0.03
                 },
-                'windows_server_2022': {
-                    'name': 'Windows Server 2022',
-                    'tcp_stack_efficiency': 0.96,
-                    'memory_copy_overhead': 0.06,
-                    'interrupt_overhead': 0.04,
-                    'kernel_bypass_support': True,
-                    'max_tcp_window_size': '1MB',
-                    'rss_support': True,
-                    'network_virtualization_overhead': 0.08
-                },
-                'linux_rhel8': {
-                    'name': 'Red Hat Enterprise Linux 8',
-                    'tcp_stack_efficiency': 0.97,
-                    'memory_copy_overhead': 0.04,
-                    'interrupt_overhead': 0.03,
-                    'kernel_bypass_support': True,
-                    'max_tcp_window_size': '16MB',
-                    'rss_support': True,
-                    'network_virtualization_overhead': 0.05
-                },
-                'linux_ubuntu': {
-                    'name': 'Ubuntu Linux (Latest)',
-                    'tcp_stack_efficiency': 0.98,
-                    'memory_copy_overhead': 0.03,
-                    'interrupt_overhead': 0.02,
-                    'kernel_bypass_support': True,
-                    'max_tcp_window_size': '16MB',
-                    'rss_support': True,
-                    'network_virtualization_overhead': 0.04
+                'database_suitability': {
+                    'oltp': 0.7,
+                    'olap': 0.9,
+                    'replication': 0.6,
+                    'backup': 0.95
+                }
+            },
+            'sj_nonprod_direct_connect': {
+                'name': 'San Jose Non-Prod → AWS Direct Connect',
+                'source': 'San Jose',
+                'environment': 'non-production',
+                'pattern_type': 'direct_connect',
+                'os_type': 'linux_rhel8',
+                'nic_type': '10gbps_standard',
+                'lan_type': '10gb_switch',
+                'wan_type': 'mpls_tier1',
+                'dx_type': '10gbps_dedicated',
+                'committed_bandwidth_mbps': 2000,
+                'baseline_latency_ms': 12,
+                'cost_factor': 2.0,
+                'security_level': 'high',
+                'reliability_score': 0.95,
+                'complexity_score': 0.6,
+                'database_suitability': {
+                    'oltp': 0.9,
+                    'olap': 0.95,
+                    'replication': 0.95,
+                    'backup': 0.9
+                }
+            },
+            'sj_prod_direct_connect': {
+                'name': 'San Jose Production → AWS Direct Connect',
+                'source': 'San Jose',
+                'environment': 'production',
+                'pattern_type': 'direct_connect',
+                'os_type': 'linux_ubuntu',
+                'nic_type': '25gbps_high_performance',
+                'lan_type': 'spine_leaf_fabric',
+                'wan_type': 'aws_dx_dedicated',
+                'dx_type': '100gbps_dedicated',
+                'committed_bandwidth_mbps': 10000,
+                'baseline_latency_ms': 6,
+                'cost_factor': 3.5,
+                'security_level': 'very_high',
+                'reliability_score': 0.99,
+                'complexity_score': 0.7,
+                'database_suitability': {
+                    'oltp': 0.98,
+                    'olap': 0.98,
+                    'replication': 0.99,
+                    'backup': 0.95
+                }
+            },
+            'sa_prod_via_sj': {
+                'name': 'San Antonio Production → San Jose → AWS',
+                'source': 'San Antonio',
+                'environment': 'production',
+                'pattern_type': 'multi_hop',
+                'os_type': 'windows_server_2022',
+                'nic_type': '25gbps_high_performance',
+                'lan_type': 'spine_leaf_fabric',
+                'wan_type': 'mpls_tier1',
+                'dx_type': '100gbps_dedicated',
+                'committed_bandwidth_mbps': 10000,
+                'baseline_latency_ms': 18,
+                'cost_factor': 4.0,
+                'security_level': 'very_high',
+                'reliability_score': 0.92,
+                'complexity_score': 0.9,
+                'database_suitability': {
+                    'oltp': 0.85,
+                    'olap': 0.95,
+                    'replication': 0.88,
+                    'backup': 0.9
                 }
             }
-            
-            # Network Interface Card Characteristics
-            self.nic_characteristics = {
-                '1gbps_standard': {
-                    'name': '1 Gbps Standard NIC',
-                    'theoretical_bandwidth_mbps': 1000,
-                    'real_world_efficiency': 0.94,
-                    'cpu_utilization_per_gbps': 0.15,
-                    'pcie_gen': '2.0',
-                    'pcie_lanes': 1,
-                    'hardware_offload_support': ['checksum'],
-                    'mtu_support': 1500,
-                    'buffer_size_mb': 1,
-                    'interrupt_coalescing': False
-                },
-                '10gbps_standard': {
-                    'name': '10 Gbps Standard NIC',
-                    'theoretical_bandwidth_mbps': 10000,
-                    'real_world_efficiency': 0.92,
-                    'cpu_utilization_per_gbps': 0.08,
-                    'pcie_gen': '3.0',
-                    'pcie_lanes': 4,
-                    'hardware_offload_support': ['checksum', 'segmentation', 'rss'],
-                    'mtu_support': 9000,
-                    'buffer_size_mb': 4,
-                    'interrupt_coalescing': True
-                },
-                '25gbps_high_performance': {
-                    'name': '25 Gbps High-Performance NIC',
-                    'theoretical_bandwidth_mbps': 25000,
-                    'real_world_efficiency': 0.96,
-                    'cpu_utilization_per_gbps': 0.04,
-                    'pcie_gen': '3.0',
-                    'pcie_lanes': 8,
-                    'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma'],
-                    'mtu_support': 9000,
-                    'buffer_size_mb': 16,
-                    'interrupt_coalescing': True
-                },
-                '100gbps_enterprise': {
-                    'name': '100 Gbps Enterprise NIC',
-                    'theoretical_bandwidth_mbps': 100000,
-                    'real_world_efficiency': 0.98,
-                    'cpu_utilization_per_gbps': 0.02,
-                    'pcie_gen': '4.0',
-                    'pcie_lanes': 16,
-                    'hardware_offload_support': ['checksum', 'segmentation', 'rss', 'rdma', 'encryption'],
-                    'mtu_support': 9000,
-                    'buffer_size_mb': 64,
-                    'interrupt_coalescing': True
-                }
-            }
-            
-            # LAN Infrastructure Characteristics
-            self.lan_characteristics = {
-                'gigabit_switch': {
-                    'name': 'Gigabit Ethernet Switch',
-                    'switching_capacity_gbps': 48,
-                    'port_buffer_mb': 12,
-                    'switching_latency_us': 5,
-                    'oversubscription_ratio': '3:1',
-                    'congestion_threshold': 0.8,
-                    'qos_support': True,
-                    'vlan_overhead': 0.01
-                },
-                '10gb_switch': {
-                    'name': '10 Gigabit Ethernet Switch',
-                    'switching_capacity_gbps': 480,
-                    'port_buffer_mb': 48,
-                    'switching_latency_us': 2,
-                    'oversubscription_ratio': '2:1',
-                    'congestion_threshold': 0.85,
-                    'qos_support': True,
-                    'vlan_overhead': 0.005
-                },
-                '25gb_switch': {
-                    'name': '25 Gigabit Ethernet Switch',
-                    'switching_capacity_gbps': 1200,
-                    'port_buffer_mb': 128,
-                    'switching_latency_us': 1,
-                    'oversubscription_ratio': '1.5:1',
-                    'congestion_threshold': 0.9,
-                    'qos_support': True,
-                    'vlan_overhead': 0.003
-                },
-                'spine_leaf_fabric': {
-                    'name': 'Spine-Leaf Fabric',
-                    'switching_capacity_gbps': 5000,
-                    'port_buffer_mb': 256,
-                    'switching_latency_us': 0.5,
-                    'oversubscription_ratio': '1:1',
-                    'congestion_threshold': 0.95,
-                    'qos_support': True,
-                    'vlan_overhead': 0.001
-                }
-            }
-            
-            # WAN Provider Characteristics
-            self.wan_characteristics = {
-                'mpls_tier1': {
-                    'name': 'MPLS Tier-1 Provider',
-                    'bandwidth_efficiency': 0.96,
-                    'latency_consistency': 0.98,
-                    'packet_loss_rate': 0.0001,
-                    'jitter_ms': 2,
-                    'burstable_overhead': 0.1,
-                    'qos_classes': 4,
-                    'sla_availability': 0.9999
-                },
-                'fiber_metro': {
-                    'name': 'Metro Fiber Ethernet',
-                    'bandwidth_efficiency': 0.98,
-                    'latency_consistency': 0.99,
-                    'packet_loss_rate': 0.00005,
-                    'jitter_ms': 1,
-                    'burstable_overhead': 0.05,
-                    'qos_classes': 8,
-                    'sla_availability': 0.99995
-                },
-                'internet_transit': {
-                    'name': 'Internet Transit',
-                    'bandwidth_efficiency': 0.85,
-                    'latency_consistency': 0.9,
-                    'packet_loss_rate': 0.001,
-                    'jitter_ms': 10,
-                    'burstable_overhead': 0.2,
-                    'qos_classes': 0,
-                    'sla_availability': 0.999
-                },
-                'aws_dx_dedicated': {
-                    'name': 'AWS Direct Connect Dedicated',
-                    'bandwidth_efficiency': 0.99,
-                    'latency_consistency': 0.999,
-                    'packet_loss_rate': 0.00001,
-                    'jitter_ms': 0.5,
-                    'burstable_overhead': 0.02,
-                    'qos_classes': 8,
-                    'sla_availability': 0.9999
-                }
-            }
-            
-            # AWS Direct Connect Specific Factors
-            self.dx_characteristics = {
-                '1gbps_dedicated': {
-                    'name': '1 Gbps Dedicated Connection',
-                    'committed_bandwidth_mbps': 1000,
-                    'burst_capability': 1.0,
-                    'aws_edge_processing_overhead': 0.02,
-                    'cross_connect_latency_ms': 1,
-                    'bgp_convergence_impact': 0.01,
-                    'virtual_interface_overhead': 0.005
-                },
-                '10gbps_dedicated': {
-                    'name': '10 Gbps Dedicated Connection',
-                    'committed_bandwidth_mbps': 10000,
-                    'burst_capability': 1.0,
-                    'aws_edge_processing_overhead': 0.01,
-                    'cross_connect_latency_ms': 0.8,
-                    'bgp_convergence_impact': 0.005,
-                    'virtual_interface_overhead': 0.003
-                },
-                '100gbps_dedicated': {
-                    'name': '100 Gbps Dedicated Connection',
-                    'committed_bandwidth_mbps': 100000,
-                    'burst_capability': 1.0,
-                    'aws_edge_processing_overhead': 0.005,
-                    'cross_connect_latency_ms': 0.5,
-                    'bgp_convergence_impact': 0.002,
-                    'virtual_interface_overhead': 0.001
-                }
-            }
-            
-            # Enhanced Network Patterns with realistic infrastructure + database scenarios
-            self.network_patterns = {
-                'sj_nonprod_vpc_endpoint': {
-                    'name': 'San Jose Non-Prod → AWS VPC Endpoint',
-                    'source': 'San Jose',
-                    'environment': 'non-production',
-                    'pattern_type': 'vpc_endpoint',
-                    'os_type': 'linux_rhel8',
-                    'nic_type': '10gbps_standard',
-                    'lan_type': '10gb_switch',
-                    'wan_type': 'fiber_metro',
-                    'dx_type': None,
-                    'committed_bandwidth_mbps': 2000,
-                    'baseline_latency_ms': 8,
-                    'cost_factor': 1.5,
-                    'security_level': 'high',
-                    'reliability_score': 0.85,
-                    'complexity_score': 0.3,
-                    'vpc_endpoint_limitations': {
-                        'ipv4_only': True,
-                        'no_shared_vpc': True,
-                        'privatelink_routing_overhead': 0.03
-                    },
-                    'database_suitability': {
-                        'oltp': 0.7,
-                        'olap': 0.9,
-                        'replication': 0.6,
-                        'backup': 0.95
-                    }
-                },
-                'sj_nonprod_direct_connect': {
-                    'name': 'San Jose Non-Prod → AWS Direct Connect',
-                    'source': 'San Jose',
-                    'environment': 'non-production',
-                    'pattern_type': 'direct_connect',
-                    'os_type': 'linux_rhel8',
-                    'nic_type': '10gbps_standard',
-                    'lan_type': '10gb_switch',
-                    'wan_type': 'mpls_tier1',
-                    'dx_type': '10gbps_dedicated',
-                    'committed_bandwidth_mbps': 2000,
-                    'baseline_latency_ms': 12,
-                    'cost_factor': 2.0,
-                    'security_level': 'high',
-                    'reliability_score': 0.95,
-                    'complexity_score': 0.6,
-                    'database_suitability': {
-                        'oltp': 0.9,
-                        'olap': 0.95,
-                        'replication': 0.95,
-                        'backup': 0.9
-                    }
-                },
-                'sj_prod_direct_connect': {
-                    'name': 'San Jose Production → AWS Direct Connect',
-                    'source': 'San Jose',
-                    'environment': 'production',
-                    'pattern_type': 'direct_connect',
-                    'os_type': 'linux_ubuntu',
-                    'nic_type': '25gbps_high_performance',
-                    'lan_type': 'spine_leaf_fabric',
-                    'wan_type': 'aws_dx_dedicated',
-                    'dx_type': '100gbps_dedicated',
-                    'committed_bandwidth_mbps': 10000,
-                    'baseline_latency_ms': 6,
-                    'cost_factor': 3.5,
-                    'security_level': 'very_high',
-                    'reliability_score': 0.99,
-                    'complexity_score': 0.7,
-                    'database_suitability': {
-                        'oltp': 0.98,
-                        'olap': 0.98,
-                        'replication': 0.99,
-                        'backup': 0.95
-                    }
-                },
-                'sa_prod_via_sj': {
-                    'name': 'San Antonio Production → San Jose → AWS',
-                    'source': 'San Antonio',
-                    'environment': 'production',
-                    'pattern_type': 'multi_hop',
-                    'os_type': 'windows_server_2022',
-                    'nic_type': '25gbps_high_performance',
-                    'lan_type': 'spine_leaf_fabric',
-                    'wan_type': 'mpls_tier1',
-                    'dx_type': '100gbps_dedicated',
-                    'committed_bandwidth_mbps': 10000,
-                    'baseline_latency_ms': 18,
-                    'cost_factor': 4.0,
-                    'security_level': 'very_high',
-                    'reliability_score': 0.92,
-                    'complexity_score': 0.9,
-                    'database_suitability': {
-                        'oltp': 0.85,
-                        'olap': 0.95,
-                        'replication': 0.88,
-                        'backup': 0.9
-                    }
-                }
-            }
-            
-    # End of database_scenarios dictionary
-        database_scenarios = {
+        }
+        
+        # Complete Database Scenarios Dictionary
+        self.database_scenarios = {
+            'mysql_oltp_rds': {
+                'name': 'MySQL OLTP → RDS MySQL',
+                'workload_type': 'oltp',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for MySQL',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'medium',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 500,
+                'max_tolerable_latency_ms': 10,
+                'migration_complexity': 'low',
+                'downtime_sensitivity': 'high'
+            },
+            'postgresql_analytics_rds': {
+                'name': 'PostgreSQL Analytics → RDS PostgreSQL',
+                'workload_type': 'olap',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for PostgreSQL',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'eventual',
+                'recommended_services': ['dms', 'datasync'],
+                'min_bandwidth_mbps': 1000,
+                'max_tolerable_latency_ms': 50,
+                'migration_complexity': 'medium',
+                'downtime_sensitivity': 'medium'
+            },
+            'oracle_enterprise_rds': {
+                'name': 'Oracle Enterprise → RDS Oracle',
+                'workload_type': 'oltp',
+                'aws_target': 'rds',
+                'target_service': 'Amazon RDS for Oracle',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 2000,
+                'max_tolerable_latency_ms': 5,
+                'migration_complexity': 'high',
+                'downtime_sensitivity': 'high'
+            },
+            'sqlserver_enterprise_ec2': {
+                'name': 'SQL Server Enterprise → EC2',
+                'workload_type': 'oltp',
+                'aws_target': 'ec2',
+                'target_service': 'SQL Server on EC2',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms', 'datasync'],
+                'min_bandwidth_mbps': 1500,
+                'max_tolerable_latency_ms': 8,
+                'migration_complexity': 'high',
+                'downtime_sensitivity': 'high'
+            },
+            'mongodb_cluster_documentdb': {
+                'name': 'MongoDB Cluster → DocumentDB',
+                'workload_type': 'oltp',
+                'aws_target': 'documentdb',
+                'target_service': 'Amazon DocumentDB',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'configurable',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 1500,
+                'max_tolerable_latency_ms': 20,
+                'migration_complexity': 'medium',
+                'downtime_sensitivity': 'medium'
+            },
+            'mysql_analytics_aurora': {
+                'name': 'MySQL Analytics → Aurora MySQL',
+                'workload_type': 'olap',
+                'aws_target': 'aurora',
+                'target_service': 'Amazon Aurora MySQL',
+                'latency_sensitivity': 'medium',
+                'bandwidth_requirement': 'high',
+                'consistency_requirement': 'eventual',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 1200,
+                'max_tolerable_latency_ms': 25,
+                'migration_complexity': 'medium',
+                'downtime_sensitivity': 'low'
+            },
+            'postgresql_oltp_aurora': {
+                'name': 'PostgreSQL OLTP → Aurora PostgreSQL',
+                'workload_type': 'oltp',
+                'aws_target': 'aurora',
+                'target_service': 'Amazon Aurora PostgreSQL',
+                'latency_sensitivity': 'high',
+                'bandwidth_requirement': 'medium',
+                'consistency_requirement': 'strict',
+                'recommended_services': ['dms'],
+                'min_bandwidth_mbps': 800,
+                'max_tolerable_latency_ms': 12,
+                'migration_complexity': 'low',
+                'downtime_sensitivity': 'high'
+            },
             'mariadb_oltp_rds': {
                 'name': 'MariaDB OLTP → RDS MariaDB',
                 'workload_type': 'oltp',
@@ -993,216 +1091,215 @@ class EnhancedNetworkAnalyzer:
                 'downtime_sensitivity': 'high'
             }
         }
-        # Close the database_scenarios dictionary
         
         # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
-            self.migration_services = {
-                'datasync': {
-                    'name': 'AWS DataSync',
-                    'use_case': 'File and object data transfer',
-                    'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
-                    'vpc_endpoint_compatible': True,
-                    'encryption_in_transit': True,
-                    'encryption_at_rest': True,
-                    'application_efficiency': 0.92,
-                    'protocol_efficiency': 0.96,
-                    'latency_sensitivity': 'medium',
-                    'tcp_window_scaling_required': True,
-                    'vmware_deployment': True,  # NEW FLAG
-                    'database_compatibility': {
-                        'file_based_backups': True,
-                        'live_replication': False,
-                        'transaction_logs': True
-                    },
-                    'sizes': {
-                        'small': {
-                            'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
-                            'vpc_endpoint_throughput_reduction': 0.1,
-                            'optimal_file_size_mb': '1-100',
-                            'concurrent_transfers': 16,
-                            'tcp_connections': 16,
-                            'instance_type': 'm5.xlarge',
-                            'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
-                            'effective_throughput_mbps': 340  # NEW: After VMware overhead
-                        },
-                        'medium': {
-                            'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
-                            'vpc_endpoint_throughput_reduction': 0.08,
-                            'optimal_file_size_mb': '100-1000',
-                            'concurrent_transfers': 32,
-                            'tcp_connections': 32,
-                            'instance_type': 'm5.2xlarge',
-                            'vmware_overhead': 0.12,
-                            'effective_throughput_mbps': 880
-                        },
-                        'large': {
-                            'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
-                            'vpc_endpoint_throughput_reduction': 0.05,
-                            'optimal_file_size_mb': '1000+',
-                            'concurrent_transfers': 64,
-                            'tcp_connections': 64,
-                            'instance_type': 'm5.4xlarge',
-                            'vmware_overhead': 0.10,
-                            'effective_throughput_mbps': 1800
-                        },
-                        'xlarge': {
-                            'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
-                            'vpc_endpoint_throughput_reduction': 0.03,
-                            'optimal_file_size_mb': '1000+',
-                            'concurrent_transfers': 128,
-                            'tcp_connections': 128,
-                            'instance_type': 'm5.8xlarge',
-                            'vmware_overhead': 0.08,  # Less overhead on larger VMs
-                            'effective_throughput_mbps': 3680
-                        }
-                    }
+        self.migration_services = {
+            'datasync': {
+                'name': 'AWS DataSync',
+                'use_case': 'File and object data transfer',
+                'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
+                'vpc_endpoint_compatible': True,
+                'encryption_in_transit': True,
+                'encryption_at_rest': True,
+                'application_efficiency': 0.92,
+                'protocol_efficiency': 0.96,
+                'latency_sensitivity': 'medium',
+                'tcp_window_scaling_required': True,
+                'vmware_deployment': True,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': True
                 },
-                'dms': {
-                    'name': 'AWS Database Migration Service',
-                    'use_case': 'Database migration and replication',
-                    'protocols': ['TCP/IP', 'SSL/TLS'],
-                    'vpc_endpoint_compatible': True,
-                    'encryption_in_transit': True,
-                    'encryption_at_rest': True,
-                    'application_efficiency': 0.88,
-                    'protocol_efficiency': 0.94,
-                    'latency_sensitivity': 'high',
-                    'requires_endpoints': True,
-                    'supports_cdc': True,
-                    'tcp_window_scaling_required': True,
-                    'database_compatibility': {
-                        'file_based_backups': False,
-                        'live_replication': True,
-                        'transaction_logs': True,
-                        'schema_conversion': True
+                'sizes': {
+                    'small': {
+                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
+                        'vpc_endpoint_throughput_reduction': 0.1,
+                        'optimal_file_size_mb': '1-100',
+                        'concurrent_transfers': 16,
+                        'tcp_connections': 16,
+                        'instance_type': 'm5.xlarge',
+                        'vmware_overhead': 0.15,
+                        'effective_throughput_mbps': 340
                     },
-                    'sizes': {
-                        'small': {
-                            'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
-                            'max_connections': 50,
-                            'optimal_table_size_gb': '1-10',
-                            'tcp_connections': 4,
-                            'instance_type': 'dms.t3.medium'
-                        },
-                        'medium': {
-                            'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
-                            'max_connections': 100,
-                            'optimal_table_size_gb': '10-100',
-                            'tcp_connections': 8,
-                            'instance_type': 'dms.r5.large'
-                        },
-                        'large': {
-                            'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
-                            'max_connections': 200,
-                            'optimal_table_size_gb': '100-500',
-                            'tcp_connections': 16,
-                            'instance_type': 'dms.r5.xlarge'
-                        },
-                        'xlarge': {
-                            'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
-                            'max_connections': 400,
-                            'optimal_table_size_gb': '500+',
-                            'tcp_connections': 32,
-                            'instance_type': 'dms.r5.2xlarge'
-                        }
+                    'medium': {
+                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
+                        'vpc_endpoint_throughput_reduction': 0.08,
+                        'optimal_file_size_mb': '100-1000',
+                        'concurrent_transfers': 32,
+                        'tcp_connections': 32,
+                        'instance_type': 'm5.2xlarge',
+                        'vmware_overhead': 0.12,
+                        'effective_throughput_mbps': 880
+                    },
+                    'large': {
+                        'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
+                        'vpc_endpoint_throughput_reduction': 0.05,
+                        'optimal_file_size_mb': '1000+',
+                        'concurrent_transfers': 64,
+                        'tcp_connections': 64,
+                        'instance_type': 'm5.4xlarge',
+                        'vmware_overhead': 0.10,
+                        'effective_throughput_mbps': 1800
+                    },
+                    'xlarge': {
+                        'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
+                        'vpc_endpoint_throughput_reduction': 0.03,
+                        'optimal_file_size_mb': '1000+',
+                        'concurrent_transfers': 128,
+                        'tcp_connections': 128,
+                        'instance_type': 'm5.8xlarge',
+                        'vmware_overhead': 0.08,
+                        'effective_throughput_mbps': 3680
                     }
+                }
+            },
+            'dms': {
+                'name': 'AWS Database Migration Service',
+                'use_case': 'Database migration and replication',
+                'protocols': ['TCP/IP', 'SSL/TLS'],
+                'vpc_endpoint_compatible': True,
+                'encryption_in_transit': True,
+                'encryption_at_rest': True,
+                'application_efficiency': 0.88,
+                'protocol_efficiency': 0.94,
+                'latency_sensitivity': 'high',
+                'requires_endpoints': True,
+                'supports_cdc': True,
+                'tcp_window_scaling_required': True,
+                'database_compatibility': {
+                    'file_based_backups': False,
+                    'live_replication': True,
+                    'transaction_logs': True,
+                    'schema_conversion': True
                 },
-                    'fsx_windows': {
-                        'name': 'Amazon FSx for Windows File Server',
-                        'use_case': 'Windows-based file shares and applications',
-                        'protocols': ['SMB', 'NFS', 'iSCSI'],
-                        'vpc_endpoint_compatible': False,
-                        'encryption_in_transit': True,
-                        'encryption_at_rest': True,
-                        'application_efficiency': 0.95,
-                        'protocol_efficiency': 0.93,
-                        'latency_sensitivity': 'low',
-                        'requires_active_directory': True,
-                        'supports_deduplication': True,
-                        'tcp_window_scaling_required': False,
-                        'database_compatibility': {
-                            'file_based_backups': True,
-                            'live_replication': False,
-                            'transaction_logs': False
-                        },
-                        'sizes': {
-                            'small': {
-                                'storage_gb': 32, 'throughput_mbps': 16, 'cost_per_hour': 0.013,
-                                'iops': 96, 'max_concurrent_users': 50
-                            },
-                            'medium': {
-                                'storage_gb': 64, 'throughput_mbps': 32, 'cost_per_hour': 0.025,
-                                'iops': 192, 'max_concurrent_users': 100
-                            },
-                            'large': {
-                                'storage_gb': 2048, 'throughput_mbps': 512, 'cost_per_hour': 0.40,
-                                'iops': 6144, 'max_concurrent_users': 500
-                            }
-                        }
+                'sizes': {
+                    'small': {
+                        'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
+                        'max_connections': 50,
+                        'optimal_table_size_gb': '1-10',
+                        'tcp_connections': 4,
+                        'instance_type': 'dms.t3.medium'
                     },
-                    'fsx_lustre': {
-                        'name': 'Amazon FSx for Lustre',
-                        'use_case': 'High-performance computing and machine learning',
-                        'protocols': ['Lustre', 'POSIX'],
-                        'vpc_endpoint_compatible': False,
-                        'encryption_in_transit': True,
-                        'encryption_at_rest': True,
-                        'application_efficiency': 0.98,
-                        'protocol_efficiency': 0.97,
-                        'latency_sensitivity': 'very_low',
-                        'supports_s3_integration': True,
-                        'tcp_window_scaling_required': False,
-                        'database_compatibility': {
-                            'file_based_backups': True,
-                            'live_replication': False,
-                            'transaction_logs': False
-                        },
-                        'sizes': {
-                            'small': {
-                                'storage_gb': 1200, 'throughput_mbps': 240, 'cost_per_hour': 0.15,
-                                'iops': 'unlimited', 'max_concurrent_clients': 100
-                            },
-                            'large': {
-                                'storage_gb': 7200, 'throughput_mbps': 1440, 'cost_per_hour': 0.90,
-                                'iops': 'unlimited', 'max_concurrent_clients': 500
-                            }
-                        }
+                    'medium': {
+                        'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
+                        'max_connections': 100,
+                        'optimal_table_size_gb': '10-100',
+                        'tcp_connections': 8,
+                        'instance_type': 'dms.r5.large'
                     },
-                    'storage_gateway': {
-                        'name': 'AWS Storage Gateway',
-                        'use_case': 'Hybrid cloud storage integration',
-                        'protocols': ['NFS', 'SMB', 'iSCSI', 'VTL'],
-                        'vpc_endpoint_compatible': True,
-                        'encryption_in_transit': True,
-                        'encryption_at_rest': True,
-                        'application_efficiency': 0.85,
-                        'protocol_efficiency': 0.92,
-                        'latency_sensitivity': 'medium',
-                        'supports_caching': True,
-                        'tcp_window_scaling_required': True,
-                        'database_compatibility': {
-                            'file_based_backups': True,
-                            'live_replication': False,
-                            'transaction_logs': True
-                        },
-                        'sizes': {
-                            'small': {
-                                'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 125, 'cost_per_hour': 0.05,
-                                'cache_gb': 150, 'max_volumes': 32,
-                                'instance_type': 'm5.xlarge'
-                            },
-                            'large': {
-                                'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 500, 'cost_per_hour': 0.20,
-                                'cache_gb': 600, 'max_volumes': 128,
-                                'instance_type': 'm5.4xlarge'
-                            }
-                        }
+                    'large': {
+                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
+                        'max_connections': 200,
+                        'optimal_table_size_gb': '100-500',
+                        'tcp_connections': 16,
+                        'instance_type': 'dms.r5.xlarge'
+                    },
+                    'xlarge': {
+                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
+                        'max_connections': 400,
+                        'optimal_table_size_gb': '500+',
+                        'tcp_connections': 32,
+                        'instance_type': 'dms.r5.2xlarge'
                     }
+                }
+            },
+            'fsx_windows': {
+                'name': 'Amazon FSx for Windows File Server',
+                'use_case': 'Windows-based file shares and applications',
+                'protocols': ['SMB', 'NFS', 'iSCSI'],
+                'vpc_endpoint_compatible': False,
+                'encryption_in_transit': True,
+                'encryption_at_rest': True,
+                'application_efficiency': 0.95,
+                'protocol_efficiency': 0.93,
+                'latency_sensitivity': 'low',
+                'requires_active_directory': True,
+                'supports_deduplication': True,
+                'tcp_window_scaling_required': False,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': False
+                },
+                'sizes': {
+                    'small': {
+                        'storage_gb': 32, 'throughput_mbps': 16, 'cost_per_hour': 0.013,
+                        'iops': 96, 'max_concurrent_users': 50
+                    },
+                    'medium': {
+                        'storage_gb': 64, 'throughput_mbps': 32, 'cost_per_hour': 0.025,
+                        'iops': 192, 'max_concurrent_users': 100
+                    },
+                    'large': {
+                        'storage_gb': 2048, 'throughput_mbps': 512, 'cost_per_hour': 0.40,
+                        'iops': 6144, 'max_concurrent_users': 500
+                    }
+                }
+            },
+            'fsx_lustre': {
+                'name': 'Amazon FSx for Lustre',
+                'use_case': 'High-performance computing and machine learning',
+                'protocols': ['Lustre', 'POSIX'],
+                'vpc_endpoint_compatible': False,
+                'encryption_in_transit': True,
+                'encryption_at_rest': True,
+                'application_efficiency': 0.98,
+                'protocol_efficiency': 0.97,
+                'latency_sensitivity': 'very_low',
+                'supports_s3_integration': True,
+                'tcp_window_scaling_required': False,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': False
+                },
+                'sizes': {
+                    'small': {
+                        'storage_gb': 1200, 'throughput_mbps': 240, 'cost_per_hour': 0.15,
+                        'iops': 'unlimited', 'max_concurrent_clients': 100
+                    },
+                    'large': {
+                        'storage_gb': 7200, 'throughput_mbps': 1440, 'cost_per_hour': 0.90,
+                        'iops': 'unlimited', 'max_concurrent_clients': 500
+                    }
+                }
+            },
+            'storage_gateway': {
+                'name': 'AWS Storage Gateway',
+                'use_case': 'Hybrid cloud storage integration',
+                'protocols': ['NFS', 'SMB', 'iSCSI', 'VTL'],
+                'vpc_endpoint_compatible': True,
+                'encryption_in_transit': True,
+                'encryption_at_rest': True,
+                'application_efficiency': 0.85,
+                'protocol_efficiency': 0.92,
+                'latency_sensitivity': 'medium',
+                'supports_caching': True,
+                'tcp_window_scaling_required': True,
+                'database_compatibility': {
+                    'file_based_backups': True,
+                    'live_replication': False,
+                    'transaction_logs': True
+                },
+                'sizes': {
+                    'small': {
+                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 125, 'cost_per_hour': 0.05,
+                        'cache_gb': 150, 'max_volumes': 32,
+                        'instance_type': 'm5.xlarge'
+                    },
+                    'large': {
+                        'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 500, 'cost_per_hour': 0.20,
+                        'cache_gb': 600, 'max_volumes': 128,
+                        'instance_type': 'm5.4xlarge'
+                    }
+                }
             }
+        }
         
         # Initialize new clients
-    self.pricing_client = AWSPricingClient()
-    self.ai_client = ClaudeAIClient()
+        self.pricing_client = AWSPricingClient()
+        self.ai_client = ClaudeAIClient()
     
     def determine_optimal_pattern(self, source_location: str, environment: str, migration_service: str) -> str:
         """Determine optimal network pattern based on requirements"""
@@ -1363,16 +1460,6 @@ class EnhancedNetworkAnalyzer:
         })
         step_number += 1
         
-        # MODIFY the existing "Step 10: Service Capacity" section in calculate_realistic_bandwidth_waterfall()
-# Replace around line 700-750:
-
-        # OLD CODE:
-        # Step 10: Service Capacity
-        service_capacity = service_spec['throughput_mbps'] * num_instances
-        service_limited_bandwidth = min(protocol_adjusted_bandwidth, service_capacity)
-        service_reduction = protocol_adjusted_bandwidth - service_limited_bandwidth
-
-        # NEW ENHANCED CODE:
         # Step 10: Service Capacity (Enhanced for DataSync VMware overhead)
         if migration_service == 'datasync' and service.get('vmware_deployment', False):
             # Use effective throughput that accounts for VMware overhead
@@ -1416,6 +1503,7 @@ class EnhancedNetworkAnalyzer:
             'step_number': step_number,
             'details': f"Service capacity: {service_capacity:.0f} Mbps, Network available: {protocol_adjusted_bandwidth:.0f} Mbps"
         })
+        step_number += 1
         
         # Step 11: Application Efficiency
         app_efficiency = service.get('application_efficiency', 0.9)
@@ -1535,14 +1623,206 @@ class EnhancedNetworkAnalyzer:
             'supports_incremental': migration_service in ['dms', 'storage_gateway']
         }
     
+    def calculate_optimal_datasync_instances(self, available_bandwidth_mbps: float, data_size_gb: int, target_transfer_time_hours: float) -> Dict:
+        """Calculate optimal number of DataSync instances for production workloads"""
+        
+        # Get DataSync VM specs from migration services
+        datasync_service = self.migration_services['datasync']
+        
+        # Calculate required throughput
+        required_throughput_mbps = (data_size_gb * 8) / (target_transfer_time_hours * 3600) * 1000
+        
+        recommendations = {}
+        
+        # Analyze each size configuration
+        for size_name, size_config in datasync_service['sizes'].items():
+            vmware_overhead = size_config.get('vmware_overhead', 0.1)
+            base_throughput = size_config['throughput_mbps']
+            effective_throughput = size_config.get('effective_throughput_mbps', 
+                                                  base_throughput * (1 - vmware_overhead))
+            
+            # Calculate instances needed
+            instances_needed = math.ceil(required_throughput_mbps / effective_throughput)
+            
+            # Check against available bandwidth
+            max_possible_instances = min(instances_needed, 
+                                       available_bandwidth_mbps // effective_throughput)
+            
+            total_throughput = max_possible_instances * effective_throughput
+            
+            recommendations[size_name] = {
+                'instances_needed': instances_needed,
+                'instances_possible': max_possible_instances,
+                'effective_throughput_per_vm': effective_throughput,
+                'total_throughput_mbps': total_throughput,
+                'meets_requirement': total_throughput >= required_throughput_mbps,
+                'vmware_requirements': {
+                    'total_cpu_cores': max_possible_instances * size_config['vcpu'],
+                    'total_memory_gb': max_possible_instances * size_config['memory_gb'],
+                    'network_bandwidth_mbps': max_possible_instances * base_throughput
+                },
+                'is_bottleneck': required_throughput_mbps > total_throughput
+            }
+        
+        # Find best recommendation
+        viable_options = {k: v for k, v in recommendations.items() if v['meets_requirement']}
+        
+        if viable_options:
+            best_option_key = min(viable_options.keys(), 
+                                 key=lambda k: viable_options[k]['vmware_requirements']['total_cpu_cores'])
+        else:
+            best_option_key = max(recommendations.keys(),
+                                 key=lambda k: recommendations[k]['total_throughput_mbps'])
+        
+        return {
+            'required_throughput_mbps': required_throughput_mbps,
+            'available_bandwidth_mbps': available_bandwidth_mbps,
+            'recommendations': recommendations,
+            'best_option': best_option_key,
+            'best_option_details': recommendations[best_option_key],
+            'is_datasync_bottleneck': any(rec['is_bottleneck'] for rec in recommendations.values())
+        }
+
+    def analyze_datasync_bottleneck_by_pattern(self, pattern_key: str, migration_service: str, 
+                                              service_size: str, num_instances: int, 
+                                              data_size_gb: int, target_hours: float) -> Dict:
+        """Analyze if DataSync is the bottleneck for a specific pattern"""
+        
+        # Calculate network capacity
+        waterfall_data = self.calculate_realistic_bandwidth_waterfall(
+            pattern_key, migration_service, service_size, num_instances
+        )
+        
+        available_bandwidth = waterfall_data['summary']['final_effective_mbps']
+        
+        # Only analyze if it's DataSync
+        if migration_service == 'datasync':
+            datasync_analysis = self.calculate_optimal_datasync_instances(
+                available_bandwidth, data_size_gb, target_hours
+            )
+            
+            return {
+                'waterfall_data': waterfall_data,
+                'datasync_analysis': datasync_analysis,
+                'bottleneck_layer': 'service' if datasync_analysis['is_datasync_bottleneck'] else 'network',
+                'bottleneck_explanation': self._explain_datasync_bottleneck(datasync_analysis, waterfall_data)
+            }
+        else:
+            return {
+                'waterfall_data': waterfall_data,
+                'datasync_analysis': None,
+                'bottleneck_layer': waterfall_data['summary']['bottleneck'],
+                'bottleneck_explanation': f"Service: {migration_service} (not DataSync)"
+            }
+
+    def _explain_datasync_bottleneck(self, datasync_analysis: Dict, waterfall_data: Dict) -> str:
+        """Generate explanation for DataSync bottleneck analysis"""
+        
+        best_option = datasync_analysis['best_option_details']
+        required = datasync_analysis['required_throughput_mbps']
+        available_network = datasync_analysis['available_bandwidth_mbps']
+        
+        if datasync_analysis['is_datasync_bottleneck']:
+            if best_option['instances_possible'] < best_option['instances_needed']:
+                return (f"DataSync bottleneck: Need {best_option['instances_needed']} instances "
+                       f"({required:,.0f} Mbps required) but network only supports "
+                       f"{best_option['instances_possible']} instances ({available_network:,.0f} Mbps)")
+            else:
+                return (f"DataSync bottleneck: Single VM limited to {best_option['effective_throughput_per_vm']:,.0f} Mbps, "
+                       f"need {best_option['instances_needed']} instances for {required:,.0f} Mbps requirement")
+        else:
+            return (f"Network bottleneck: DataSync can provide {best_option['total_throughput_mbps']:,.0f} Mbps "
+                    f"but network limits to {available_network:,.0f} Mbps")
+
+    def get_datasync_scaling_recommendations(self, pattern_key: str, config: Dict) -> Dict:
+        """Get DataSync scaling recommendations for the current configuration"""
+        
+        if config['migration_service'] != 'datasync':
+            return {'applicable': False, 'reason': 'Not using DataSync service'}
+        
+        # Calculate target transfer time
+        target_hours = config.get('max_downtime_hours', 8)
+        
+        analysis = self.analyze_datasync_bottleneck_by_pattern(
+            pattern_key, 
+            config['migration_service'],
+            config['service_size'],
+            config['num_instances'],
+            config['data_size_gb'],
+            target_hours
+        )
+        
+        if analysis['datasync_analysis']:
+            datasync_data = analysis['datasync_analysis']
+            best_option = datasync_data['best_option_details']
+            
+            recommendations = []
+            
+            if datasync_data['is_datasync_bottleneck']:
+                recommendations.append({
+                    'type': 'scaling',
+                    'priority': 'high',
+                    'description': f"Scale to {best_option['instances_needed']} DataSync VMs to meet {target_hours}h transfer window",
+                    'vmware_impact': f"Requires {best_option['vmware_requirements']['total_cpu_cores']} CPU cores, "
+                                   f"{best_option['vmware_requirements']['total_memory_gb']} GB RAM",
+                    'cost_impact': f"Estimated {best_option['instances_needed']}x cost increase"
+                })
+            
+            if best_option['instances_needed'] > 1:
+                recommendations.append({
+                    'type': 'architecture',
+                    'priority': 'medium', 
+                    'description': "Deploy multiple DataSync VMs across different VMware hosts for better performance",
+                    'vmware_impact': "Distribute VMs to avoid resource contention",
+                    'cost_impact': "Minimal additional cost for VM distribution"
+                })
+            
+            return {
+                'applicable': True,
+                'is_bottleneck': datasync_data['is_datasync_bottleneck'],
+                'current_config': {
+                    'size': config['service_size'],
+                    'instances': config['num_instances'],
+                    'effective_throughput': best_option['total_throughput_mbps']
+                },
+                'optimal_config': {
+                    'size': datasync_data['best_option'],
+                    'instances': best_option['instances_needed'],
+                    'effective_throughput': best_option['total_throughput_mbps']
+                },
+                'recommendations': recommendations,
+                'explanation': analysis['bottleneck_explanation']
+            }
+        
+        return {'applicable': False, 'reason': 'Could not analyze DataSync configuration'}
+    
     def generate_ai_recommendations(self, config: Dict, analysis_results: Dict) -> Dict:
-        """Generate AI-powered recommendations"""
+        """Generate AI-powered recommendations (ENHANCED VERSION)"""
         migration_time = analysis_results['migration_time']
         waterfall_data = analysis_results['waterfall_data']
         service_compatibility = analysis_results.get('service_compatibility', {})
         
         recommendations = []
         priority_score = 0
+        
+        # NEW: DataSync-specific recommendations
+        if config['migration_service'] == 'datasync':
+            pattern_key = self.determine_optimal_pattern(
+                config['source_location'], 
+                config['environment'], 
+                config['migration_service']
+            )
+            
+            datasync_scaling = self.get_datasync_scaling_recommendations(pattern_key, config)
+            
+            if datasync_scaling['applicable'] and datasync_scaling['is_bottleneck']:
+                recommendations.append({
+                    'type': 'datasync_scaling',
+                    'priority': 'high',
+                    'description': f'DataSync bottleneck detected. Scale to {datasync_scaling["optimal_config"]["instances"]} VMs for optimal performance.',
+                    'impact': f'{(datasync_scaling["optimal_config"]["effective_throughput"] / datasync_scaling["current_config"]["effective_throughput"] - 1) * 100:.0f}% performance improvement'
+                })
+                priority_score += 25
         
         # Infrastructure bottleneck recommendations
         primary_bottleneck = waterfall_data['summary']['primary_bottleneck_layer']
@@ -1589,184 +1869,6 @@ class EnhancedNetworkAnalyzer:
             'migration_complexity': 'high' if priority_score > 40 else 'medium' if priority_score > 20 else 'low',
             'confidence_level': 'high' if len(recommendations) <= 3 else 'medium'
         }
-    
-    # ADD these methods to the EnhancedNetworkAnalyzer class
-# Insert around line 800-900, after existing methods but before "# NEW METHODS FOR AI AND COST ANALYSIS"
-
-def calculate_optimal_datasync_instances(self, available_bandwidth_mbps: float, data_size_gb: int, target_transfer_time_hours: float) -> Dict:
-    """Calculate optimal number of DataSync instances for production workloads"""
-    
-    # Get DataSync VM specs from migration services
-    datasync_service = self.migration_services['datasync']
-    
-    # Calculate required throughput
-    required_throughput_mbps = (data_size_gb * 8) / (target_transfer_time_hours * 3600) * 1000
-    
-    recommendations = {}
-    
-    # Analyze each size configuration
-    for size_name, size_config in datasync_service['sizes'].items():
-        vmware_overhead = size_config.get('vmware_overhead', 0.1)
-        base_throughput = size_config['throughput_mbps']
-        effective_throughput = size_config.get('effective_throughput_mbps', 
-                                              base_throughput * (1 - vmware_overhead))
-        
-        # Calculate instances needed
-        instances_needed = math.ceil(required_throughput_mbps / effective_throughput)
-        
-        # Check against available bandwidth
-        max_possible_instances = min(instances_needed, 
-                                   available_bandwidth_mbps // effective_throughput)
-        
-        total_throughput = max_possible_instances * effective_throughput
-        
-        recommendations[size_name] = {
-            'instances_needed': instances_needed,
-            'instances_possible': max_possible_instances,
-            'effective_throughput_per_vm': effective_throughput,
-            'total_throughput_mbps': total_throughput,
-            'meets_requirement': total_throughput >= required_throughput_mbps,
-            'vmware_requirements': {
-                'total_cpu_cores': max_possible_instances * size_config['vcpu'],
-                'total_memory_gb': max_possible_instances * size_config['memory_gb'],
-                'network_bandwidth_mbps': max_possible_instances * base_throughput
-            },
-            'is_bottleneck': required_throughput_mbps > total_throughput
-        }
-    
-    # Find best recommendation
-    viable_options = {k: v for k, v in recommendations.items() if v['meets_requirement']}
-    
-    if viable_options:
-        best_option_key = min(viable_options.keys(), 
-                             key=lambda k: viable_options[k]['vmware_requirements']['total_cpu_cores'])
-    else:
-        best_option_key = max(recommendations.keys(),
-                             key=lambda k: recommendations[k]['total_throughput_mbps'])
-    
-    return {
-        'required_throughput_mbps': required_throughput_mbps,
-        'available_bandwidth_mbps': available_bandwidth_mbps,
-        'recommendations': recommendations,
-        'best_option': best_option_key,
-        'best_option_details': recommendations[best_option_key],
-        'is_datasync_bottleneck': any(rec['is_bottleneck'] for rec in recommendations.values())
-    }
-
-def analyze_datasync_bottleneck_by_pattern(self, pattern_key: str, migration_service: str, 
-                                          service_size: str, num_instances: int, 
-                                          data_size_gb: int, target_hours: float) -> Dict:
-    """Analyze if DataSync is the bottleneck for a specific pattern"""
-    
-    # Calculate network capacity
-    waterfall_data = self.calculate_realistic_bandwidth_waterfall(
-        pattern_key, migration_service, service_size, num_instances
-    )
-    
-    available_bandwidth = waterfall_data['summary']['final_effective_mbps']
-    
-    # Only analyze if it's DataSync
-    if migration_service == 'datasync':
-        datasync_analysis = self.calculate_optimal_datasync_instances(
-            available_bandwidth, data_size_gb, target_hours
-        )
-        
-        return {
-            'waterfall_data': waterfall_data,
-            'datasync_analysis': datasync_analysis,
-            'bottleneck_layer': 'service' if datasync_analysis['is_datasync_bottleneck'] else 'network',
-            'bottleneck_explanation': self._explain_datasync_bottleneck(datasync_analysis, waterfall_data)
-        }
-    else:
-        return {
-            'waterfall_data': waterfall_data,
-            'datasync_analysis': None,
-            'bottleneck_layer': waterfall_data['summary']['bottleneck'],
-            'bottleneck_explanation': f"Service: {migration_service} (not DataSync)"
-        }
-
-def _explain_datasync_bottleneck(self, datasync_analysis: Dict, waterfall_data: Dict) -> str:
-    """Generate explanation for DataSync bottleneck analysis"""
-    
-    best_option = datasync_analysis['best_option_details']
-    required = datasync_analysis['required_throughput_mbps']
-    available_network = datasync_analysis['available_bandwidth_mbps']
-    
-    if datasync_analysis['is_datasync_bottleneck']:
-        if best_option['instances_possible'] < best_option['instances_needed']:
-            return (f"DataSync bottleneck: Need {best_option['instances_needed']} instances "
-                   f"({required:,.0f} Mbps required) but network only supports "
-                   f"{best_option['instances_possible']} instances ({available_network:,.0f} Mbps)")
-        else:
-            return (f"DataSync bottleneck: Single VM limited to {best_option['effective_throughput_per_vm']:,.0f} Mbps, "
-                   f"need {best_option['instances_needed']} instances for {required:,.0f} Mbps requirement")
-    else:
-        return (f"Network bottleneck: DataSync can provide {best_option['total_throughput_mbps']:,.0f} Mbps "
-                f"but network limits to {available_network:,.0f} Mbps")
-
-def get_datasync_scaling_recommendations(self, pattern_key: str, config: Dict) -> Dict:
-    """Get DataSync scaling recommendations for the current configuration"""
-    
-    if config['migration_service'] != 'datasync':
-        return {'applicable': False, 'reason': 'Not using DataSync service'}
-    
-    # Calculate target transfer time
-    target_hours = config.get('max_downtime_hours', 8)
-    
-    analysis = self.analyze_datasync_bottleneck_by_pattern(
-        pattern_key, 
-        config['migration_service'],
-        config['service_size'],
-        config['num_instances'],
-        config['data_size_gb'],
-        target_hours
-    )
-    
-    if analysis['datasync_analysis']:
-        datasync_data = analysis['datasync_analysis']
-        best_option = datasync_data['best_option_details']
-        
-        recommendations = []
-        
-        if datasync_data['is_datasync_bottleneck']:
-            recommendations.append({
-                'type': 'scaling',
-                'priority': 'high',
-                'description': f"Scale to {best_option['instances_needed']} DataSync VMs to meet {target_hours}h transfer window",
-                'vmware_impact': f"Requires {best_option['vmware_requirements']['total_cpu_cores']} CPU cores, "
-                               f"{best_option['vmware_requirements']['total_memory_gb']} GB RAM",
-                'cost_impact': f"Estimated {best_option['instances_needed']}x cost increase"
-            })
-        
-        if best_option['instances_needed'] > 1:
-            recommendations.append({
-                'type': 'architecture',
-                'priority': 'medium', 
-                'description': "Deploy multiple DataSync VMs across different VMware hosts for better performance",
-                'vmware_impact': "Distribute VMs to avoid resource contention",
-                'cost_impact': "Minimal additional cost for VM distribution"
-            })
-        
-        return {
-            'applicable': True,
-            'is_bottleneck': datasync_data['is_datasync_bottleneck'],
-            'current_config': {
-                'size': config['service_size'],
-                'instances': config['num_instances'],
-                'effective_throughput': best_option['total_throughput_mbps']
-            },
-            'optimal_config': {
-                'size': datasync_data['best_option'],
-                'instances': best_option['instances_needed'],
-                'effective_throughput': best_option['total_throughput_mbps']
-            },
-            'recommendations': recommendations,
-            'explanation': analysis['bottleneck_explanation']
-        }
-    
-    return {'applicable': False, 'reason': 'Could not analyze DataSync configuration'}
-    
-    
     
     # NEW METHODS FOR AI AND COST ANALYSIS
     def analyze_all_patterns(self, config: Dict) -> List[PatternAnalysis]:
@@ -2819,10 +2921,7 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
         </div>
         """, unsafe_allow_html=True)
     
-        # ADD this section in render_realistic_analysis_tab() 
-    # Insert after the database requirements check (around line 1400):
-
-    # Enhanced DataSync Analysis (ADD THIS SECTION)
+    # Enhanced DataSync Analysis
     if config['migration_service'] == 'datasync':
         datasync_scaling = analyzer.get_datasync_scaling_recommendations(pattern_key, config)
         
@@ -2858,7 +2957,7 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
             </div>
             """, unsafe_allow_html=True)
 
-    # ADD this DataSync VMware deployment information section as well:
+    # DataSync VMware deployment information
     if config['migration_service'] == 'datasync':
         with st.expander("🖥️ VMware Deployment Details", expanded=False):
             col1, col2 = st.columns(2)
@@ -2884,6 +2983,7 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
             
             with col2:
                 # Calculate total VMware requirements
+                datasync_scaling = analyzer.get_datasync_scaling_recommendations(pattern_key, config)
                 if datasync_scaling['applicable']:
                     optimal = datasync_scaling['optimal_config']
                     service_spec = analyzer.migration_services['datasync']['sizes'][optimal['size']]
@@ -2908,8 +3008,6 @@ def render_realistic_analysis_tab(config: Dict, analyzer: EnhancedNetworkAnalyze
                     - **Network ports:** {optimal['instances']} × 10GbE
                     - **Storage IOPS:** 500 IOPS per VM minimum
                     """)
-        
-    
     
     # Sequential flow diagram
     create_sequential_flow_diagram(waterfall_data)
@@ -3245,10 +3343,7 @@ def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer
             </div>
             """, unsafe_allow_html=True)
     
-        # ADD this section to render_ai_recommendations_tab() 
-    # Insert after the existing recommendations sections (around line 1650):
-
-    # Enhanced DataSync AI Recommendations (ADD THIS SECTION)
+    # Enhanced DataSync AI Recommendations
     if config['migration_service'] == 'datasync':
         pattern_key = analyzer.determine_optimal_pattern(
             config['source_location'], 
@@ -3313,41 +3408,6 @@ def render_ai_recommendations_tab(config: Dict, analysis_results: Dict, analyzer
                 <p><strong>ROI Consideration:</strong> Shorter migration window may offset higher VM costs</p>
             </div>
             """, unsafe_allow_html=True)
-
-    # Also ADD this to the generate_ai_recommendations method in the EnhancedNetworkAnalyzer class
-    # Add around line 900 in the generate_ai_recommendations method:
-
-    def generate_ai_recommendations(self, config: Dict, analysis_results: Dict) -> Dict:
-        """Generate AI-powered recommendations (ENHANCED VERSION)"""
-        migration_time = analysis_results['migration_time']
-        waterfall_data = analysis_results['waterfall_data']
-        service_compatibility = analysis_results.get('service_compatibility', {})
-        
-        recommendations = []
-        priority_score = 0
-        
-        # NEW: DataSync-specific recommendations
-        if config['migration_service'] == 'datasync':
-            pattern_key = self.determine_optimal_pattern(
-                config['source_location'], 
-                config['environment'], 
-                config['migration_service']
-            )
-            
-            datasync_scaling = self.get_datasync_scaling_recommendations(pattern_key, config)
-            
-            if datasync_scaling['applicable'] and datasync_scaling['is_bottleneck']:
-                recommendations.append({
-                    'type': 'datasync_scaling',
-                    'priority': 'high',
-                    'description': f'DataSync bottleneck detected. Scale to {datasync_scaling["optimal_config"]["instances"]} VMs for optimal performance.',
-                    'impact': f'{(datasync_scaling["optimal_config"]["effective_throughput"] / datasync_scaling["current_config"]["effective_throughput"] - 1) * 100:.0f}% performance improvement'
-                })
-                priority_score += 25
-        
-        # ... rest of existing recommendation logic ...
-    
-    
     
     # Summary card
     waterfall_summary = analysis_results['waterfall_data']['summary']
