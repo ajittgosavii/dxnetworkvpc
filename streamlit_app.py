@@ -2323,9 +2323,51 @@ def render_enhanced_sidebar_controls():
         help="AI analyzes performance, cost, and complexity for each destination type"
     )
     
-    # Environment
+    
+        # Environment
     environment = st.sidebar.selectbox("Environment", ["non-production", "production"],
-                                     help="AI adjusts reliability and performance requirements")
+                                    help="AI adjusts reliability and performance requirements")
+
+    # VPC Endpoint Configuration
+    st.sidebar.subheader("🔗 VPC Endpoint Configuration")
+    use_vpc_endpoint = st.sidebar.checkbox(
+        "Enable VPC Endpoint",
+        value=True,
+        help="Use VPC endpoint for improved performance and reduced data transfer costs"
+    )
+
+    vpc_endpoint_type = None
+    vpc_endpoint_policy = None
+
+    if use_vpc_endpoint:
+        vpc_endpoint_type = st.sidebar.selectbox(
+            "VPC Endpoint Type",
+            ["Gateway", "Interface"],
+            format_func=lambda x: {
+                'Gateway': '🌐 Gateway Endpoint (S3, DynamoDB)',
+                'Interface': '🔌 Interface Endpoint (Most AWS Services)'
+            }[x],
+            help="Gateway endpoints are free, Interface endpoints have hourly charges"
+        )
+        
+        vpc_endpoint_policy = st.sidebar.selectbox(
+            "VPC Endpoint Policy",
+            ["Full Access", "Restricted", "Custom"],
+            help="Control access through the VPC endpoint"
+        )
+        
+        # Show cost impact
+        if vpc_endpoint_type == "Interface":
+            st.sidebar.warning("💰 Interface endpoints: ~$7.20/month per endpoint")
+        else:
+            st.sidebar.success("💰 Gateway endpoints: No additional charges")
+            
+        # Show performance benefit
+        destination_storage = destination_storage_type  # Use the variable from above
+        performance_boost = 30 if destination_storage == 'S3' else 15
+        st.sidebar.info(f"📈 Expected performance boost: +{performance_boost}%")
+    else:
+        use_vpc_endpoint = False
     
     # Rest of the configuration remains the same...
     # Agent configuration, AI settings, etc.
@@ -9055,6 +9097,11 @@ def render_network_intelligence_tab(analysis: Dict, config: Dict):
             for risk in risks[:2]:
                 st.write(f"• {risk}")
     
+    
+        # Add this after the existing network analysis sections
+    st.markdown("---")
+    render_vpc_endpoint_analysis(config, analysis)
+        
     # Network Optimization Recommendations
     st.markdown("**💡 Network Optimization Recommendations:**")
     
