@@ -15,13 +15,13 @@ from anthropic import Anthropic
 
 # Configure page
 st.set_page_config(
-    page_title="AWS Network Migration Analyzer",
-    page_icon="🌐",
+    page_title="AWS DataSync Database Migration Analyzer",
+    page_icon="🗄️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Enhanced CSS styling with new placement analysis components
+# Enhanced CSS styling with database migration specific components
 st.markdown("""
 <style>
     .main-header {
@@ -32,6 +32,30 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2rem;
         box-shadow: 0 4px 15px rgba(30,58,138,0.2);
+    }
+    
+    .database-card {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        color: #1f2937;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #22c55e;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+    
+    .backup-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #dbeafe 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        color: #1f2937;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #3b82f6;
+        font-size: 14px;
+        line-height: 1.6;
     }
     
     .network-card {
@@ -283,6 +307,30 @@ st.markdown("""
     .placement-score.poor {
         background: #ef4444;
     }
+
+    .sql-server-card {
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        color: #1f2937;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #0ea5e9;
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .linux-db-card {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        padding: 1.5rem;
+        border-radius: 8px;
+        color: #1f2937;
+        margin: 1rem 0;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-left: 4px solid #22c55e;
+        font-size: 14px;
+        line-height: 1.6;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -449,25 +497,31 @@ class ClaudeAIIntegration:
         except Exception as e:
             return False, f"Claude AI connection failed: {str(e)}"
     
-    def analyze_migration_performance(self, config: Dict, network_perf: Dict, 
-                                   agent_perf: Dict, placement_analysis: Dict = None, 
-                                   aws_data: Dict = None) -> str:
-        """Get Claude AI analysis of migration performance including agent placement"""
+    def analyze_database_backup_migration(self, config: Dict, network_perf: Dict, 
+                                        agent_perf: Dict, placement_analysis: Dict = None, 
+                                        aws_data: Dict = None) -> str:
+        """Get Claude AI analysis of database backup migration performance including agent placement"""
         if not self.client:
             return "Claude AI not initialized"
         
         try:
             # Prepare enhanced context for Claude
             context = f"""
-            Migration Configuration Analysis:
+            Database Backup Migration Analysis:
+            
+            Database Configuration:
+            - Source Database: {config['source_database_engine'].upper()}
+            - Backup Size: {config['backup_size_gb']} GB
+            - Backup Type: {config['backup_type']}
+            - Compression: {config['backup_compression']}
+            - Operating System: {config['operating_system']}
+            - Storage Type: {config['storage_type']}
             
             Hardware Configuration:
-            - Operating System: {config['operating_system']}
             - Server Type: {config['server_type']}
             - RAM: {config['ram_gb']} GB
             - CPU Cores: {config['cpu_cores']}
             - NIC: {config['nic_speed']} Mbps {config['nic_type']}
-            - Storage Type: {config.get('storage_type', 'Unknown')}
             
             Network Performance:
             - Path: {network_perf['path_name']}
@@ -475,56 +529,55 @@ class ClaudeAIIntegration:
             - Total Latency: {network_perf['total_latency_ms']:.1f} ms
             - Reliability: {network_perf['total_reliability']*100:.2f}%
             - Quality Score: {network_perf['network_quality_score']:.1f}/100
+            - Storage Protocol: {network_perf.get('storage_mount_type', 'Unknown').upper()}
             
-            Agent Performance:
-            - Type: {agent_perf['agent_type']}
-            - Size: {agent_perf['agent_size']}
-            - Count: {agent_perf['num_agents']}
+            DataSync Agent Performance:
+            - Agent Count: {agent_perf['num_agents']}
+            - Agent Size: {agent_perf['agent_size']}
             - Total Capacity: {agent_perf['total_agent_throughput_mbps']:.0f} Mbps
             - Monthly Cost: ${agent_perf['total_monthly_cost']:.0f}
             - Platform Efficiency: {agent_perf['platform_efficiency']*100:.1f}%
             
             Migration Details:
-            - Database Size: {config['database_size_gb']} GB
-            - Migration Type: {config['migration_type']}
             - Environment: {config['environment']}
+            - Migration Strategy: DataSync backup file transfer
+            - Target: AWS S3
             
             {f"Agent Placement Analysis: {json.dumps(placement_analysis, indent=2)}" if placement_analysis else "No placement analysis provided"}
             
-            Performance Differences Observed:
-            - Linux NAS typically achieves 15-25% better performance than Windows mapped drives
-            - VMware introduces 8-12% overhead compared to physical servers
-            - DataSync on physical Linux can achieve near line-rate speeds
-            - Windows Server mapped drives suffer from SMB protocol overhead
-            - Agent placement proximity to data sources reduces latency by 2-5ms
-            - Physical agents in DMZ provide 20-30% better throughput than virtualized
+            Database-Specific Performance Considerations:
+            - SQL Server backup files (.bak) typically achieve good compression ratios
+            - Oracle backup files (.dmp) with EXPDP can be highly compressed
+            - PostgreSQL backup files (.sql/.dump) benefit from gzip compression
+            - Linux-based database backups on NAS typically perform 20-25% better than Windows SMB
+            - Large backup files (>100GB) benefit significantly from parallel DataSync agents
             
             {f"AWS Real-time Data: {json.dumps(aws_data, indent=2)}" if aws_data else "No real-time AWS data available"}
             """
             
             prompt = f"""
-            As an AWS migration expert, analyze this migration configuration and provide a structured analysis with the following sections:
+            As an AWS database migration expert specializing in DataSync backup file transfers, analyze this configuration and provide a structured analysis with the following sections:
 
-            1. PERFORMANCE BOTTLENECK ANALYSIS
-            2. AGENT PLACEMENT OPTIMIZATION RECOMMENDATIONS  
-            3. PHYSICAL VS VIRTUAL AGENT CONFIGURATION
-            4. NETWORK PROXIMITY AND LATENCY OPTIMIZATION
-            5. COST VS PERFORMANCE TRADE-OFFS
-            6. IMPLEMENTATION STRATEGY AND TIMELINE
-            7. RISK ASSESSMENT AND MITIGATION
+            1. DATABASE BACKUP MIGRATION STRATEGY ANALYSIS
+            2. DATASYNC AGENT PLACEMENT FOR BACKUP FILES  
+            3. STORAGE PROTOCOL OPTIMIZATION FOR DATABASE BACKUPS
+            4. BACKUP FILE SIZE AND COMPRESSION IMPACT
+            5. NETWORK PERFORMANCE OPTIMIZATION
+            6. COST OPTIMIZATION FOR BACKUP TRANSFERS
+            7. IMPLEMENTATION TIMELINE AND RISK ASSESSMENT
 
-            Focus on real-world performance differences between:
-            - Physical vs virtual agent deployment
-            - Agent placement in DMZ vs internal network segments
-            - Co-location with data sources vs centralized deployment
-            - Linux NFS vs Windows SMB for agent communication
-            - DataSync vs DMS optimization strategies
+            Focus on database backup file migration scenarios:
+            - How backup file characteristics affect DataSync performance
+            - Optimal agent placement for accessing backup storage
+            - Storage protocol efficiency for large backup files
+            - Compression impact on transfer times
+            - Best practices for SQL Server backups on Windows Share vs Oracle/Postgres backups on Linux NAS
 
             Configuration to analyze:
             {context}
 
-            Provide specific technical recommendations for agent placement, infrastructure requirements, 
-            and configuration optimization. Include expected performance improvements and implementation complexity.
+            Provide specific technical recommendations for DataSync agent configuration, backup file handling, 
+            and infrastructure optimization for database backup migrations to S3.
             """
             
             response = self.client.messages.create(
@@ -538,23 +591,25 @@ class ClaudeAIIntegration:
         except Exception as e:
             return f"Error getting Claude AI analysis: {str(e)}"
     
-    def get_optimization_recommendations(self, bottleneck_type: str, current_config: Dict) -> str:
-        """Get specific optimization recommendations based on bottleneck type"""
+    def get_database_specific_recommendations(self, database_type: str, current_config: Dict) -> str:
+        """Get database-specific optimization recommendations"""
         if not self.client:
             return "Claude AI not initialized"
         
         try:
             prompt = f"""
-            As an AWS migration specialist, the current migration setup has a {bottleneck_type} bottleneck.
+            As an AWS migration specialist, provide specific recommendations for migrating {database_type.upper()} database backups using DataSync.
             
             Current configuration:
+            - Database: {database_type.upper()}
             - Platform: {current_config['server_type']}
             - OS: {current_config['operating_system']}
             - Storage: {current_config.get('storage_type', 'Unknown')}
-            - Agent: {current_config['migration_type']}
+            - Backup Size: {current_config.get('backup_size_gb', 'Unknown')} GB
             
-            Provide 3-5 specific, actionable recommendations to resolve this {bottleneck_type} bottleneck.
-            Include expected performance improvements and implementation complexity for each recommendation.
+            Provide 5-7 specific, actionable recommendations for optimizing {database_type.upper()} backup file transfers to S3.
+            Include expected performance improvements and implementation steps.
+            Focus on backup file characteristics, compression options, and DataSync configuration.
             Format as clear bullet points with technical details.
             """
             
@@ -567,35 +622,37 @@ class ClaudeAIIntegration:
             return response.content[0].text
             
         except Exception as e:
-            return f"Error getting optimization recommendations: {str(e)}"
+            return f"Error getting database-specific recommendations: {str(e)}"
     
     def get_placement_recommendations(self, config: Dict, placement_options: List[Dict]) -> str:
-        """Get specific agent placement recommendations"""
+        """Get specific agent placement recommendations for database backup migrations"""
         if not self.client:
             return "Claude AI not initialized"
         
         try:
             prompt = f"""
-            As an AWS migration specialist, analyze these agent placement options and provide specific recommendations:
+            As an AWS migration specialist, analyze these DataSync agent placement options for database backup file migration:
             
             Current Configuration:
-            - Migration Type: {config['migration_type']}
+            - Database: {config['source_database_engine'].upper()}
+            - Backup Type: {config.get('backup_type', 'Full backup')}
             - Environment: {config['environment']}
             - Platform: {config['server_type']}
             - OS: {config['operating_system']}
-            - Database Size: {config['database_size_gb']} GB
+            - Backup Size: {config.get('backup_size_gb', 'Unknown')} GB
+            - Storage: {config.get('storage_type', 'Unknown')}
             
             Placement Options Analysis:
             {json.dumps(placement_options, indent=2)}
             
             Provide:
-            1. Recommended placement strategy with justification
-            2. Alternative options with trade-offs
-            3. Implementation considerations
-            4. Performance expectations
-            5. Security implications
+            1. Recommended placement strategy for database backup file access
+            2. Storage protocol optimization recommendations
+            3. Backup file handling considerations
+            4. Performance expectations for large backup files
+            5. Security considerations for database backup access
             
-            Format as clear bullet points with technical details.
+            Format as clear bullet points with technical details specific to database backup scenarios.
             """
             
             response = self.client.messages.create(
@@ -609,64 +666,46 @@ class ClaudeAIIntegration:
         except Exception as e:
             return f"Error getting placement recommendations: {str(e)}"
 
-class EnhancedNetworkPathManager:
-    """Enhanced network path manager with detailed storage type analysis"""
+class DatabaseBackupNetworkPathManager:
+    """Enhanced network path manager for database backup migrations"""
     
     def __init__(self):
         self.network_paths = {
-            'nonprod_sj_linux_nas_s3': {
-                'name': 'Non-Prod: San Jose Linux NAS → AWS S3',
+            'nonprod_sj_sqlserver_backup_s3': {
+                'name': 'Non-Prod: San Jose SQL Server Backup (Windows Share) → AWS S3',
                 'destination_storage': 'S3',
                 'source': 'San Jose',
                 'destination': 'AWS US-West-2 S3',
                 'environment': 'non-production',
-                'os_type': 'linux',
-                'storage_type': 'nas',
-                'storage_mount_type': 'nfs',
-                'segments': [
-                    {
-                        'name': 'Linux NAS to Linux Jump Server (NFS)',
-                        'bandwidth_mbps': 10000,
-                        'latency_ms': 1.5,
-                        'reliability': 0.9995,
-                        'connection_type': 'internal_lan',
-                        'cost_factor': 0.0,
-                        'optimization_potential': 0.97,
-                        'protocol_efficiency': 0.95
-                    },
-                    {
-                        'name': 'Linux Jump Server to AWS S3 (DX)',
-                        'bandwidth_mbps': 2000,
-                        'latency_ms': 12,
-                        'reliability': 0.998,
-                        'connection_type': 'direct_connect',
-                        'cost_factor': 2.0,
-                        'optimization_potential': 0.94
-                    }
-                ]
-            },
-            'nonprod_sj_windows_share_s3': {
-                'name': 'Non-Prod: San Jose Windows Share → AWS S3',
-                'destination_storage': 'S3',
-                'source': 'San Jose',
-                'destination': 'AWS US-West-2 S3',
-                'environment': 'non-production',
+                'database_type': 'sqlserver',
                 'os_type': 'windows',
                 'storage_type': 'share',
                 'storage_mount_type': 'smb',
+                'backup_location': 'windows_share_drive',
                 'segments': [
                     {
-                        'name': 'Windows Share to Windows Jump Server (SMB)',
+                        'name': 'SQL Server Backup Files → Windows Share Drive (SMB)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 4,
+                        'latency_ms': 2.5,
                         'reliability': 0.995,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
                         'optimization_potential': 0.85,
-                        'protocol_efficiency': 0.78
+                        'protocol_efficiency': 0.78,
+                        'backup_file_impact': 1.2  # Backup files are larger, more impact
                     },
                     {
-                        'name': 'Windows Jump Server to AWS S3 (DX)',
+                        'name': 'Windows Share to DataSync Agent (SMB)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.5,
+                        'reliability': 0.995,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.82,
+                        'protocol_efficiency': 0.75
+                    },
+                    {
+                        'name': 'DataSync Agent to AWS S3 (DX)',
                         'bandwidth_mbps': 2000,
                         'latency_ms': 18,
                         'reliability': 0.998,
@@ -676,25 +715,179 @@ class EnhancedNetworkPathManager:
                     }
                 ]
             },
-            'prod_sa_linux_nas_s3': {
-                'name': 'Prod: San Antonio Linux NAS → San Jose → AWS Production VPC S3',
+            'nonprod_sj_oracle_backup_s3': {
+                'name': 'Non-Prod: San Jose Oracle Backup (Linux NAS) → AWS S3',
+                'destination_storage': 'S3',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 S3',
+                'environment': 'non-production',
+                'database_type': 'oracle',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'storage_mount_type': 'nfs',
+                'backup_location': 'linux_nas_drive',
+                'segments': [
+                    {
+                        'name': 'Oracle Backup Files → Linux NAS (NFS)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.2,
+                        'reliability': 0.9995,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.97,
+                        'protocol_efficiency': 0.95,
+                        'backup_file_impact': 1.0  # Oracle dumps compress well
+                    },
+                    {
+                        'name': 'Linux NAS to DataSync Agent (NFS)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.0,
+                        'reliability': 0.9995,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.94,
+                        'protocol_efficiency': 0.92
+                    },
+                    {
+                        'name': 'DataSync Agent to AWS S3 (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 12,
+                        'reliability': 0.998,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.0,
+                        'optimization_potential': 0.94
+                    }
+                ]
+            },
+            'nonprod_sj_postgres_backup_s3': {
+                'name': 'Non-Prod: San Jose PostgreSQL Backup (Linux NAS) → AWS S3',
+                'destination_storage': 'S3',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 S3',
+                'environment': 'non-production',
+                'database_type': 'postgresql',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'storage_mount_type': 'nfs',
+                'backup_location': 'linux_nas_drive',
+                'segments': [
+                    {
+                        'name': 'PostgreSQL Backup Files → Linux NAS (NFS)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1.0,
+                        'reliability': 0.9995,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.98,
+                        'protocol_efficiency': 0.96,
+                        'backup_file_impact': 0.9  # Text-based dumps compress very well
+                    },
+                    {
+                        'name': 'Linux NAS to DataSync Agent (NFS)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.8,
+                        'reliability': 0.9995,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.95,
+                        'protocol_efficiency': 0.93
+                    },
+                    {
+                        'name': 'DataSync Agent to AWS S3 (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 12,
+                        'reliability': 0.998,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.0,
+                        'optimization_potential': 0.94
+                    }
+                ]
+            },
+            'prod_sa_sqlserver_backup_s3': {
+                'name': 'Prod: San Antonio SQL Server Backup (Windows Share) → San Jose → AWS S3',
                 'destination_storage': 'S3',
                 'source': 'San Antonio',
                 'destination': 'AWS US-West-2 Production VPC S3',
                 'environment': 'production',
+                'database_type': 'sqlserver',
+                'os_type': 'windows',
+                'storage_type': 'share',
+                'storage_mount_type': 'smb',
+                'backup_location': 'windows_share_drive',
+                'segments': [
+                    {
+                        'name': 'SQL Server Backup Files → Windows Share Drive (SMB)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 3.5,
+                        'reliability': 0.996,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.84,
+                        'protocol_efficiency': 0.76,
+                        'backup_file_impact': 1.3
+                    },
+                    {
+                        'name': 'Windows Share to DataSync Agent (SMB)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2.0,
+                        'reliability': 0.996,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.80,
+                        'protocol_efficiency': 0.73
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 12,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'optimization_potential': 0.94
+                    },
+                    {
+                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 8,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.0,
+                        'optimization_potential': 0.95
+                    }
+                ]
+            },
+            'prod_sa_oracle_backup_s3': {
+                'name': 'Prod: San Antonio Oracle Backup (Linux NAS) → San Jose → AWS S3',
+                'destination_storage': 'S3',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 Production VPC S3',
+                'environment': 'production',
+                'database_type': 'oracle',
                 'os_type': 'linux',
                 'storage_type': 'nas',
                 'storage_mount_type': 'nfs',
+                'backup_location': 'linux_nas_drive',
                 'segments': [
                     {
-                        'name': 'San Antonio Linux NAS to Linux Jump Server (NFS)',
+                        'name': 'Oracle Backup Files → Linux NAS (NFS)',
                         'bandwidth_mbps': 10000,
                         'latency_ms': 0.8,
                         'reliability': 0.9998,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
                         'optimization_potential': 0.98,
-                        'protocol_efficiency': 0.96
+                        'protocol_efficiency': 0.96,
+                        'backup_file_impact': 1.0
+                    },
+                    {
+                        'name': 'Linux NAS to DataSync Agent (NFS)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.6,
+                        'reliability': 0.9998,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.96,
+                        'protocol_efficiency': 0.94
                     },
                     {
                         'name': 'San Antonio to San Jose (Private Line)',
@@ -716,73 +909,83 @@ class EnhancedNetworkPathManager:
                     }
                 ]
             },
-            'prod_sa_windows_share_s3': {
-                'name': 'Prod: San Antonio Windows Share → San Jose → AWS Production VPC S3',
+            'prod_sa_postgres_backup_s3': {
+                'name': 'Prod: San Antonio PostgreSQL Backup (Linux NAS) → San Jose → AWS S3',
                 'destination_storage': 'S3',
                 'source': 'San Antonio',
                 'destination': 'AWS US-West-2 Production VPC S3',
                 'environment': 'production',
-                'os_type': 'windows',
-                'storage_type': 'share',
-                'storage_mount_type': 'smb',
+                'database_type': 'postgresql',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'storage_mount_type': 'nfs',
+                'backup_location': 'linux_nas_drive',
                 'segments': [
                     {
-                        'name': 'San Antonio Windows Share to Windows Jump Server (SMB)',
+                        'name': 'PostgreSQL Backup Files → Linux NAS (NFS)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 3,
-                        'reliability': 0.996,
+                        'latency_ms': 0.6,
+                        'reliability': 0.9998,
                         'connection_type': 'internal_lan',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.86,
-                        'protocol_efficiency': 0.80
+                        'optimization_potential': 0.99,
+                        'protocol_efficiency': 0.97,
+                        'backup_file_impact': 0.85
+                    },
+                    {
+                        'name': 'Linux NAS to DataSync Agent (NFS)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 0.5,
+                        'reliability': 0.9998,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'optimization_potential': 0.97,
+                        'protocol_efficiency': 0.95
                     },
                     {
                         'name': 'San Antonio to San Jose (Private Line)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 12,
+                        'latency_ms': 10,
                         'reliability': 0.9995,
                         'connection_type': 'private_line',
                         'cost_factor': 3.0,
-                        'optimization_potential': 0.94
+                        'optimization_potential': 0.96
                     },
                     {
                         'name': 'San Jose to AWS Production VPC S3 (DX)',
                         'bandwidth_mbps': 10000,
-                        'latency_ms': 8,
+                        'latency_ms': 6,
                         'reliability': 0.9999,
                         'connection_type': 'direct_connect',
                         'cost_factor': 4.0,
-                        'optimization_potential': 0.95
+                        'optimization_potential': 0.97
                     }
                 ]
             }
         }
     
     def get_network_path_key(self, config: Dict) -> str:
-        """Get network path key based on configuration"""
-        os_lower = config['operating_system'].lower()
-        if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel', 'centos']):
-            os_type = 'linux'
-        elif 'windows' in os_lower:
-            os_type = 'windows'
-        else:
-            os_type = 'linux'
-        
+        """Get network path key based on database and configuration"""
+        database_type = config['source_database_engine'].lower()
         environment = config['environment']
         
-        if environment == 'non-production':
-            if os_type == 'linux':
-                return 'nonprod_sj_linux_nas_s3'
-            else:
-                return 'nonprod_sj_windows_share_s3'
+        # Map database types to backup storage patterns
+        if database_type == 'sqlserver':
+            backup_pattern = 'sqlserver_backup'
+        elif database_type in ['oracle', 'postgresql']:
+            backup_pattern = f"{database_type}_backup"
         else:
-            if os_type == 'linux':
-                return 'prod_sa_linux_nas_s3'
-            else:
-                return 'prod_sa_windows_share_s3'
+            # Default to postgres pattern for other databases
+            backup_pattern = 'postgres_backup'
+        
+        if environment == 'non-production':
+            return f'nonprod_sj_{backup_pattern}_s3'
+        else:
+            return f'prod_sa_{backup_pattern}_s3'
     
-    def calculate_network_performance(self, path_key: str, time_of_day: int = None) -> Dict:
-        """Calculate network performance with enhanced storage type considerations"""
+    def calculate_network_performance(self, path_key: str, time_of_day: int = None, 
+                                    backup_compression: float = 1.0) -> Dict:
+        """Calculate network performance with backup file considerations"""
         path = self.network_paths[path_key]
         
         if time_of_day is None:
@@ -805,6 +1008,13 @@ class EnhancedNetworkPathManager:
             protocol_efficiency = segment.get('protocol_efficiency', 1.0)
             effective_bandwidth = segment_bandwidth * protocol_efficiency
             
+            # Apply backup file impact (larger files, different I/O patterns)
+            backup_file_impact = segment.get('backup_file_impact', 1.0)
+            effective_bandwidth = effective_bandwidth / backup_file_impact
+            
+            # Apply compression impact (compressed backup files transfer faster)
+            effective_bandwidth = effective_bandwidth * backup_compression
+            
             # Time-of-day congestion adjustments
             if segment['connection_type'] == 'internal_lan':
                 congestion_factor = 1.15 if 9 <= time_of_day <= 17 else 0.92
@@ -819,12 +1029,12 @@ class EnhancedNetworkPathManager:
             effective_bandwidth = effective_bandwidth / congestion_factor
             effective_latency = segment_latency * congestion_factor
             
-            # Storage type specific adjustments
+            # Storage type specific adjustments for backup files
             if path['storage_mount_type'] == 'smb':
-                effective_bandwidth *= 0.82
+                effective_bandwidth *= 0.82  # SMB overhead for large backup files
                 effective_latency *= 1.3
             elif path['storage_mount_type'] == 'nfs':
-                effective_bandwidth *= 0.96
+                effective_bandwidth *= 0.96  # NFS is more efficient for large files
                 effective_latency *= 1.05
             
             optimization_score *= segment['optimization_potential']
@@ -840,10 +1050,11 @@ class EnhancedNetworkPathManager:
                 'effective_bandwidth_mbps': effective_bandwidth,
                 'effective_latency_ms': effective_latency,
                 'congestion_factor': congestion_factor,
-                'protocol_efficiency': protocol_efficiency
+                'protocol_efficiency': protocol_efficiency,
+                'backup_file_impact': backup_file_impact
             })
         
-        # Calculate quality scores
+        # Calculate quality scores with backup file considerations
         latency_score = max(0, 100 - (total_latency * 1.5))
         bandwidth_score = min(100, (min_bandwidth / 1000) * 15)
         reliability_score = total_reliability * 100
@@ -854,8 +1065,10 @@ class EnhancedNetworkPathManager:
             'path_name': path['name'],
             'destination_storage': path['destination_storage'],
             'environment': path['environment'],
+            'database_type': path['database_type'],
             'os_type': path['os_type'],
             'storage_mount_type': path['storage_mount_type'],
+            'backup_location': path['backup_location'],
             'total_latency_ms': total_latency,
             'effective_bandwidth_mbps': min_bandwidth,
             'total_reliability': total_reliability,
@@ -867,28 +1080,19 @@ class EnhancedNetworkPathManager:
         
         return result
 
-class EnhancedAgentManager:
-    """Enhanced agent manager with detailed physical vs VMware analysis and agent placement optimization"""
+class EnhancedDataSyncAgentManager:
+    """Enhanced DataSync agent manager focused on backup file transfers"""
     
     def __init__(self):
-        # Updated AWS pricing (per hour) as of 2024
+        # Updated AWS DataSync pricing (per hour) as of 2024
         self.datasync_specs = {
-            'small': {'throughput_mbps': 250, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0416},
-            'medium': {'throughput_mbps': 500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.0832},
-            'large': {'throughput_mbps': 1000, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.1664},
-            'xlarge': {'throughput_mbps': 2000, 'vcpu': 8, 'memory': 32, 'cost_hour': 0.3328}
+            'small': {'throughput_mbps': 250, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0416, 'backup_efficiency': 0.85},
+            'medium': {'throughput_mbps': 500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.0832, 'backup_efficiency': 0.90},
+            'large': {'throughput_mbps': 1000, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.1664, 'backup_efficiency': 0.93},
+            'xlarge': {'throughput_mbps': 2000, 'vcpu': 8, 'memory': 32, 'cost_hour': 0.3328, 'backup_efficiency': 0.95}
         }
         
-        # Updated DMS pricing (per hour) as of 2024
-        self.dms_specs = {
-            'small': {'throughput_mbps': 200, 'vcpu': 1, 'memory': 1, 'cost_hour': 0.0193},
-            'medium': {'throughput_mbps': 400, 'vcpu': 1, 'memory': 2, 'cost_hour': 0.0386},
-            'large': {'throughput_mbps': 800, 'vcpu': 2, 'memory': 4, 'cost_hour': 0.0772},
-            'xlarge': {'throughput_mbps': 1500, 'vcpu': 2, 'memory': 8, 'cost_hour': 0.1544},
-            'xxlarge': {'throughput_mbps': 2500, 'vcpu': 4, 'memory': 16, 'cost_hour': 0.3088}
-        }
-        
-        # Physical vs VMware performance characteristics
+        # Physical vs VMware performance characteristics for backup transfers
         self.platform_characteristics = {
             'physical': {
                 'base_efficiency': 1.0,
@@ -896,7 +1100,7 @@ class EnhancedAgentManager:
                 'memory_overhead': 0.0,
                 'io_efficiency': 1.0,
                 'network_efficiency': 1.0,
-                'placement_bonus': 1.0
+                'backup_file_handling': 1.0
             },
             'vmware': {
                 'base_efficiency': 0.92,
@@ -904,27 +1108,29 @@ class EnhancedAgentManager:
                 'memory_overhead': 0.12,
                 'io_efficiency': 0.88,
                 'network_efficiency': 0.94,
-                'placement_bonus': 0.95
+                'backup_file_handling': 0.85  # VMware has more overhead with large backup files
             }
         }
 
-        # Agent placement characteristics
+        # Agent placement characteristics for backup file access
         self.placement_characteristics = {
-            'source_colocation': {
-                'latency_reduction_ms': -2.5,
-                'bandwidth_bonus': 1.15,
-                'reliability_bonus': 1.02,
-                'security_score': 0.85,
+            'backup_source_colocation': {
+                'latency_reduction_ms': -3.0,
+                'bandwidth_bonus': 1.20,
+                'reliability_bonus': 1.03,
+                'security_score': 0.80,
                 'cost_multiplier': 1.0,
-                'management_complexity': 0.7
+                'management_complexity': 0.7,
+                'backup_access_efficiency': 1.15
             },
             'dmz_placement': {
-                'latency_reduction_ms': -1.0,
-                'bandwidth_bonus': 1.08,
-                'reliability_bonus': 1.01,
+                'latency_reduction_ms': -1.5,
+                'bandwidth_bonus': 1.10,
+                'reliability_bonus': 1.02,
                 'security_score': 0.95,
                 'cost_multiplier': 1.1,
-                'management_complexity': 0.8
+                'management_complexity': 0.8,
+                'backup_access_efficiency': 1.05
             },
             'centralized_datacenter': {
                 'latency_reduction_ms': 0.0,
@@ -932,27 +1138,57 @@ class EnhancedAgentManager:
                 'reliability_bonus': 1.0,
                 'security_score': 1.0,
                 'cost_multiplier': 1.0,
-                'management_complexity': 1.0
+                'management_complexity': 1.0,
+                'backup_access_efficiency': 1.0
             },
             'edge_deployment': {
-                'latency_reduction_ms': -4.0,
-                'bandwidth_bonus': 1.25,
-                'reliability_bonus': 0.98,
-                'security_score': 0.75,
-                'cost_multiplier': 1.3,
-                'management_complexity': 0.6
+                'latency_reduction_ms': -5.0,
+                'bandwidth_bonus': 1.30,
+                'reliability_bonus': 0.97,
+                'security_score': 0.70,
+                'cost_multiplier': 1.4,
+                'management_complexity': 0.6,
+                'backup_access_efficiency': 1.25
+            }
+        }
+        
+        # Database-specific backup file characteristics
+        self.database_backup_characteristics = {
+            'sqlserver': {
+                'compression_ratio': 0.7,  # SQL Server backups compress well
+                'file_size_factor': 1.2,   # Larger backup files
+                'io_pattern': 'sequential', # Good sequential I/O
+                'preferred_storage': 'smb_share'
+            },
+            'oracle': {
+                'compression_ratio': 0.6,  # Oracle dumps compress very well
+                'file_size_factor': 1.0,   # Moderate backup files
+                'io_pattern': 'sequential',
+                'preferred_storage': 'nfs_nas'
+            },
+            'postgresql': {
+                'compression_ratio': 0.5,  # Text-based dumps compress excellently
+                'file_size_factor': 0.8,   # Smaller compressed backups
+                'io_pattern': 'sequential',
+                'preferred_storage': 'nfs_nas'
+            },
+            'mysql': {
+                'compression_ratio': 0.6,
+                'file_size_factor': 0.9,
+                'io_pattern': 'sequential',
+                'preferred_storage': 'nfs_nas'
             }
         }
     
-    def calculate_agent_performance(self, agent_type: str, agent_size: str, num_agents: int, 
-                                   platform_type: str = 'vmware', storage_type: str = 'nas',
-                                   os_type: str = 'linux', placement_type: str = 'centralized_datacenter') -> Dict:
-        """Enhanced agent performance calculation with placement considerations"""
+    def calculate_agent_performance(self, agent_size: str, num_agents: int, 
+                                   platform_type: str = 'vmware', database_type: str = 'sqlserver',
+                                   storage_type: str = 'share', os_type: str = 'windows', 
+                                   placement_type: str = 'centralized_datacenter',
+                                   backup_compression: float = 1.0) -> Dict:
+        """Enhanced agent performance calculation for backup file transfers"""
         
-        if agent_type == 'datasync':
-            base_spec = self.datasync_specs[agent_size]
-        else:
-            base_spec = self.dms_specs[agent_size]
+        base_spec = self.datasync_specs[agent_size]
+        db_characteristics = self.database_backup_characteristics.get(database_type, self.database_backup_characteristics['sqlserver'])
         
         # Platform characteristics
         platform_char = self.platform_characteristics[platform_type]
@@ -964,6 +1200,12 @@ class EnhancedAgentManager:
         # Apply platform efficiency
         platform_throughput = base_throughput * platform_char['base_efficiency']
         
+        # Apply backup file handling efficiency
+        backup_file_throughput = platform_throughput * platform_char['backup_file_handling']
+        
+        # Apply database-specific backup characteristics
+        db_throughput = backup_file_throughput * (2.0 - db_characteristics['file_size_factor'])
+        
         # Apply I/O efficiency based on storage type and OS
         if storage_type == 'nas' and os_type == 'linux':
             io_multiplier = 1.0
@@ -972,16 +1214,22 @@ class EnhancedAgentManager:
         else:
             io_multiplier = 0.9
         
-        # Apply placement bonus
-        placement_throughput = platform_throughput * io_multiplier * placement_char['bandwidth_bonus']
+        # Apply placement bonus for backup file access
+        placement_throughput = db_throughput * io_multiplier * placement_char['backup_access_efficiency']
         
         # Network efficiency
         network_efficiency = platform_char['network_efficiency']
         
-        # Final per-agent throughput
-        per_agent_throughput = placement_throughput * network_efficiency
+        # DataSync agent efficiency for backup files
+        agent_backup_efficiency = base_spec['backup_efficiency']
         
-        # Calculate scaling efficiency
+        # Final per-agent throughput
+        per_agent_throughput = placement_throughput * network_efficiency * agent_backup_efficiency
+        
+        # Apply compression impact (compressed backups transfer faster)
+        per_agent_throughput = per_agent_throughput * backup_compression
+        
+        # Calculate scaling efficiency for backup file transfers
         if num_agents == 1:
             scaling_efficiency = 1.0
         elif num_agents <= 3:
@@ -1015,10 +1263,11 @@ class EnhancedAgentManager:
         performance_loss = ((max_theoretical - actual_total) / max_theoretical) * 100
         
         return {
-            'agent_type': agent_type,
+            'agent_type': 'datasync',
             'agent_size': agent_size,
             'num_agents': num_agents,
             'platform_type': platform_type,
+            'database_type': database_type,
             'storage_type': storage_type,
             'os_type': os_type,
             'placement_type': placement_type,
@@ -1027,119 +1276,125 @@ class EnhancedAgentManager:
             'total_agent_throughput_mbps': total_agent_throughput,
             'scaling_efficiency': scaling_efficiency,
             'platform_efficiency': platform_char['base_efficiency'],
+            'backup_file_efficiency': platform_char['backup_file_handling'],
             'io_multiplier': io_multiplier,
             'network_efficiency': network_efficiency,
-            'placement_bonus': placement_char['bandwidth_bonus'],
+            'agent_backup_efficiency': agent_backup_efficiency,
+            'placement_bonus': placement_char['backup_access_efficiency'],
             'performance_loss_pct': performance_loss,
             'per_agent_monthly_cost': per_agent_cost,
             'total_monthly_cost': total_monthly_cost,
             'vmware_licensing_multiplier': vmware_licensing_multiplier,
             'placement_cost_multiplier': placement_cost_multiplier,
+            'compression_impact': backup_compression,
             'base_spec': base_spec,
             'platform_characteristics': platform_char,
-            'placement_characteristics': placement_char
+            'placement_characteristics': placement_char,
+            'database_characteristics': db_characteristics
         }
 
-class AgentPlacementAnalyzer:
-    """Comprehensive agent placement analysis and optimization"""
+class DatabasePlacementAnalyzer:
+    """Database backup specific placement analysis and optimization"""
     
     def __init__(self):
         self.placement_strategies = {
-            'source_colocation': {
-                'name': 'Source Co-location',
-                'description': 'Agents placed directly with data sources',
+            'backup_source_colocation': {
+                'name': 'Backup Source Co-location',
+                'description': 'DataSync agents placed directly with backup storage',
                 'pros': [
-                    'Minimal latency to source data',
+                    'Direct access to backup files',
+                    'Minimal latency for large file reads',
                     'Maximum bandwidth utilization',
-                    'Reduced network hops',
-                    'Direct storage access'
+                    'No intermediate network hops for backup access'
                 ],
                 'cons': [
-                    'Distributed management overhead',
-                    'Security exposure',
-                    'Higher maintenance complexity',
-                    'Limited scalability'
+                    'Distributed agent management',
+                    'Security exposure at backup source',
+                    'Limited backup storage scalability',
+                    'Agent maintenance at multiple sites'
                 ],
-                'best_for': ['Large databases', 'High-throughput requirements', 'Minimal downtime needs'],
-                'avoid_when': ['High security requirements', 'Limited on-premise resources']
+                'best_for': ['Large backup files (>500GB)', 'High-throughput requirements', 'SQL Server backup files'],
+                'avoid_when': ['High security requirements', 'Limited backup server resources']
             },
             'dmz_placement': {
-                'name': 'DMZ Deployment',
-                'description': 'Agents in demilitarized zone with security controls',
+                'name': 'DMZ Backup Processing',
+                'description': 'DataSync agents in DMZ with backup file staging',
                 'pros': [
-                    'Balanced security and performance',
+                    'Controlled backup file access',
                     'Centralized security management',
-                    'Good network performance',
-                    'Controlled access'
+                    'Good performance with staging',
+                    'Backup file preprocessing capability'
                 ],
                 'cons': [
-                    'Additional security overhead',
-                    'Network latency increase',
-                    'Firewall rule complexity',
-                    'DMZ resource requirements'
+                    'Additional backup file copy overhead',
+                    'DMZ storage requirements',
+                    'Network latency for backup reads',
+                    'Complex firewall configurations'
                 ],
-                'best_for': ['Production environments', 'Compliance requirements', 'Balanced approach'],
-                'avoid_when': ['Ultra-high performance needs', 'Simple network topologies']
+                'best_for': ['Production environments', 'Compliance requirements', 'Oracle/PostgreSQL backups'],
+                'avoid_when': ['Ultra-high performance needs', 'Simple backup scenarios']
             },
             'centralized_datacenter': {
                 'name': 'Centralized Data Center',
-                'description': 'Agents in central enterprise data center',
+                'description': 'DataSync agents in central enterprise data center',
                 'pros': [
-                    'Simplified management',
-                    'Centralized monitoring',
+                    'Simplified agent management',
+                    'Centralized monitoring and maintenance',
                     'Standard security controls',
-                    'Easy maintenance'
+                    'Easy backup scheduling coordination'
                 ],
                 'cons': [
-                    'Increased network latency',
-                    'Bandwidth sharing',
-                    'Single point of failure',
-                    'Distance from sources'
+                    'Network latency for backup file access',
+                    'Bandwidth sharing with other workloads',
+                    'Distance from backup sources',
+                    'Potential backup file transfer bottlenecks'
                 ],
-                'best_for': ['Multiple source locations', 'Standard deployments', 'Operational simplicity'],
-                'avoid_when': ['Performance-critical migrations', 'Distributed sources']
+                'best_for': ['Multiple database backup sources', 'Standard deployments', 'Operational simplicity'],
+                'avoid_when': ['Performance-critical transfers', 'Very large backup files']
             },
             'edge_deployment': {
-                'name': 'Edge Deployment',
-                'description': 'Agents at network edge closest to data',
+                'name': 'Edge Backup Processing',
+                'description': 'DataSync agents at network edge closest to backup storage',
                 'pros': [
-                    'Ultra-low latency',
-                    'Maximum performance',
-                    'Optimized data paths',
+                    'Ultra-low latency backup access',
+                    'Maximum backup transfer performance',
+                    'Optimized backup file paths',
                     'Reduced core network load'
                 ],
                 'cons': [
-                    'Complex management',
-                    'Security challenges',
-                    'Higher costs',
-                    'Limited monitoring'
+                    'Complex distributed management',
+                    'Security challenges at edge',
+                    'Higher operational costs',
+                    'Limited monitoring capabilities'
                 ],
-                'best_for': ['Performance-critical migrations', 'Large data volumes', 'Time-sensitive transfers'],
+                'best_for': ['Performance-critical backup transfers', 'Very large databases (>5TB)', 'Time-sensitive migrations'],
                 'avoid_when': ['Budget constraints', 'Security-first environments']
             }
         }
     
-    def analyze_placement_options(self, config: Dict, network_perf: Dict, agent_manager: EnhancedAgentManager) -> List[Dict]:
-        """Analyze all placement options and score them"""
+    def analyze_placement_options(self, config: Dict, network_perf: Dict, 
+                                agent_manager: EnhancedDataSyncAgentManager) -> List[Dict]:
+        """Analyze all placement options for database backup scenarios"""
         placement_options = []
         
         for placement_type, strategy in self.placement_strategies.items():
             # Calculate performance for this placement
             agent_perf = agent_manager.calculate_agent_performance(
-                config['migration_type'], 
                 config['agent_size'], 
                 config['number_of_agents'],
                 config['server_type'],
+                config['source_database_engine'],
                 self._map_storage_type(config['storage_type']),
                 self._determine_os_type(config['operating_system']),
-                placement_type
+                placement_type,
+                config.get('backup_compression', 1.0)
             )
             
-            # Calculate placement score
-            score = self._calculate_placement_score(placement_type, config, network_perf, agent_perf)
+            # Calculate placement score for backup scenarios
+            score = self._calculate_backup_placement_score(placement_type, config, network_perf, agent_perf)
             
             # Determine implementation complexity
-            complexity = self._assess_implementation_complexity(placement_type, config)
+            complexity = self._assess_backup_implementation_complexity(placement_type, config)
             
             placement_options.append({
                 'placement_type': placement_type,
@@ -1151,7 +1406,8 @@ class AgentPlacementAnalyzer:
                 'monthly_cost': agent_perf['total_monthly_cost'],
                 'latency_impact': agent_perf['placement_characteristics']['latency_reduction_ms'],
                 'security_score': agent_perf['placement_characteristics']['security_score'],
-                'management_complexity': agent_perf['placement_characteristics']['management_complexity']
+                'management_complexity': agent_perf['placement_characteristics']['management_complexity'],
+                'backup_access_efficiency': agent_perf['backup_access_efficiency']
             })
         
         # Sort by placement score
@@ -1159,64 +1415,73 @@ class AgentPlacementAnalyzer:
         
         return placement_options
     
-    def _calculate_placement_score(self, placement_type: str, config: Dict, network_perf: Dict, agent_perf: Dict) -> float:
-        """Calculate comprehensive placement score (0-100)"""
-        # Performance score (40% weight)
-        max_possible_throughput = 2000 * config['number_of_agents']  # Theoretical max
+    def _calculate_backup_placement_score(self, placement_type: str, config: Dict, 
+                                        network_perf: Dict, agent_perf: Dict) -> float:
+        """Calculate comprehensive placement score for backup scenarios (0-100)"""
+        # Performance score (45% weight - higher for backup scenarios)
+        max_possible_throughput = 2000 * config['number_of_agents']
         performance_score = (agent_perf['total_agent_throughput_mbps'] / max_possible_throughput) * 100
         performance_score = min(performance_score, 100)
         
-        # Cost efficiency score (25% weight)
+        # Cost efficiency score (20% weight)
         cost_per_mbps = agent_perf['total_monthly_cost'] / agent_perf['total_agent_throughput_mbps']
-        max_cost_per_mbps = 1000  # Threshold for poor cost efficiency
+        max_cost_per_mbps = 1000
         cost_score = max(0, 100 - (cost_per_mbps / max_cost_per_mbps * 100))
         
-        # Security score (20% weight)
+        # Security score (15% weight)
         security_score = agent_perf['placement_characteristics']['security_score'] * 100
         
-        # Management complexity score (15% weight)
+        # Management complexity score (10% weight)
         management_score = agent_perf['placement_characteristics']['management_complexity'] * 100
+        
+        # Backup access efficiency (10% weight - specific to backup scenarios)
+        backup_access_score = agent_perf['backup_access_efficiency'] * 100
         
         # Calculate weighted total
         total_score = (
-            performance_score * 0.40 +
-            cost_score * 0.25 +
-            security_score * 0.20 +
-            management_score * 0.15
+            performance_score * 0.45 +
+            cost_score * 0.20 +
+            security_score * 0.15 +
+            management_score * 0.10 +
+            backup_access_score * 0.10
         )
         
         return min(total_score, 100)
     
-    def _assess_implementation_complexity(self, placement_type: str, config: Dict) -> Dict:
-        """Assess implementation complexity for placement type"""
+    def _assess_backup_implementation_complexity(self, placement_type: str, config: Dict) -> Dict:
+        """Assess implementation complexity for backup placement scenarios"""
         complexity_factors = {
-            'source_colocation': {
-                'setup_time_days': 3,
-                'skill_level': 'High',
-                'infrastructure_changes': 'Minimal',
-                'security_review': 'Required',
-                'ongoing_maintenance': 'High'
-            },
-            'dmz_placement': {
-                'setup_time_days': 7,
-                'skill_level': 'High',
-                'infrastructure_changes': 'Moderate',
-                'security_review': 'Extensive',
-                'ongoing_maintenance': 'Moderate'
-            },
-            'centralized_datacenter': {
+            'backup_source_colocation': {
                 'setup_time_days': 2,
                 'skill_level': 'Medium',
                 'infrastructure_changes': 'Minimal',
                 'security_review': 'Standard',
-                'ongoing_maintenance': 'Low'
+                'ongoing_maintenance': 'Medium',
+                'backup_coordination': 'Simple'
+            },
+            'dmz_placement': {
+                'setup_time_days': 5,
+                'skill_level': 'High',
+                'infrastructure_changes': 'Moderate',
+                'security_review': 'Extensive',
+                'ongoing_maintenance': 'High',
+                'backup_coordination': 'Complex'
+            },
+            'centralized_datacenter': {
+                'setup_time_days': 1,
+                'skill_level': 'Low',
+                'infrastructure_changes': 'Minimal',
+                'security_review': 'Standard',
+                'ongoing_maintenance': 'Low',
+                'backup_coordination': 'Standard'
             },
             'edge_deployment': {
-                'setup_time_days': 10,
+                'setup_time_days': 7,
                 'skill_level': 'Expert',
                 'infrastructure_changes': 'Significant',
                 'security_review': 'Extensive',
-                'ongoing_maintenance': 'Very High'
+                'ongoing_maintenance': 'Very High',
+                'backup_coordination': 'Very Complex'
             }
         }
         
@@ -1225,8 +1490,8 @@ class AgentPlacementAnalyzer:
     def _map_storage_type(self, storage_type: str) -> str:
         """Map storage type to simplified categories"""
         mapping = {
-            'nfs_nas': 'nas',
-            'smb_share': 'share',
+            'windows_share_drive': 'share',
+            'linux_nas_drive': 'nas',
             'iscsi_san': 'san',
             'local_storage': 'local'
         }
@@ -1247,6 +1512,64 @@ def get_nic_efficiency(nic_type: str) -> float:
         '40g_fiber': 0.94
     }
     return efficiencies.get(nic_type, 0.90)
+
+def get_database_backup_info(database_type: str) -> Dict:
+    """Get database-specific backup information"""
+    backup_info = {
+        'sqlserver': {
+            'typical_backup_extensions': ['.bak', '.trn'],
+            'compression_available': True,
+            'typical_compression_ratio': 0.7,
+            'preferred_storage': 'Windows Share Drive (SMB)',
+            'backup_tools': ['SQL Server Management Studio', 'T-SQL BACKUP', 'PowerShell'],
+            'considerations': [
+                'SQL Server backups work well with SMB shares',
+                'Consider backup compression for faster transfers',
+                'Transaction log backups require frequent transfers',
+                'Large database backups benefit from parallel DataSync agents'
+            ]
+        },
+        'oracle': {
+            'typical_backup_extensions': ['.dmp', '.log'],
+            'compression_available': True,
+            'typical_compression_ratio': 0.6,
+            'preferred_storage': 'Linux NAS Drive (NFS)',
+            'backup_tools': ['RMAN', 'Data Pump (expdp)', 'Cold Backup'],
+            'considerations': [
+                'Oracle works efficiently with NFS storage',
+                'Data Pump exports compress very well',
+                'RMAN backups can be parallelized',
+                'Archive log backups need frequent synchronization'
+            ]
+        },
+        'postgresql': {
+            'typical_backup_extensions': ['.sql', '.dump', '.tar'],
+            'compression_available': True,
+            'typical_compression_ratio': 0.5,
+            'preferred_storage': 'Linux NAS Drive (NFS)',
+            'backup_tools': ['pg_dump', 'pg_dumpall', 'pg_basebackup'],
+            'considerations': [
+                'PostgreSQL dumps are text-based and compress excellently',
+                'Custom format dumps provide best compression',
+                'Parallel dumps improve performance significantly',
+                'WAL files require continuous archiving'
+            ]
+        },
+        'mysql': {
+            'typical_backup_extensions': ['.sql', '.dump'],
+            'compression_available': True,
+            'typical_compression_ratio': 0.6,
+            'preferred_storage': 'Linux NAS Drive (NFS)',
+            'backup_tools': ['mysqldump', 'mysqlpump', 'Percona XtraBackup'],
+            'considerations': [
+                'MySQL dumps compress well with gzip',
+                'Binary backups transfer faster than logical dumps',
+                'Point-in-time recovery requires binary log transfers',
+                'Large databases benefit from physical backups'
+            ]
+        }
+    }
+    return backup_info.get(database_type, backup_info['mysql'])
 
 def get_secrets_safely() -> Dict:
     """Safely retrieve secrets with error handling"""
@@ -1306,13 +1629,13 @@ def initialize_integrations():
             else:
                 claude_status = "⚠️ Connection Failed"
                 claude_message = message
-                claude_integration = None  # Set to None if initialization failed
+                claude_integration = None
         except Exception as e:
             claude_status = "⚠️ Connection Failed"
             claude_message = str(e)
-            claude_integration = None  # Set to None if initialization failed
+            claude_integration = None
     else:
-        claude_integration = None  # Set to None if no API key
+        claude_integration = None
     
     return {
         'aws_integration': aws_integration,
@@ -1376,13 +1699,256 @@ def render_connection_status(status_info: Dict):
         3. Add the required keys as shown above
         """)
 
-def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_manager: EnhancedAgentManager, 
-                                  claude_integration: ClaudeAIIntegration):
+def render_database_backup_overview(config: Dict):
+    """Render database-specific backup overview"""
+    st.markdown("**🗄️ Database Backup Migration Overview**")
+    
+    database_type = config['source_database_engine']
+    backup_info = get_database_backup_info(database_type)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if database_type == 'sqlserver':
+            card_class = "sql-server-card"
+            icon = "🔵"
+        else:
+            card_class = "linux-db-card" 
+            icon = "🐧"
+            
+        st.markdown(f"""
+        <div class="{card_class}">
+            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">{icon} {database_type.upper()} Backup Configuration</h4>
+            <div style="font-size: 15px; line-height: 1.7;">
+                <p style="margin: 8px 0;"><strong>Backup Size:</strong> {config.get('backup_size_gb', 1000):,} GB</p>
+                <p style="margin: 8px 0;"><strong>Backup Type:</strong> {config.get('backup_type', 'Full backup')}</p>
+                <p style="margin: 8px 0;"><strong>Compression:</strong> {config.get('backup_compression_ratio', 0.7)*100:.0f}% ratio</p>
+                <p style="margin: 8px 0;"><strong>Storage:</strong> {backup_info['preferred_storage']}</p>
+                <p style="margin: 8px 0;"><strong>Extensions:</strong> {', '.join(backup_info['typical_backup_extensions'])}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="backup-card">
+            <h4 style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">🛠️ Recommended Tools & Considerations</h4>
+            <div style="font-size: 14px; line-height: 1.6;">
+                <p style="margin: 8px 0;"><strong>Backup Tools:</strong></p>
+                <ul style="margin: 0 0 12px 20px; padding: 0;">
+                    {chr(10).join([f'<li style="margin: 4px 0;">{tool}</li>' for tool in backup_info['backup_tools']])}
+                </ul>
+                <p style="margin: 8px 0;"><strong>Key Considerations:</strong></p>
+                <ul style="margin: 0; padding: 0 0 0 20px;">
+                    {chr(10).join([f'<li style="margin: 4px 0; font-size: 13px;">{consideration}</li>' for consideration in backup_info['considerations'][:2]])}
+                </ul>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_backup_transfer_metrics(config: Dict, network_perf: Dict, agent_perf: Dict):
+    """Render backup-specific transfer metrics"""
+    st.markdown("**📊 Backup Transfer Performance Metrics**")
+    
+    backup_size_gb = config.get('backup_size_gb', 1000)
+    compression_ratio = config.get('backup_compression_ratio', 1.0)
+    effective_backup_size = backup_size_gb * compression_ratio
+    
+    # Calculate transfer times
+    throughput_mbps = min(network_perf['effective_bandwidth_mbps'], agent_perf['total_agent_throughput_mbps'])
+    
+    # Convert GB to Mbits for calculation
+    backup_size_mbits = effective_backup_size * 8 * 1000
+    transfer_time_seconds = backup_size_mbits / throughput_mbps
+    transfer_time_hours = transfer_time_seconds / 3600
+    
+    # Calculate costs
+    transfer_cost = (agent_perf['total_monthly_cost'] / (30 * 24)) * transfer_time_hours
+    cost_per_gb = transfer_cost / backup_size_gb
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">📦 {backup_size_gb:,} GB</div>
+            <div class="metric-label">Original Backup Size</div>
+            <div style="font-size: 12px; color: #6b7280;">Uncompressed</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">🗜️ {effective_backup_size:,.0f} GB</div>
+            <div class="metric-label">Compressed Size</div>
+            <div style="font-size: 12px; color: #059669;">{(1-compression_ratio)*100:.0f}% reduction</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">⚡ {throughput_mbps:,.0f} Mbps</div>
+            <div class="metric-label">Effective Throughput</div>
+            <div style="font-size: 12px; color: #6b7280;">Backup transfer rate</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">⏱️ {transfer_time_hours:.1f} hrs</div>
+            <div class="metric-label">Transfer Time</div>
+            <div style="font-size: 12px; color: #6b7280;">{transfer_time_seconds/60:.0f} minutes</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col5:
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-value">💰 ${transfer_cost:.2f}</div>
+            <div class="metric-label">Transfer Cost</div>
+            <div style="font-size: 12px; color: #6b7280;">${cost_per_gb:.4f}/GB</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_database_storage_comparison(config: Dict):
+    """Render database-specific storage comparison"""
+    st.markdown("**📊 Database Backup Storage Performance Comparison**")
+    
+    # Create comparison scenarios based on database types
+    scenarios = []
+    
+    database_configs = [
+        {'name': 'SQL Server → Windows Share (SMB)', 'db': 'sqlserver', 'os': 'windows', 'storage': 'smb', 'efficiency': 0.75},
+        {'name': 'Oracle → Linux NAS (NFS)', 'db': 'oracle', 'os': 'linux', 'storage': 'nfs', 'efficiency': 0.96},
+        {'name': 'PostgreSQL → Linux NAS (NFS)', 'db': 'postgresql', 'os': 'linux', 'storage': 'nfs', 'efficiency': 0.98},
+        {'name': 'MySQL → Linux NAS (NFS)', 'db': 'mysql', 'os': 'linux', 'storage': 'nfs', 'efficiency': 0.92},
+    ]
+    
+    base_throughput = 1000  # Base throughput for comparison
+    current_db = config['source_database_engine']
+    
+    for config_item in configs_item:
+        is_current = config_item['db'] == current_db
+        backup_info = get_database_backup_info(config_item['db'])
+        
+        # Apply database-specific backup characteristics
+        backup_efficiency = base_throughput * config_item['efficiency'] * backup_info['typical_compression_ratio']
+        
+        scenarios.append({
+            'Configuration': config_item['name'],
+            'Database': config_item['db'].upper(),
+            'Throughput (Mbps)': backup_efficiency,
+            'Efficiency (%)': config_item['efficiency'] * 100,
+            'Compression Ratio': backup_info['typical_compression_ratio'],
+            'Current': '✓ Current' if is_current else '',
+            'Storage Protocol': config_item['storage'].upper()
+        })
+    
+    df_scenarios = pd.DataFrame(scenarios)
+    
+    # Create comparison chart
+    fig = px.bar(
+        df_scenarios,
+        x='Configuration',
+        y='Throughput (Mbps)',
+        title='Database Backup Storage Performance Comparison',
+        color='Efficiency (%)',
+        color_continuous_scale='RdYlGn',
+        text='Throughput (Mbps)',
+        hover_data=['Compression Ratio', 'Storage Protocol']
+    )
+    
+    fig.update_traces(
+        texttemplate='%{text:.0f} Mbps', 
+        textposition='outside',
+        textfont=dict(size=14, family="Arial Black")
+    )
+    
+    fig.update_layout(
+        height=500,
+        xaxis_tickangle=-45,
+        title=dict(
+            font=dict(size=18, family="Arial Black")
+        ),
+        xaxis=dict(
+            title=dict(text='Database & Storage Configuration', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        yaxis=dict(
+            title=dict(text='Effective Throughput (Mbps)', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        font=dict(size=12)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Performance insights
+    best_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmax()]
+    worst_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmin()]
+    
+    performance_diff = best_config['Throughput (Mbps)'] - worst_config['Throughput (Mbps)']
+    performance_diff_pct = (performance_diff / worst_config['Throughput (Mbps)']) * 100
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 3px solid #10b981; border-radius: 12px; padding: 20px; margin: 20px 0; font-size: 15px; line-height: 1.8;">
+        <strong style="color: #065f46; font-size: 18px;">🏆 Database Backup Performance Insights:</strong><br><br>
+        • <strong>Best Configuration:</strong> {best_config['Configuration']} ({best_config['Throughput (Mbps)']:.0f} Mbps)<br>
+        • <strong>Worst Configuration:</strong> {worst_config['Configuration']} ({worst_config['Throughput (Mbps)']:.0f} Mbps)<br>
+        • <strong>Performance Gap:</strong> {performance_diff:.0f} Mbps ({performance_diff_pct:.1f}% difference)<br>
+        • <strong>Linux NFS Advantage:</strong> Significant performance benefit for Oracle/PostgreSQL<br>
+        • <strong>Compression Impact:</strong> PostgreSQL text dumps achieve best compression ratios
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_datasync_backup_configuration(config: Dict, agent_perf: Dict):
+    """Render DataSync-specific configuration for backup transfers"""
+    st.markdown("**⚙️ DataSync Agent Configuration for Database Backups**")
+    
+    database_type = config['source_database_engine']
+    backup_info = get_database_backup_info(database_type)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="agent-card">
+            <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">🤖 DataSync Agent Configuration</h4>
+            <div style="font-size: 14px; line-height: 1.7;">
+                <p style="margin: 8px 0;"><strong>Agent Count:</strong> {agent_perf['num_agents']}</p>
+                <p style="margin: 8px 0;"><strong>Agent Size:</strong> {agent_perf['agent_size'].title()}</p>
+                <p style="margin: 8px 0;"><strong>Total Capacity:</strong> {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</p>
+                <p style="margin: 8px 0;"><strong>Platform:</strong> {agent_perf['platform_type'].title()}</p>
+                <p style="margin: 8px 0;"><strong>Backup Efficiency:</strong> {agent_perf['agent_backup_efficiency']*100:.1f}%</p>
+                <p style="margin: 8px 0;"><strong>Monthly Cost:</strong> ${agent_perf['total_monthly_cost']:,.0f}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="backup-card">
+            <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">📁 Backup File Handling</h4>
+            <div style="font-size: 14px; line-height: 1.7;">
+                <p style="margin: 8px 0;"><strong>Database Type:</strong> {database_type.upper()}</p>
+                <p style="margin: 8px 0;"><strong>File Extensions:</strong> {', '.join(backup_info['typical_backup_extensions'])}</p>
+                <p style="margin: 8px 0;"><strong>Compression Available:</strong> {'Yes' if backup_info['compression_available'] else 'No'}</p>
+                <p style="margin: 8px 0;"><strong>Typical Compression:</strong> {backup_info['typical_compression_ratio']*100:.0f}%</p>
+                <p style="margin: 8px 0;"><strong>Storage Access:</strong> {backup_info['preferred_storage']}</p>
+                <p style="margin: 8px 0;"><strong>Transfer Optimization:</strong> Sequential I/O</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_manager, claude_integration):
     """Render comprehensive agent placement analysis"""
     st.markdown("**🎯 Agent Placement Strategy Analysis**")
     
     # Initialize placement analyzer
-    placement_analyzer = AgentPlacementAnalyzer()
+    placement_analyzer = DatabasePlacementAnalyzer()
     
     try:
         # Analyze placement options
@@ -1438,133 +2004,6 @@ def render_agent_placement_analysis(config: Dict, network_perf: Dict, agent_mana
     except Exception as e:
         st.error(f"Error creating placement chart: {str(e)}")
         st.info("Placement analysis data is still available below.")
-    
-    # Detailed placement analysis
-    st.markdown("### 🔍 Detailed Placement Analysis")
-    
-    for i, option in enumerate(placement_options):
-        # Determine card class based on score
-        if option['placement_score'] >= 80:
-            score_class = "excellent"
-            card_class = "network-card"
-        elif option['placement_score'] >= 65:
-            score_class = "good"
-            card_class = "performance-card"
-        else:
-            score_class = "poor"
-            card_class = "warning-card"
-        
-        is_recommended = i == 0  # First option is highest scored
-        
-        st.markdown(f"""
-        <div class="placement-option {'recommended' if is_recommended else ''}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h4 style="font-size: 18px; font-weight: bold; margin: 0;">{option['strategy']['name']}</h4>
-                <span class="placement-score {score_class}">{option['placement_score']:.1f}/100</span>
-            </div>
-            
-            <p style="font-size: 15px; color: #6b7280; margin-bottom: 1rem;">{option['strategy']['description']}</p>
-            
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                <div>
-                    <strong>Performance:</strong><br>
-                    {option['throughput_mbps']:,.0f} Mbps<br>
-                    <small>Latency: {option['latency_impact']:+.1f} ms</small>
-                </div>
-                <div>
-                    <strong>Cost:</strong><br>
-                    ${option['monthly_cost']:,.0f}/month<br>
-                    <small>${option['monthly_cost']/option['throughput_mbps']:.2f}/Mbps</small>
-                </div>
-                <div>
-                    <strong>Security:</strong><br>
-                    {option['security_score']*100:.0f}% rating<br>
-                    <small>Risk assessment</small>
-                </div>
-                <div>
-                    <strong>Management:</strong><br>
-                    {option['management_complexity']*100:.0f}% complexity<br>
-                    <small>Operational overhead</small>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Expandable details
-        with st.expander(f"📋 {option['strategy']['name']} - Detailed Analysis", expanded=is_recommended):
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                st.markdown("**✅ Advantages:**")
-                for pro in option['strategy']['pros']:
-                    st.markdown(f"• {pro}")
-                
-                st.markdown("**🎯 Best For:**")
-                for best in option['strategy']['best_for']:
-                    st.markdown(f"• {best}")
-            
-            with col2:
-                st.markdown("**⚠️ Challenges:**")
-                for con in option['strategy']['cons']:
-                    st.markdown(f"• {con}")
-                
-                st.markdown("**❌ Avoid When:**")
-                for avoid in option['strategy']['avoid_when']:
-                    st.markdown(f"• {avoid}")
-            
-            # Implementation details
-            st.markdown("**🔧 Implementation Details:**")
-            complexity = option['implementation_complexity']
-            
-            impl_col1, impl_col2, impl_col3 = st.columns(3)
-            with impl_col1:
-                st.markdown(f"""
-                **Timeline:**
-                - Setup: {complexity['setup_time_days']} days
-                - Skill Level: {complexity['skill_level']}
-                """)
-            
-            with impl_col2:
-                st.markdown(f"""
-                **Infrastructure:**
-                - Changes: {complexity['infrastructure_changes']}
-                - Security Review: {complexity['security_review']}
-                """)
-            
-            with impl_col3:
-                st.markdown(f"""
-                **Operations:**
-                - Maintenance: {complexity['ongoing_maintenance']}
-                """)
-    
-    # AI-powered placement recommendations
-    if claude_integration and claude_integration.client:
-        st.markdown("### 🧠 AI-Powered Placement Recommendations")
-        
-        try:
-            with st.spinner("🔄 Analyzing placement strategies..."):
-                ai_recommendations = claude_integration.get_placement_recommendations(config, placement_options)
-            
-            st.markdown(f"""
-            <div class="ai-section">
-                <h4>🎯 Strategic Placement Analysis</h4>
-                <div style="font-size: 15px; line-height: 1.8; color: #374151;">{ai_recommendations.replace(chr(10), '<br>')}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        except Exception as e:
-            st.markdown(f"""
-            <div class="warning-card">
-                <strong>⚠️ Error getting AI recommendations: {str(e)}</strong><br>
-                <small>Claude AI analysis may not be fully available. Check your API configuration.</small>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-        <div class="warning-card">
-            <strong>ℹ️ AI-Powered Recommendations</strong><br>
-            Claude AI integration not available. Connect Claude AI in the sidebar to get intelligent placement recommendations.
-        </div>
-        """, unsafe_allow_html=True)
 
 def render_infrastructure_topology_with_placement(config: Dict, network_perf: Dict, agent_perf: Dict, placement_type: str):
     """Render detailed infrastructure topology showing agent placement"""
@@ -1582,10 +2021,10 @@ def render_infrastructure_topology_with_placement(config: Dict, network_perf: Di
         {
             'tier': 'Source',
             'component': f'{source_storage_type} Storage Server',
-            'details': f"{config.get('database_size_gb', 1000)} GB Database",
+            'details': f"{config.get('backup_size_gb', 1000)} GB Database Backup",
             'status': 'Active',
             'icon': '🗄️',
-            'has_agent': placement_type == 'source_colocation'
+            'has_agent': placement_type == 'backup_source_colocation'
         },
         {
             'tier': 'Source',
@@ -1642,8 +2081,8 @@ def render_infrastructure_topology_with_placement(config: Dict, network_perf: Di
         },
         {
             'tier': 'AWS',
-            'component': 'Target Database',
-            'details': f"{config.get('database_engine', 'MySQL').upper()} on RDS/Aurora",
+            'component': 'Target S3 Bucket',
+            'details': f"Backup files destination",
             'status': 'Ready',
             'icon': '🗃️',
             'has_agent': False
@@ -1773,7 +2212,7 @@ def render_network_path_visualization(network_perf: Dict, config: Dict, agent_pe
         {
             'layer': 'Source Storage',
             'component': f'{source_storage_type} Storage Server',
-            'details': f"{config.get('database_size_gb', 1000)} GB {config.get('source_database_engine', 'MySQL').upper()}",
+            'details': f"{config.get('backup_size_gb', 1000)} GB {config.get('source_database_engine', 'Database').upper()} Backup",
             'bandwidth_in': 10000,
             'bandwidth_out': 10000,
             'latency_ms': 0.5,
@@ -1843,7 +2282,7 @@ def render_network_path_visualization(network_perf: Dict, config: Dict, agent_pe
         },
         {
             'layer': 'Migration Agents',
-            'component': f'{num_agents}x {agent_type.upper()} {agent_size.title()} Agents',
+            'component': f'{num_agents}x DataSync {agent_size.title()} Agents',
             'details': f"Total Capacity: {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps",
             'bandwidth_in': agent_perf['total_agent_throughput_mbps'],
             'bandwidth_out': agent_perf['total_agent_throughput_mbps'],
@@ -1880,8 +2319,8 @@ def render_network_path_visualization(network_perf: Dict, config: Dict, agent_pe
         },
         {
             'layer': 'AWS Services',
-            'component': f'Target: {config.get("database_engine", "MySQL").upper()}',
-            'details': f"RDS/Aurora in {aws_region}",
+            'component': f'Target: S3 Bucket',
+            'details': f"Backup storage in {aws_region}",
             'bandwidth_in': final_bandwidth * 0.98,
             'bandwidth_out': final_bandwidth * 0.98,
             'latency_ms': 2.0,
@@ -2054,7 +2493,7 @@ def render_network_performance_dashboard(components, network_perf, agent_perf):
         """, unsafe_allow_html=True)
     
     with col4:
-        agent_efficiency = (agent_perf['total_agent_throughput_mbps'] / agent_perf['base_throughput_mbps']) * 100 if agent_perf.get('base_throughput_mbps') else 0
+        agent_efficiency = (agent_perf['total_agent_throughput_mbps'] / agent_perf.get('base_throughput_mbps', 1000)) * 100 if agent_perf.get('base_throughput_mbps') else 0
         st.markdown(f"""
         <div class="metric-container">
             <div class="metric-value">🤖 {agent_efficiency:.1f}%</div>
@@ -2166,130 +2605,38 @@ def render_infrastructure_component_analysis(components, config):
     # Migration-specific components analysis
     agent_type = config['migration_type']
     
-    if agent_type == 'datasync':
-        st.markdown("##### 📦 AWS DataSync Agent Analysis")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("""
-            <div class="network-card">
-                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🔄 DataSync Agent Characteristics</h6>
-                <ul style="font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
-                    <li style="margin-bottom: 6px;"><strong>Protocol:</strong> Custom AWS protocol over HTTPS</li>
-                    <li style="margin-bottom: 6px;"><strong>Compression:</strong> Real-time data compression</li>
-                    <li style="margin-bottom: 6px;"><strong>Verification:</strong> Checksum validation</li>
-                    <li style="margin-bottom: 6px;"><strong>Encryption:</strong> TLS 1.2 in transit</li>
-                    <li style="margin-bottom: 6px;"><strong>Optimization:</strong> Sparse file detection</li>
-                    <li style="margin-bottom: 6px;"><strong>Throttling:</strong> Configurable bandwidth control</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div class="performance-card">
-                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">⚡ Current DataSync Configuration</h6>
-                <div style="font-size: 14px; line-height: 1.6;">
-                    <p style="margin: 8px 0;"><strong>Agent Count:</strong> {config['number_of_agents']}</p>
-                    <p style="margin: 8px 0;"><strong>Agent Size:</strong> {config['agent_size'].title()}</p>
-                    <p style="margin: 8px 0;"><strong>Platform:</strong> {config['server_type'].title()}</p>
-                    <p style="margin: 8px 0;"><strong>File System:</strong> {config.get('storage_type', 'NFS').upper()}</p>
-                    <p style="margin: 8px 0;"><strong>Source Size:</strong> {config['database_size_gb']:,} GB</p>
-                    <p style="margin: 8px 0;"><strong>Expected Transfer:</strong> File-level synchronization</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+    st.markdown("##### 📦 AWS DataSync Agent Analysis")
     
-    else:  # DMS
-        st.markdown("##### 🔄 AWS DMS Instance Analysis")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("""
-            <div class="network-card">
-                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🗃️ DMS Instance Characteristics</h6>
-                <ul style="font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
-                    <li style="margin-bottom: 6px;"><strong>Migration:</strong> Database-level replication</li>
-                    <li style="margin-bottom: 6px;"><strong>CDC:</strong> Change Data Capture support</li>
-                    <li style="margin-bottom: 6px;"><strong>Schema:</strong> Automatic schema conversion</li>
-                    <li style="margin-bottom: 6px;"><strong>Validation:</strong> Data validation tools</li>
-                    <li style="margin-bottom: 6px;"><strong>Monitoring:</strong> CloudWatch integration</li>
-                    <li style="margin-bottom: 6px;"><strong>Filtering:</strong> Table and column filtering</li>
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(f"""
-            <div class="performance-card">
-                <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">⚡ Current DMS Configuration</h6>
-                <div style="font-size: 14px; line-height: 1.6;">
-                    <p style="margin: 8px 0;"><strong>Instance Count:</strong> {config['number_of_agents']}</p>
-                    <p style="margin: 8px 0;"><strong>Instance Size:</strong> {config['agent_size'].title()}</p>
-                    <p style="margin: 8px 0;"><strong>Source DB:</strong> {config.get('source_database_engine', 'MySQL').upper()}</p>
-                    <p style="margin: 8px 0;"><strong>Target DB:</strong> {config.get('database_engine', 'MySQL').upper()}</p>
-                    <p style="margin: 8px 0;"><strong>Data Size:</strong> {config['database_size_gb']:,} GB</p>
-                    <p style="margin: 8px 0;"><strong>Migration Type:</strong> {'Homogeneous' if config.get('is_homogeneous') else 'Heterogeneous'}</p>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
     
-    # Network infrastructure details with improved visibility
-    st.markdown("##### 🌐 Network Infrastructure Components")
-    
-    infrastructure_tabs = st.tabs(["🔀 Switching", "🛡️ Security", "🌉 Connectivity", "☁️ AWS Services"])
-    
-    with infrastructure_tabs[0]:
+    with col1:
         st.markdown("""
-        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
-        <strong style="font-size: 16px;">Core Network Switching Infrastructure:</strong><br><br>
-        
-        • <strong>Access Layer:</strong> Server-to-switch connectivity (typically 1/10 GbE)<br>
-        • <strong>Aggregation Layer:</strong> VLAN aggregation and policy enforcement<br>
-        • <strong>Core Layer:</strong> High-speed backbone (10/25/40 GbE)<br>
-        • <strong>Redundancy:</strong> Link aggregation and spanning tree protocols<br>
-        • <strong>QoS:</strong> Traffic prioritization for migration flows<br>
+        <div class="network-card">
+            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🔄 DataSync Agent Characteristics</h6>
+            <ul style="font-size: 14px; line-height: 1.6; margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 6px;"><strong>Protocol:</strong> Custom AWS protocol over HTTPS</li>
+                <li style="margin-bottom: 6px;"><strong>Compression:</strong> Real-time data compression</li>
+                <li style="margin-bottom: 6px;"><strong>Verification:</strong> Checksum validation</li>
+                <li style="margin-bottom: 6px;"><strong>Encryption:</strong> TLS 1.2 in transit</li>
+                <li style="margin-bottom: 6px;"><strong>Optimization:</strong> Sparse file detection</li>
+                <li style="margin-bottom: 6px;"><strong>Throttling:</strong> Configurable bandwidth control</li>
+                <li style="margin-bottom: 6px;"><strong>Backup Files:</strong> Large file optimization</li>
+            </ul>
         </div>
         """, unsafe_allow_html=True)
     
-    with infrastructure_tabs[1]:
-        st.markdown("""
-        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
-        <strong style="font-size: 16px;">Security Infrastructure Components:</strong><br><br>
-        
-        • <strong>Firewalls:</strong> Stateful inspection and application awareness<br>
-        • <strong>IPS/IDS:</strong> Intrusion prevention and detection systems<br>
-        • <strong>VPN Concentrators:</strong> Encrypted tunnel termination<br>
-        • <strong>NAT Gateways:</strong> Network address translation services<br>
-        • <strong>Certificate Management:</strong> PKI and SSL/TLS certificate handling<br>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with infrastructure_tabs[2]:
-        st.markdown("""
-        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
-        <strong style="font-size: 16px;">Wide Area Network Connectivity:</strong><br><br>
-        
-        • <strong>MPLS Networks:</strong> Private label-switched paths<br>
-        • <strong>Direct Connect:</strong> Dedicated AWS connectivity<br>
-        • <strong>SD-WAN:</strong> Software-defined WAN optimization<br>
-        • <strong>Load Balancers:</strong> Traffic distribution and failover<br>
-        • <strong>WAN Optimization:</strong> Compression and caching appliances<br>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with infrastructure_tabs[3]:
-        st.markdown("""
-        <div style="font-size: 15px; line-height: 1.7; color: #374151;">
-        <strong style="font-size: 16px;">AWS Cloud Services Integration:</strong><br><br>
-        
-        • <strong>VPC Transit Gateway:</strong> Multi-VPC routing hub<br>
-        • <strong>Direct Connect Gateway:</strong> Cross-region connectivity<br>
-        • <strong>Route 53:</strong> DNS resolution and health checks<br>
-        • <strong>CloudFront:</strong> Global content delivery network<br>
-        • <strong>WAF/Shield:</strong> Web application firewall and DDoS protection<br>
+    with col2:
+        st.markdown(f"""
+        <div class="performance-card">
+            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">⚡ Current DataSync Configuration</h6>
+            <div style="font-size: 14px; line-height: 1.6;">
+                <p style="margin: 8px 0;"><strong>Agent Count:</strong> {config['number_of_agents']}</p>
+                <p style="margin: 8px 0;"><strong>Agent Size:</strong> {config['agent_size'].title()}</p>
+                <p style="margin: 8px 0;"><strong>Platform:</strong> {config['server_type'].title()}</p>
+                <p style="margin: 8px 0;"><strong>Database:</strong> {config.get('source_database_engine', 'Unknown').upper()}</p>
+                <p style="margin: 8px 0;"><strong>Backup Size:</strong> {config.get('backup_size_gb', 1000):,} GB</p>
+                <p style="margin: 8px 0;"><strong>Expected Transfer:</strong> Backup file synchronization</p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2361,72 +2708,6 @@ def identify_network_bottlenecks(components, network_perf, agent_perf):
                 <strong style="color: #065f46; font-size: 15px;">✅ All components within acceptable latency ranges</strong>
             </div>
             """, unsafe_allow_html=True)
-    
-    # Optimization recommendations with enhanced visibility
-    st.markdown("##### 🎯 Optimization Recommendations")
-    
-    final_throughput = min(network_perf['effective_bandwidth_mbps'], agent_perf['total_agent_throughput_mbps'])
-    
-    # Determine primary bottleneck
-    if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
-        primary_bottleneck = "network"
-        bottleneck_value = network_perf['effective_bandwidth_mbps']
-        potential_gain = agent_perf['total_agent_throughput_mbps'] - network_perf['effective_bandwidth_mbps']
-    else:
-        primary_bottleneck = "agent"
-        bottleneck_value = agent_perf['total_agent_throughput_mbps']
-        potential_gain = network_perf['effective_bandwidth_mbps'] - agent_perf['total_agent_throughput_mbps']
-    
-    optimization_cols = st.columns(3)
-    
-    with optimization_cols[0]:
-        card_class = "warning-card" if primary_bottleneck == 'network' else "network-card"
-        st.markdown(f"""
-        <div class="{card_class}">
-            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🌐 Network Optimization</h6>
-            <div style="font-size: 14px; line-height: 1.6;">
-                <p style="margin: 6px 0;"><strong>Current:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</p>
-                <p style="margin: 6px 0;"><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'network' else 'No'}</p>
-                <p style="margin: 10px 0 6px 0;"><strong>Recommendations:</strong></p>
-                <ul style="margin: 0; padding-left: 18px;">
-                    <li style="margin-bottom: 4px;">Upgrade WAN bandwidth</li>
-                    <li style="margin-bottom: 4px;">Optimize routing paths</li>
-                    <li style="margin-bottom: 4px;">Implement QoS policies</li>
-                </ul>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with optimization_cols[1]:
-        card_class = "warning-card" if primary_bottleneck == 'agent' else "network-card"
-        st.markdown(f"""
-        <div class="{card_class}">
-            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">🤖 Agent Optimization</h6>
-            <div style="font-size: 14px; line-height: 1.6;">
-                <p style="margin: 6px 0;"><strong>Current:</strong> {agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</p>
-                <p style="margin: 6px 0;"><strong>Bottleneck:</strong> {'Yes' if primary_bottleneck == 'agent' else 'No'}</p>
-                <p style="margin: 10px 0 6px 0;"><strong>Recommendations:</strong></p>
-                <ul style="margin: 0; padding-left: 18px;">
-                    <li style="margin-bottom: 4px;">Scale agent instances</li>
-                    <li style="margin-bottom: 4px;">Upgrade instance sizes</li>
-                    <li style="margin-bottom: 4px;">Optimize configurations</li>
-                </ul>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with optimization_cols[2]:
-        st.markdown(f"""
-        <div class="performance-card">
-            <h6 style="font-size: 16px; font-weight: bold; margin-bottom: 12px;">📊 Potential Improvement</h6>
-            <div style="font-size: 14px; line-height: 1.6;">
-                <p style="margin: 6px 0;"><strong>Current Performance:</strong> {final_throughput:,.0f} Mbps</p>
-                <p style="margin: 6px 0;"><strong>Potential Gain:</strong> {potential_gain:,.0f} Mbps</p>
-                <p style="margin: 6px 0;"><strong>Improvement:</strong> {(potential_gain/final_throughput)*100:.1f}%</p>
-                <p style="margin: 6px 0;"><strong>Primary Focus:</strong> {primary_bottleneck.title()} Layer</p>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
 def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_perf: Dict):
     """Enhanced bandwidth waterfall with storage type analysis and improved visibility"""
@@ -2477,9 +2758,16 @@ def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_
     throughputs.append(after_storage)
     descriptions.append(f"{storage_efficiency*100:.1f}% {storage_mount.upper()} efficiency")
     
+    # Backup File Handling Impact
+    backup_efficiency = agent_perf.get('backup_file_efficiency', 1.0)
+    after_backup = after_storage * backup_efficiency
+    stages.append('Backup File\nHandling')
+    throughputs.append(after_backup)
+    descriptions.append(f"{backup_efficiency*100:.1f}% backup file efficiency")
+    
     # Protocol Security Overhead
     protocol_efficiency = 0.85 if config['environment'] == 'production' else 0.88
-    after_protocol = after_storage * protocol_efficiency
+    after_protocol = after_backup * protocol_efficiency
     stages.append('Security\nProtocols')
     throughputs.append(after_protocol)
     descriptions.append(f"{config['environment'].title()} security")
@@ -2496,7 +2784,7 @@ def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_
     final_throughput = min(after_network, agent_capacity)
     stages.append('Final\nThroughput')
     throughputs.append(final_throughput)
-    descriptions.append(f"{agent_perf['num_agents']}x {agent_perf['agent_type']} agents")
+    descriptions.append(f"{agent_perf['num_agents']}x DataSync agents")
     
     # Create enhanced visualization with improved visibility
     waterfall_data = pd.DataFrame({
@@ -2574,138 +2862,8 @@ def render_enhanced_bandwidth_waterfall(config: Dict, network_perf: Dict, agent_
             </div>
         </div>
         """, unsafe_allow_html=True)
-    
-    # Comparison analysis with enhanced visibility
-    if storage_mount == 'smb':
-        nfs_efficiency = 1.0  # Theoretical NFS efficiency
-        nfs_throughput = (after_platform / storage_efficiency) * nfs_efficiency
-        performance_gain = nfs_throughput - after_storage
-        
-        st.markdown(f"""
-        <div style="background: #fef3c7; border: 3px solid #f59e0b; border-radius: 10px; padding: 20px; margin: 15px 0; font-size: 15px; line-height: 1.7;">
-            <strong style="color: #92400e; font-size: 17px;">⚠️ SMB Protocol Performance Impact:</strong><br><br>
-            • <strong>Current (SMB):</strong> {after_storage:.0f} Mbps<br>
-            • <strong>Potential (NFS):</strong> {nfs_throughput:.0f} Mbps<br>
-            • <strong>Performance Gain:</strong> {performance_gain:.0f} Mbps (+{(performance_gain/after_storage)*100:.1f}%)<br><br>
-            💡 <strong>Recommendation:</strong> Consider Linux NAS with NFS for optimal performance
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if platform_type == 'vmware':
-        physical_throughput = after_os  # No virtualization overhead
-        platform_gain = physical_throughput - after_platform
-        
-        st.markdown(f"""
-        <div style="background: #e0f2fe; border: 3px solid #0288d1; border-radius: 10px; padding: 20px; margin: 15px 0; font-size: 15px; line-height: 1.7;">
-            <strong style="color: #01579b; font-size: 17px;">☁️ VMware Virtualization Impact:</strong><br><br>
-            • <strong>Current (VMware):</strong> {after_platform:.0f} Mbps<br>
-            • <strong>Potential (Physical):</strong> {physical_throughput:.0f} Mbps<br>
-            • <strong>Performance Gain:</strong> {platform_gain:.0f} Mbps (+{(platform_gain/after_platform)*100:.1f}%)<br><br>
-            💡 <strong>Trade-off:</strong> Physical servers offer better performance but less flexibility
-        </div>
-        """, unsafe_allow_html=True)
 
-def render_storage_comparison_analysis(config: Dict):
-    """Render detailed storage type comparison with enhanced visibility"""
-    st.markdown("**📊 Storage Protocol Performance Comparison**")
-    
-    # Create comparison scenarios
-    scenarios = []
-    
-    # Current configuration
-    current_os = 'linux' if 'linux' in config['operating_system'].lower() else 'windows'
-    current_storage = 'nfs' if current_os == 'linux' else 'smb'
-    
-    base_throughput = 1000  # Base throughput for comparison
-    
-    configurations = [
-        {'name': 'Linux + NFS + Physical', 'os': 'linux', 'storage': 'nfs', 'platform': 'physical', 'efficiency': 0.96},
-        {'name': 'Linux + NFS + VMware', 'os': 'linux', 'storage': 'nfs', 'platform': 'vmware', 'efficiency': 0.88},
-        {'name': 'Windows + SMB + Physical', 'os': 'windows', 'storage': 'smb', 'platform': 'physical', 'efficiency': 0.75},
-        {'name': 'Windows + SMB + VMware', 'os': 'windows', 'storage': 'smb', 'platform': 'vmware', 'efficiency': 0.69},
-    ]
-    
-    for config_item in configurations:
-        is_current = (config_item['os'] == current_os and 
-                     config_item['platform'] == config['server_type'])
-        
-        scenarios.append({
-            'Configuration': config_item['name'],
-            'Throughput (Mbps)': base_throughput * config_item['efficiency'],
-            'Efficiency (%)': config_item['efficiency'] * 100,
-            'Current': '✓ Current' if is_current else '',
-            'Performance Loss (%)': (1 - config_item['efficiency']) * 100
-        })
-    
-    df_scenarios = pd.DataFrame(scenarios)
-    
-    # Create comparison chart with enhanced visibility
-    fig = px.bar(
-        df_scenarios,
-        x='Configuration',
-        y='Throughput (Mbps)',
-        title='Storage Protocol & Platform Performance Comparison',
-        color='Efficiency (%)',
-        color_continuous_scale='RdYlGn',
-        text='Throughput (Mbps)'
-    )
-    
-    fig.update_traces(
-        texttemplate='%{text:.0f} Mbps', 
-        textposition='outside',
-        textfont=dict(size=14, family="Arial Black")
-    )
-    
-    fig.update_layout(
-        height=500,
-        xaxis_tickangle=-45,
-        title=dict(
-            font=dict(size=18, family="Arial Black")
-        ),
-        xaxis=dict(
-            title=dict(text='Configuration', font=dict(size=14)),
-            tickfont=dict(size=12)
-        ),
-        yaxis=dict(
-            title=dict(text='Throughput (Mbps)', font=dict(size=14)),
-            tickfont=dict(size=12)
-        ),
-        font=dict(size=12)
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Performance impact table with enhanced styling
-    st.markdown("**📋 Detailed Performance Analysis:**")
-    
-    # Style the dataframe for better visibility
-    styled_df = df_scenarios.drop('Current', axis=1).style.format({
-        'Throughput (Mbps)': '{:.0f}',
-        'Efficiency (%)': '{:.1f}%',
-        'Performance Loss (%)': '{:.1f}%'
-    }).background_gradient(subset=['Throughput (Mbps)'], cmap='RdYlGn')
-    
-    st.dataframe(styled_df, use_container_width=True, height=200)
-    
-    # Key insights with enhanced visibility
-    best_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmax()]
-    worst_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmin()]
-    
-    performance_diff = best_config['Throughput (Mbps)'] - worst_config['Throughput (Mbps)']
-    performance_diff_pct = (performance_diff / worst_config['Throughput (Mbps)']) * 100
-    
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 3px solid #10b981; border-radius: 12px; padding: 20px; margin: 20px 0; font-size: 15px; line-height: 1.8;">
-        <strong style="color: #065f46; font-size: 18px;">🏆 Key Performance Insights:</strong><br><br>
-        • <strong>Best Configuration:</strong> {best_config['Configuration']} ({best_config['Throughput (Mbps)']:.0f} Mbps)<br>
-        • <strong>Worst Configuration:</strong> {worst_config['Configuration']} ({worst_config['Throughput (Mbps)']:.0f} Mbps)<br>
-        • <strong>Performance Gap:</strong> {performance_diff:.0f} Mbps ({performance_diff_pct:.1f}% difference)<br>
-        • <strong>Linux NFS Advantage:</strong> ~20-25% better than Windows SMB<br>
-        • <strong>Physical Server Advantage:</strong> ~8-12% better than VMware
-    </div>
-    """, unsafe_allow_html=True)
-
-def render_aws_integration_panel(aws_integration: AWSIntegration):
+def render_aws_integration_panel(aws_integration):
     """Render AWS integration status and real-time data with enhanced visibility"""
     st.markdown("**☁️ AWS Real-Time Integration**")
     
@@ -2794,144 +2952,106 @@ def render_aws_integration_panel(aws_integration: AWSIntegration):
         'region': current_region
     }
 
-def parse_ai_analysis(analysis_text: str) -> Dict:
-    """Parse Claude AI analysis into structured sections"""
-    sections = {
-        'performance_bottleneck': '',
-        'optimization_recommendations': '',
-        'expected_vs_actual': '',
-        'cost_optimization': '',
-        'risk_assessment': ''
-    }
-    
-    current_section = None
-    lines = analysis_text.split('\n')
-    
-    for line in lines:
-        line = line.strip()
-        
-        # Identify section headers
-        if 'PERFORMANCE BOTTLENECK' in line.upper():
-            current_section = 'performance_bottleneck'
-        elif 'OPTIMIZATION RECOMMENDATION' in line.upper():
-            current_section = 'optimization_recommendations'
-        elif 'EXPECTED VS ACTUAL' in line.upper():
-            current_section = 'expected_vs_actual'
-        elif 'COST OPTIMIZATION' in line.upper():
-            current_section = 'cost_optimization'
-        elif 'RISK ASSESSMENT' in line.upper():
-            current_section = 'risk_assessment'
-        elif current_section and line:
-            sections[current_section] += line + '\n'
-    
-    # If sections aren't clearly defined, put everything in performance_bottleneck
-    if not any(sections.values()):
-        sections['performance_bottleneck'] = analysis_text
-    
-    return sections
-
-def render_professional_ai_analysis(claude_integration: ClaudeAIIntegration, config: Dict, 
-                                   network_perf: Dict, agent_perf: Dict, aws_data: Dict):
-    """Render professionally formatted Claude AI analysis with enhanced visibility"""
-    st.markdown("**🤖 AI-Powered Performance Analysis**")
-    
-    if not claude_integration.client:
-        st.markdown("""
-        <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
-            <strong style="color: #01579b;">ℹ️ Claude AI integration not connected. Check sidebar for connection status.</strong>
-        </div>
-        """, unsafe_allow_html=True)
-        return
-    
-    with st.spinner("🔄 Analyzing migration configuration..."):
-        analysis = claude_integration.analyze_migration_performance(
-            config, network_perf, agent_perf, aws_data
-        )
-    
-    # Parse the analysis into sections
-    sections = parse_ai_analysis(analysis)
-    
-    # Render sections professionally with enhanced visibility
-    if sections['performance_bottleneck']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🔍 Performance Bottleneck Analysis</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['performance_bottleneck'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['optimization_recommendations']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🚀 Optimization Recommendations</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['optimization_recommendations'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['expected_vs_actual']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">📊 Expected vs Actual Performance</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['expected_vs_actual'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['cost_optimization']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">💰 Cost Optimization Suggestions</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['cost_optimization'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    if sections['risk_assessment']:
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">⚠️ Risk Assessment & Mitigation</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['risk_assessment'].replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # If no sections were parsed, show the full analysis
-    if not any(sections.values()):
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🧠 Complete Analysis</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Get specific optimization recommendations
-    if network_perf['effective_bandwidth_mbps'] < agent_perf['total_agent_throughput_mbps']:
-        bottleneck_type = "network"
-    else:
-        bottleneck_type = "agent"
-    
-    with st.expander("🎯 Targeted Optimization Recommendations", expanded=False):
-        with st.spinner("🔄 Getting optimization recommendations..."):
-            recommendations = claude_integration.get_optimization_recommendations(
-                bottleneck_type, config
-            )
-        
-        st.markdown(f"""
-        <div class="ai-section">
-            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🔧 {bottleneck_type.title()} Bottleneck Solutions</h4>
-            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{recommendations.replace(chr(10), '<br>')}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
 def render_enhanced_sidebar():
-    """Enhanced sidebar with placement configuration"""
-    st.sidebar.header("🌐 Enhanced Migration Analyzer")
+    """Enhanced sidebar with database backup migration configuration"""
+    st.sidebar.header("🗄️ Database Backup Migration Analyzer")
     
-    # Configuration section
+    # Database Configuration section
+    st.sidebar.subheader("🗃️ Database Configuration")
+    
+    # Source Database
+    source_database_engine = st.sidebar.selectbox(
+        "Source Database",
+        ["sqlserver", "oracle", "postgresql", "mysql"],
+        index=0,
+        format_func=lambda x: {
+            'sqlserver': '🔵 Microsoft SQL Server',
+            'oracle': '🔴 Oracle Database',
+            'postgresql': '🐘 PostgreSQL',
+            'mysql': '🐬 MySQL'
+        }[x]
+    )
+    
+    # Auto-determine storage based on database type
+    if source_database_engine == 'sqlserver':
+        default_storage = "windows_share_drive"
+        default_os = "windows_server_2019"
+        storage_options = ["windows_share_drive", "local_storage"]
+        storage_labels = {
+            'windows_share_drive': '📁 Windows Share Drive (SMB)',
+            'local_storage': '💽 Local Storage'
+        }
+    else:
+        default_storage = "linux_nas_drive"
+        default_os = "rhel_8"
+        storage_options = ["linux_nas_drive", "local_storage"]
+        storage_labels = {
+            'linux_nas_drive': '📁 Linux NAS Drive (NFS)',
+            'local_storage': '💽 Local Storage'
+        }
+    
+    # Backup Configuration
+    st.sidebar.subheader("💾 Backup Configuration")
+    
+    backup_size_gb = st.sidebar.number_input(
+        "Backup Size (GB)", 
+        min_value=100, 
+        max_value=50000, 
+        value=1000, 
+        step=100,
+        help="Size of the database backup files to transfer"
+    )
+    
+    backup_type = st.sidebar.selectbox(
+        "Backup Type",
+        ["full_backup", "differential_backup", "transaction_log", "archive_log"],
+        format_func=lambda x: {
+            'full_backup': '📦 Full Database Backup',
+            'differential_backup': '📝 Differential Backup',
+            'transaction_log': '📋 Transaction Log Backup',
+            'archive_log': '📚 Archive Log Backup'
+        }[x]
+    )
+    
+    # Compression settings
+    backup_info = get_database_backup_info(source_database_engine)
+    default_compression = backup_info['typical_compression_ratio']
+    
+    compression_enabled = st.sidebar.checkbox("Enable Backup Compression", value=True)
+    if compression_enabled:
+        backup_compression_ratio = st.sidebar.slider(
+            "Compression Ratio",
+            min_value=0.3,
+            max_value=1.0,
+            value=default_compression,
+            step=0.1,
+            format="%.1f",
+            help="Lower values = better compression"
+        )
+    else:
+        backup_compression_ratio = 1.0
+    
+    # Storage Type
+    storage_type = st.sidebar.selectbox(
+        "Backup Storage Location",
+        storage_options,
+        index=0,
+        format_func=lambda x: storage_labels[x],
+        help=f"Recommended for {source_database_engine.upper()}: {backup_info['preferred_storage']}"
+    )
+    
+    # Operating System (auto-determined but adjustable)
     st.sidebar.subheader("💻 System Configuration")
     
-    # Operating System
+    if source_database_engine == 'sqlserver':
+        os_options = ["windows_server_2019", "windows_server_2022"]
+    else:
+        os_options = ["rhel_8", "rhel_9", "ubuntu_20_04", "ubuntu_22_04"]
+    
     operating_system = st.sidebar.selectbox(
         "Operating System",
-        ["windows_server_2019", "windows_server_2022", "rhel_8", "rhel_9", "ubuntu_20_04", "ubuntu_22_04"],
-        index=3,
+        os_options,
+        index=0 if default_os in os_options else 0,
         format_func=lambda x: {
             'windows_server_2019': '🔵 Windows Server 2019',
             'windows_server_2022': '🔵 Windows Server 2022',
@@ -2948,33 +3068,6 @@ def render_enhanced_sidebar():
         ["physical", "vmware"],
         index=1,
         format_func=lambda x: "🏢 Physical Server" if x == "physical" else "☁️ VMware Virtual Machine"
-    )
-    
-    # Storage Configuration
-    st.sidebar.subheader("💾 Storage Configuration")
-    
-    # Determine storage type based on OS
-    os_lower = operating_system.lower()
-    if 'linux' in os_lower:
-        storage_options = ["nfs_nas", "iscsi_san", "local_storage"]
-        storage_labels = {
-            'nfs_nas': '📁 NFS Network Attached Storage',
-            'iscsi_san': '🔗 iSCSI Storage Area Network', 
-            'local_storage': '💽 Local Direct Attached Storage'
-        }
-    else:
-        storage_options = ["smb_share", "iscsi_san", "local_storage"]
-        storage_labels = {
-            'smb_share': '📁 SMB/CIFS Network Share',
-            'iscsi_san': '🔗 iSCSI Storage Area Network',
-            'local_storage': '💽 Local Direct Attached Storage'
-        }
-    
-    storage_type = st.sidebar.selectbox(
-        "Storage Type",
-        storage_options,
-        index=0,
-        format_func=lambda x: storage_labels[x]
     )
     
     # Hardware Configuration
@@ -3004,86 +3097,425 @@ def render_enhanced_sidebar():
     }
     nic_speed = nic_speeds[nic_type]
     
-    # Migration Configuration
-    st.sidebar.subheader("🔄 Migration Configuration")
-    source_database_engine = st.sidebar.selectbox(
-        "Source Database",
-        ["mysql", "postgresql", "oracle", "sqlserver", "mongodb"],
-        format_func=lambda x: x.upper()
-    )
-    
-    database_engine = st.sidebar.selectbox(
-        "Target Database",
-        ["mysql", "postgresql", "oracle", "sqlserver", "mongodb"],
-        format_func=lambda x: x.upper()
-    )
-    
-    database_size_gb = st.sidebar.number_input("Database Size (GB)", min_value=100, max_value=100000, value=1000, step=100)
-    
     # Environment
     environment = st.sidebar.selectbox("Environment", ["non-production", "production"])
     
-    # Migration Type
-    is_homogeneous = source_database_engine == database_engine
-    migration_type = "datasync" if is_homogeneous else "dms"
+    # DataSync Agent Configuration
+    st.sidebar.subheader("🤖 DataSync Agent Configuration")
+    number_of_agents = st.sidebar.number_input("Number of DataSync Agents", min_value=1, max_value=10, value=2, step=1)
     
-    st.sidebar.info(f"**Migration Tool:** {migration_type.upper()}")
+    agent_size = st.sidebar.selectbox(
+        "DataSync Agent Size",
+        ["small", "medium", "large", "xlarge"],
+        index=1,
+        format_func=lambda x: {
+            'small': '📦 Small (250 Mbps/agent)',
+            'medium': '📦 Medium (500 Mbps/agent)',
+            'large': '📦 Large (1000 Mbps/agent)',
+            'xlarge': '📦 XLarge (2000 Mbps/agent)'
+        }[x]
+    )
     
-    # Agent Configuration
-    st.sidebar.subheader("🤖 Agent Configuration")
-    number_of_agents = st.sidebar.number_input("Number of Agents", min_value=1, max_value=10, value=2, step=1)
-    
-    if is_homogeneous:
-        agent_size = st.sidebar.selectbox(
-            "DataSync Agent Size",
-            ["small", "medium", "large", "xlarge"],
-            index=1,
-            format_func=lambda x: {
-                'small': '📦 Small (250 Mbps/agent)',
-                'medium': '📦 Medium (500 Mbps/agent)',
-                'large': '📦 Large (1000 Mbps/agent)',
-                'xlarge': '📦 XLarge (2000 Mbps/agent)'
-            }[x]
-        )
-    else:
-        agent_size = st.sidebar.selectbox(
-            "DMS Instance Size",
-            ["small", "medium", "large", "xlarge", "xxlarge"],
-            index=1,
-            format_func=lambda x: {
-                'small': '🔄 Small (200 Mbps/agent)',
-                'medium': '🔄 Medium (400 Mbps/agent)',
-                'large': '🔄 Large (800 Mbps/agent)',
-                'xlarge': '🔄 XLarge (1500 Mbps/agent)',
-                'xxlarge': '🔄 XXLarge (2500 Mbps/agent)'
-            }[x]
-        )
+    # Database-specific recommendations
+    with st.sidebar.expander(f"💡 {source_database_engine.upper()} Recommendations"):
+        st.markdown(f"""
+        **Backup Tools:**
+        {chr(10).join([f'• {tool}' for tool in backup_info['backup_tools']])}
+        
+        **Key Considerations:**
+        {chr(10).join([f'• {consideration}' for consideration in backup_info['considerations'][:3]])}
+        """)
     
     return {
+        'source_database_engine': source_database_engine,
+        'backup_size_gb': backup_size_gb,
+        'backup_type': backup_type,
+        'backup_compression': compression_enabled,
+        'backup_compression_ratio': backup_compression_ratio,
+        'storage_type': storage_type,
         'operating_system': operating_system,
         'server_type': server_type,
-        'storage_type': storage_type,
         'ram_gb': ram_gb,
         'cpu_cores': cpu_cores,
         'nic_type': nic_type,
         'nic_speed': nic_speed,
-        'source_database_engine': source_database_engine,
-        'database_engine': database_engine,
-        'database_size_gb': database_size_gb,
         'environment': environment,
         'number_of_agents': number_of_agents,
         'agent_size': agent_size,
-        'migration_type': migration_type,
-        'is_homogeneous': is_homogeneous
+        'migration_type': 'datasync'  # Always DataSync for backup file transfers
     }
 
+def parse_ai_analysis(analysis_text: str) -> Dict:
+    """Parse Claude AI analysis into structured sections"""
+    sections = {
+        'performance_bottleneck': '',
+        'agent_placement': '',
+        'storage_optimization': '',
+        'backup_migration_strategy': '',
+        'cost_optimization': '',
+        'implementation_timeline': '',
+        'risk_assessment': ''
+    }
+    
+    current_section = None
+    lines = analysis_text.split('\n')
+    
+    for line in lines:
+        line = line.strip()
+        
+        # Identify section headers
+        if 'PERFORMANCE BOTTLENECK' in line.upper() or 'BOTTLENECK ANALYSIS' in line.upper():
+            current_section = 'performance_bottleneck'
+        elif 'AGENT PLACEMENT' in line.upper():
+            current_section = 'agent_placement'
+        elif 'STORAGE' in line.upper() and 'OPTIMIZATION' in line.upper():
+            current_section = 'storage_optimization'
+        elif 'BACKUP' in line.upper() and ('STRATEGY' in line.upper() or 'MIGRATION' in line.upper()):
+            current_section = 'backup_migration_strategy'
+        elif 'COST OPTIMIZATION' in line.upper():
+            current_section = 'cost_optimization'
+        elif 'IMPLEMENTATION' in line.upper() and ('TIMELINE' in line.upper() or 'STRATEGY' in line.upper()):
+            current_section = 'implementation_timeline'
+        elif 'RISK ASSESSMENT' in line.upper() or 'RISK' in line.upper():
+            current_section = 'risk_assessment'
+        elif current_section and line:
+            sections[current_section] += line + '\n'
+    
+    # If sections aren't clearly defined, put everything in performance_bottleneck
+    if not any(sections.values()):
+        sections['performance_bottleneck'] = analysis_text
+    
+    return sections
+
+def render_professional_ai_analysis(claude_integration, config: Dict, network_perf: Dict, agent_perf: Dict, aws_data: Dict):
+    """Render professionally formatted Claude AI analysis with enhanced visibility"""
+    st.markdown("**🤖 AI-Powered Performance Analysis**")
+    
+    if not claude_integration or not claude_integration.client:
+        st.markdown("""
+        <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
+            <strong style="color: #01579b;">ℹ️ Claude AI integration not connected. Check sidebar for connection status.</strong>
+        </div>
+        """, unsafe_allow_html=True)
+        return
+    
+    with st.spinner("🔄 Analyzing database backup migration configuration..."):
+        try:
+            analysis = claude_integration.analyze_database_backup_migration(
+                config, network_perf, agent_perf, {}, aws_data
+            )
+        except Exception as e:
+            st.error(f"Error getting AI analysis: {str(e)}")
+            return
+    
+    # Parse the analysis into sections
+    sections = parse_ai_analysis(analysis)
+    
+    # Render sections professionally with enhanced visibility
+    if sections['performance_bottleneck']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🔍 Performance Bottleneck Analysis</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['performance_bottleneck'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['agent_placement']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🎯 DataSync Agent Placement Strategy</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['agent_placement'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['storage_optimization']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">📁 Storage Protocol Optimization</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['storage_optimization'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['backup_migration_strategy']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🗄️ Database Backup Migration Strategy</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['backup_migration_strategy'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['cost_optimization']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">💰 Cost Optimization Strategies</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['cost_optimization'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['implementation_timeline']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🛣️ Implementation Timeline & Strategy</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['implementation_timeline'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    if sections['risk_assessment']:
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">⚠️ Risk Assessment & Mitigation</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{sections['risk_assessment'].replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # If no sections were parsed, show the full analysis
+    if not any(sections.values()):
+        st.markdown(f"""
+        <div class="ai-section">
+            <h4 style="font-size: 20px; color: #1e293b; font-weight: bold;">🧠 Complete Analysis</h4>
+            <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+def render_storage_comparison_analysis(config: Dict):
+    """Render detailed storage type comparison with enhanced visibility"""
+    st.markdown("**📊 Storage Protocol Performance Comparison**")
+    
+    # Create comparison scenarios
+    scenarios = []
+    
+    # Current configuration
+    current_db = config['source_database_engine']
+    current_storage = config['storage_type']
+    
+    base_throughput = 1000  # Base throughput for comparison
+    
+    configurations = [
+        {'name': 'SQL Server + Windows Share + Physical', 'db': 'sqlserver', 'storage': 'windows_share_drive', 'platform': 'physical', 'efficiency': 0.78},
+        {'name': 'SQL Server + Windows Share + VMware', 'db': 'sqlserver', 'storage': 'windows_share_drive', 'platform': 'vmware', 'efficiency': 0.71},
+        {'name': 'Oracle + Linux NAS + Physical', 'db': 'oracle', 'storage': 'linux_nas_drive', 'platform': 'physical', 'efficiency': 0.96},
+        {'name': 'Oracle + Linux NAS + VMware', 'db': 'oracle', 'storage': 'linux_nas_drive', 'platform': 'vmware', 'efficiency': 0.88},
+        {'name': 'PostgreSQL + Linux NAS + Physical', 'db': 'postgresql', 'storage': 'linux_nas_drive', 'platform': 'physical', 'efficiency': 0.98},
+        {'name': 'PostgreSQL + Linux NAS + VMware', 'db': 'postgresql', 'storage': 'linux_nas_drive', 'platform': 'vmware', 'efficiency': 0.90},
+    ]
+    
+    for config_item in configurations:
+        is_current = (config_item['db'] == current_db and 
+                     config_item['storage'] == current_storage and
+                     config_item['platform'] == config['server_type'])
+        
+        backup_info = get_database_backup_info(config_item['db'])
+        
+        scenarios.append({
+            'Configuration': config_item['name'],
+            'Database': config_item['db'].upper(),
+            'Throughput (Mbps)': base_throughput * config_item['efficiency'],
+            'Efficiency (%)': config_item['efficiency'] * 100,
+            'Current': '✓ Current' if is_current else '',
+            'Compression Ratio': backup_info['typical_compression_ratio'],
+            'Performance Loss (%)': (1 - config_item['efficiency']) * 100
+        })
+    
+    df_scenarios = pd.DataFrame(scenarios)
+    
+    # Create comparison chart with enhanced visibility
+    fig = px.bar(
+        df_scenarios,
+        x='Configuration',
+        y='Throughput (Mbps)',
+        title='Database & Storage Protocol Performance Comparison',
+        color='Efficiency (%)',
+        color_continuous_scale='RdYlGn',
+        text='Throughput (Mbps)',
+        hover_data=['Compression Ratio', 'Performance Loss (%)']
+    )
+    
+    fig.update_traces(
+        texttemplate='%{text:.0f} Mbps', 
+        textposition='outside',
+        textfont=dict(size=14, family="Arial Black")
+    )
+    
+    fig.update_layout(
+        height=500,
+        xaxis_tickangle=-45,
+        title=dict(
+            font=dict(size=18, family="Arial Black")
+        ),
+        xaxis=dict(
+            title=dict(text='Database & Storage Configuration', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        yaxis=dict(
+            title=dict(text='Throughput (Mbps)', font=dict(size=14)),
+            tickfont=dict(size=12)
+        ),
+        font=dict(size=12)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Performance impact table with enhanced styling
+    st.markdown("**📋 Detailed Performance Analysis:**")
+    
+    # Style the dataframe for better visibility
+    styled_df = df_scenarios.drop('Current', axis=1).style.format({
+        'Throughput (Mbps)': '{:.0f}',
+        'Efficiency (%)': '{:.1f}%',
+        'Compression Ratio': '{:.1f}',
+        'Performance Loss (%)': '{:.1f}%'
+    }).background_gradient(subset=['Throughput (Mbps)'], cmap='RdYlGn')
+    
+    st.dataframe(styled_df, use_container_width=True, height=200)
+    
+    # Key insights with enhanced visibility
+    best_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmax()]
+    worst_config = df_scenarios.loc[df_scenarios['Throughput (Mbps)'].idxmin()]
+    
+    performance_diff = best_config['Throughput (Mbps)'] - worst_config['Throughput (Mbps)']
+    performance_diff_pct = (performance_diff / worst_config['Throughput (Mbps)']) * 100
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border: 3px solid #10b981; border-radius: 12px; padding: 20px; margin: 20px 0; font-size: 15px; line-height: 1.8;">
+        <strong style="color: #065f46; font-size: 18px;">🏆 Key Performance Insights:</strong><br><br>
+        • <strong>Best Configuration:</strong> {best_config['Configuration']} ({best_config['Throughput (Mbps)']:.0f} Mbps)<br>
+        • <strong>Worst Configuration:</strong> {worst_config['Configuration']} ({worst_config['Throughput (Mbps)']:.0f} Mbps)<br>
+        • <strong>Performance Gap:</strong> {performance_diff:.0f} Mbps ({performance_diff_pct:.1f}% difference)<br>
+        • <strong>Linux NFS Advantage:</strong> Significant benefit for Oracle/PostgreSQL backup transfers<br>
+        • <strong>Physical Server Advantage:</strong> ~8-12% better than VMware for backup file handling<br>
+        • <strong>SQL Server Considerations:</strong> Windows SMB acceptable but consider NFS alternatives
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_bandwidth_waterfall_comparison(config: Dict, network_perf: Dict, agent_perf: Dict):
+    """Render bandwidth waterfall comparison between platforms"""
+    st.markdown("**🌊 Platform Performance Comparison: Physical vs VMware**")
+    
+    # Calculate both physical and VMware scenarios
+    base_nic_speed = config['nic_speed']
+    
+    scenarios = ['Physical Server', 'VMware Platform']
+    scenario_data = []
+    
+    for scenario in scenarios:
+        platform_type = 'physical' if scenario == 'Physical Server' else 'vmware'
+        
+        # Calculate waterfall stages for each scenario
+        stages = []
+        values = []
+        
+        # Start with NIC speed
+        current_bw = base_nic_speed
+        stages.append('NIC Speed')
+        values.append(current_bw)
+        
+        # NIC efficiency
+        nic_efficiency = get_nic_efficiency(config['nic_type'])
+        current_bw *= nic_efficiency
+        stages.append('NIC Processing')
+        values.append(current_bw)
+        
+        # OS efficiency
+        os_efficiency = 0.92 if 'linux' in config['operating_system'] else 0.86
+        current_bw *= os_efficiency
+        stages.append('OS Stack')
+        values.append(current_bw)
+        
+        # Platform efficiency
+        platform_efficiency = 1.0 if platform_type == 'physical' else 0.92
+        current_bw *= platform_efficiency
+        stages.append('Platform')
+        values.append(current_bw)
+        
+        # Storage protocol
+        storage_efficiency = agent_perf['io_multiplier']
+        current_bw *= storage_efficiency
+        stages.append('Storage Protocol')
+        values.append(current_bw)
+        
+        # Agent processing
+        agent_efficiency = agent_perf.get('agent_backup_efficiency', 0.9)
+        current_bw *= agent_efficiency
+        stages.append('DataSync Agent')
+        values.append(current_bw)
+        
+        for stage, value in zip(stages, values):
+            scenario_data.append({
+                'Platform': scenario,
+                'Stage': stage,
+                'Throughput (Mbps)': value
+            })
+    
+    df_comparison = pd.DataFrame(scenario_data)
+    
+    # Create grouped bar chart
+    fig_comparison = px.bar(
+        df_comparison,
+        x='Stage',
+        y='Throughput (Mbps)',
+        color='Platform',
+        title='Performance Degradation: Physical vs VMware Platform',
+        barmode='group',
+        text='Throughput (Mbps)'
+    )
+    
+    fig_comparison.update_traces(
+        texttemplate='%{text:.0f}',
+        textposition='outside',
+        textfont=dict(size=12)
+    )
+    
+    fig_comparison.update_layout(
+        height=500,
+        title=dict(font=dict(size=18, family="Arial Black")),
+        xaxis=dict(title=dict(text='Performance Stages', font=dict(size=14))),
+        yaxis=dict(title=dict(text='Throughput (Mbps)', font=dict(size=14))),
+        font=dict(size=12),
+        legend=dict(font=dict(size=12))
+    )
+    
+    st.plotly_chart(fig_comparison, use_container_width=True)
+    
+    # Summary comparison
+    physical_final = df_comparison[(df_comparison['Platform'] == 'Physical Server') & 
+                                  (df_comparison['Stage'] == 'DataSync Agent')]['Throughput (Mbps)'].iloc[0]
+    vmware_final = df_comparison[(df_comparison['Platform'] == 'VMware Platform') & 
+                               (df_comparison['Stage'] == 'DataSync Agent')]['Throughput (Mbps)'].iloc[0]
+    
+    performance_gain = physical_final - vmware_final
+    performance_gain_pct = (performance_gain / vmware_final) * 100
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div class="network-card">
+            <h4>🏢 Physical Server Performance</h4>
+            <p><strong>Final Throughput:</strong> {physical_final:.0f} Mbps</p>
+            <p><strong>Efficiency:</strong> {(physical_final/base_nic_speed)*100:.1f}%</p>
+            <p><strong>Performance Gain:</strong> +{performance_gain:.0f} Mbps vs VMware</p>
+            <p><strong>Relative Gain:</strong> +{performance_gain_pct:.1f}%</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div class="performance-card">
+            <h4>☁️ VMware Platform Performance</h4>
+            <p><strong>Final Throughput:</strong> {vmware_final:.0f} Mbps</p>
+            <p><strong>Efficiency:</strong> {(vmware_final/base_nic_speed)*100:.1f}%</p>
+            <p><strong>Virtualization Overhead:</strong> -{(base_nic_speed-vmware_final):.0f} Mbps</p>
+            <p><strong>Total Loss:</strong> -{(1-(vmware_final/base_nic_speed))*100:.1f}%</p>
+        </div>
+        """, unsafe_allow_html=True)
+
 def main():
-    """Enhanced main application with placement analysis"""
+    """Enhanced main application for database backup migrations using DataSync"""
     # Header
     st.markdown("""
     <div class="main-header">
-        <h1 style="font-size: 32px; margin-bottom: 15px;">🌐 Enhanced AWS Migration Analyzer with Agent Placement</h1>
-        <p style="font-size: 18px; margin: 0;">AI-Powered Analysis • Agent Placement Optimization • Real-Time AWS Metrics • Physical vs VMware Performance</p>
+        <h1 style="font-size: 32px; margin-bottom: 15px;">🗄️ AWS DataSync Database Backup Migration Analyzer</h1>
+        <p style="font-size: 18px; margin: 0;">Database Backup File Transfers • SQL Server Windows Share • Oracle/PostgreSQL Linux NAS • DataSync Optimization</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -3096,7 +3528,6 @@ def main():
                 st.session_state['integrations_initialized'] = True
             except Exception as e:
                 st.error(f"Error initializing integrations: {str(e)}")
-                # Set default values if initialization fails
                 st.session_state.update({
                     'aws_integration': None,
                     'claude_integration': None,
@@ -3119,188 +3550,344 @@ def main():
     })
     
     # Initialize managers
-    network_manager = EnhancedNetworkPathManager()
-    agent_manager = EnhancedAgentManager()
+    network_manager = DatabaseBackupNetworkPathManager()
+    agent_manager = EnhancedDataSyncAgentManager()
     
     # Get network path and performance
     path_key = network_manager.get_network_path_key(config)
-    network_perf = network_manager.calculate_network_performance(path_key)
+    network_perf = network_manager.calculate_network_performance(
+        path_key, 
+        backup_compression=config['backup_compression_ratio']
+    )
     
     # Storage characteristics
     storage_type_mapping = {
-        'nfs_nas': 'nas',
-        'smb_share': 'share',
-        'iscsi_san': 'san',
+        'windows_share_drive': 'share',
+        'linux_nas_drive': 'nas',
         'local_storage': 'local'
     }
     storage_type = storage_type_mapping.get(config['storage_type'], 'nas')
     os_type = 'linux' if 'linux' in config['operating_system'].lower() else 'windows'
     
-    # Get agent performance (default placement)
-    agent_type = config['migration_type']
+    # Get agent performance
     agent_perf = agent_manager.calculate_agent_performance(
-        agent_type, config['agent_size'], config['number_of_agents'], 
-        config['server_type'], storage_type, os_type, 'centralized_datacenter'
+        config['agent_size'], 
+        config['number_of_agents'], 
+        config['server_type'],
+        config['source_database_engine'],
+        storage_type, 
+        os_type, 
+        'centralized_datacenter',
+        config['backup_compression_ratio']
     )
     
-    # Enhanced tabs with agent placement
+    # Display database backup overview
+    render_database_backup_overview(config)
+    
+    # Display backup transfer metrics
+    render_backup_transfer_metrics(config, network_perf, agent_perf)
+    
+    # Enhanced tabs for database backup migration
     tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
-        "🎯 Agent Placement Analysis",
-        "🌊 Enhanced Bandwidth Analysis",
+        "🎯 DataSync Agent Placement",
+        "🗄️ Database Backup Analysis",
         "📊 Storage Performance Comparison", 
         "🌐 Network Path Visualization",
-        "🤖 Agent Performance",
+        "🤖 DataSync Configuration",
         "☁️ AWS Integration",
         "🧠 AI Analysis"
     ])
     
     with tab1:
-        st.subheader("🎯 Comprehensive Agent Placement Analysis")
+        st.subheader("🎯 DataSync Agent Placement for Database Backups")
         
-        # Agent placement analysis
-        claude_integration = st.session_state.get('claude_integration')
-        render_agent_placement_analysis(config, network_perf, agent_manager, claude_integration)
-        
-        # Initialize placement analyzer
-        placement_analyzer = AgentPlacementAnalyzer()
+        # Agent placement analysis for backup scenarios
+        placement_analyzer = DatabasePlacementAnalyzer()
         placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
         
-        # Decision matrix
-        render_placement_decision_matrix(config, placement_options)
+        # Render placement options specific to backup scenarios
+        st.markdown("### 📍 Backup Access Strategy Comparison")
         
-        # Infrastructure topology with placement
-        recommended_placement = placement_options[0]['placement_type']
-        render_infrastructure_topology_with_placement(config, network_perf, agent_perf, recommended_placement)
+        for i, option in enumerate(placement_options):
+            is_recommended = i == 0
+            
+            if option['placement_score'] >= 80:
+                score_class = "excellent"
+                card_class = "database-card"
+            elif option['placement_score'] >= 65:
+                score_class = "good"
+                card_class = "backup-card"
+            else:
+                score_class = "poor"
+                card_class = "warning-card"
+            
+            st.markdown(f"""
+            <div class="placement-option {'recommended' if is_recommended else ''}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 style="font-size: 18px; font-weight: bold; margin: 0;">{option['strategy']['name']}</h4>
+                    <span class="placement-score {score_class}">{option['placement_score']:.1f}/100</span>
+                </div>
+                
+                <p style="font-size: 15px; color: #6b7280; margin-bottom: 1rem;">{option['strategy']['description']}</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div>
+                        <strong>Backup Access Performance:</strong><br>
+                        {option['throughput_mbps']:,.0f} Mbps<br>
+                        <small>Backup Access Efficiency: {option['backup_access_efficiency']*100:.0f}%</small>
+                    </div>
+                    <div>
+                        <strong>Transfer Cost:</strong><br>
+                        ${option['monthly_cost']:,.0f}/month<br>
+                        <small>${option['monthly_cost']/option['throughput_mbps']:.2f}/Mbps</small>
+                    </div>
+                    <div>
+                        <strong>Security:</strong><br>
+                        {option['security_score']*100:.0f}% rating<br>
+                        <small>Backup access security</small>
+                    </div>
+                    <div>
+                        <strong>Management:</strong><br>
+                        {option['management_complexity']*100:.0f}% complexity<br>
+                        <small>Operational overhead</small>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # Expandable details
+            with st.expander(f"📋 {option['strategy']['name']} - Implementation Details", expanded=is_recommended):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**✅ Advantages for Backup Scenarios:**")
+                    for pro in option['strategy']['pros']:
+                        st.markdown(f"• {pro}")
+                
+                with col2:
+                    st.markdown("**⚠️ Challenges:**")
+                    for con in option['strategy']['cons']:
+                        st.markdown(f"• {con}")
+                
+                # Implementation timeline
+                complexity = option['implementation_complexity']
+                st.markdown(f"""
+                **🔧 Implementation Details:**
+                - **Setup Time:** {complexity['setup_time_days']} days
+                - **Skill Level Required:** {complexity['skill_level']}
+                - **Backup Coordination:** {complexity['backup_coordination']}
+                """)
     
     with tab2:
-        st.subheader("🌊 Enhanced Bandwidth Waterfall Analysis")
-        render_enhanced_bandwidth_waterfall(config, network_perf, agent_perf)
+        st.subheader("🗄️ Database Backup Analysis & Optimization")
         
-        # Physical vs VMware comparison with enhanced visibility
-        st.markdown("**⚖️ Physical vs VMware Performance Impact**")
+        # DataSync configuration for backups
+        render_datasync_backup_configuration(config, agent_perf)
         
-        # Calculate both scenarios
-        physical_agent_perf = agent_manager.calculate_agent_performance(
-            agent_type, config['agent_size'], config['number_of_agents'], 
-            'physical', storage_type, os_type
+        # Database-specific storage comparison
+        render_database_storage_comparison(config)
+        
+        # Backup file transfer timeline
+        st.markdown("**⏱️ Backup Transfer Timeline Analysis**")
+        
+        backup_size_gb = config['backup_size_gb']
+        compression_ratio = config['backup_compression_ratio']
+        effective_size = backup_size_gb * compression_ratio
+        throughput_mbps = min(network_perf['effective_bandwidth_mbps'], agent_perf['total_agent_throughput_mbps'])
+        
+        # Calculate timeline for different backup sizes
+        backup_sizes = [100, 500, 1000, 2500, 5000, 10000]  # GB
+        timeline_data = []
+        
+        for size in backup_sizes:
+            effective_backup_size = size * compression_ratio
+            backup_size_mbits = effective_backup_size * 8 * 1000
+            transfer_seconds = backup_size_mbits / throughput_mbps
+            transfer_hours = transfer_seconds / 3600
+            
+            timeline_data.append({
+                'Backup Size (GB)': size,
+                'Effective Size (GB)': effective_backup_size,
+                'Transfer Time (Hours)': transfer_hours,
+                'Transfer Time (Minutes)': transfer_seconds / 60
+            })
+        
+        df_timeline = pd.DataFrame(timeline_data)
+        
+        fig_timeline = px.line(
+            df_timeline,
+            x='Backup Size (GB)',
+            y='Transfer Time (Hours)',
+            title=f'Backup Transfer Time vs Size ({config["source_database_engine"].upper()} with {compression_ratio*100:.0f}% compression)',
+            markers=True
         )
         
-        vmware_agent_perf = agent_manager.calculate_agent_performance(
-            agent_type, config['agent_size'], config['number_of_agents'], 
-            'vmware', storage_type, os_type
+        fig_timeline.update_layout(
+            height=400,
+            title=dict(font=dict(size=18, family="Arial Black")),
+            xaxis=dict(title=dict(text='Backup Size (GB)', font=dict(size=14))),
+            yaxis=dict(title=dict(text='Transfer Time (Hours)', font=dict(size=14))),
+            font=dict(size=12)
         )
         
-        comparison_col1, comparison_col2 = st.columns(2)
-        
-        with comparison_col1:
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value">🏢 {physical_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</div>
-                <div class="metric-label">Physical Server Performance</div>
-                <div style="font-size: 12px; color: #059669;">+{physical_agent_perf['total_agent_throughput_mbps'] - vmware_agent_perf['total_agent_throughput_mbps']:.0f} Mbps vs VMware</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with comparison_col2:
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value">☁️ {vmware_agent_perf['total_agent_throughput_mbps']:,.0f} Mbps</div>
-                <div class="metric-label">VMware Performance</div>
-                <div style="font-size: 12px; color: #dc2626;">{vmware_agent_perf['performance_loss_pct']:.1f}% total loss</div>
-            </div>
-            """, unsafe_allow_html=True)
+        st.plotly_chart(fig_timeline, use_container_width=True)
     
     with tab3:
-        st.subheader("📊 Storage Protocol Performance Analysis")
-        render_storage_comparison_analysis(config)
+        st.subheader("📊 Database Storage Performance Comparison")
         
-        # Real-world performance insights with enhanced visibility
-        st.markdown("**🔬 Real-World Performance Insights**")
+        # Render database-specific storage comparison (moved to tab2, but kept for backwards compatibility)
+        render_database_storage_comparison(config)
         
-        col1, col2 = st.columns(2)
+        # SQL Server vs Linux database comparison
+        st.markdown("**⚖️ SQL Server (Windows) vs Linux Database Comparison**")
         
-        with col1:
-            st.markdown("""
-            <div class="network-card">
-                <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">🐧 Linux NFS Advantages</h4>
-                <ul style="font-size: 14px; line-height: 1.7; margin: 0; padding-left: 20px;">
-                    <li style="margin-bottom: 8px;"><strong>Network efficiency:</strong> TCP window scaling</li>
-                    <li style="margin-bottom: 8px;"><strong>Protocol design:</strong> Stateless operation</li>
-                    <li style="margin-bottom: 8px;"><strong>Kernel integration:</strong> Direct kernel calls</li>
-                    <li style="margin-bottom: 8px;"><strong>Caching:</strong> Aggressive client-side caching</li>
-                    <li style="margin-bottom: 8px;"><strong>Performance:</strong> Minimal protocol overhead</li>
-                </ul>
-                <p style="margin-top: 15px; font-size: 15px;"><strong>Typical Performance:</strong> 85-95% of line rate</p>
-            </div>
-            """, unsafe_allow_html=True)
+        comparison_scenarios = [
+            {
+                'scenario': 'SQL Server on Windows Share (SMB)',
+                'throughput': 750,
+                'compression': 0.7,
+                'efficiency': 75,
+                'pros': ['Native Windows integration', 'Familiar tools', 'Enterprise support'],
+                'cons': ['SMB protocol overhead', 'Lower compression ratios', 'Windows licensing costs']
+            },
+            {
+                'scenario': 'Oracle on Linux NAS (NFS)',
+                'throughput': 960,
+                'compression': 0.6,
+                'efficiency': 96,
+                'pros': ['Excellent NFS performance', 'Superior compression', 'Lower overhead'],
+                'cons': ['Linux expertise required', 'More complex backup tools', 'Initial setup complexity']
+            },
+            {
+                'scenario': 'PostgreSQL on Linux NAS (NFS)',
+                'throughput': 980,
+                'compression': 0.5,
+                'efficiency': 98,
+                'pros': ['Best compression ratios', 'Text-based dumps', 'Excellent performance'],
+                'cons': ['Custom format complexity', 'Parallel dump setup', 'Recovery planning']
+            }
+        ]
         
-        with col2:
-            st.markdown("""
-            <div class="warning-card">
-                <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">🪟 Windows SMB Challenges</h4>
-                <ul style="font-size: 14px; line-height: 1.7; margin: 0; padding-left: 20px;">
-                    <li style="margin-bottom: 8px;"><strong>Protocol overhead:</strong> SMB2/3 authentication</li>
-                    <li style="margin-bottom: 8px;"><strong>Opportunistic locks:</strong> Performance penalties</li>
-                    <li style="margin-bottom: 8px;"><strong>Buffer management:</strong> User-space overhead</li>
-                    <li style="margin-bottom: 8px;"><strong>Latency sensitivity:</strong> Chatty protocol</li>
-                    <li style="margin-bottom: 8px;"><strong>Security overhead:</strong> Encryption impact</li>
-                </ul>
-                <p style="margin-top: 15px; font-size: 15px;"><strong>Typical Performance:</strong> 65-80% of line rate</p>
+        for scenario in comparison_scenarios:
+            is_current = config['source_database_engine'] in scenario['scenario'].lower()
+            card_class = "database-card" if is_current else "backup-card"
+            
+            st.markdown(f"""
+            <div class="{card_class}">
+                <h4 style="font-size: 17px; font-weight: bold; margin-bottom: 15px;">
+                    {'🎯 ' if is_current else ''}{"scenario['scenario']}"} 
+                    {'(Current Configuration)' if is_current else ''}
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div><strong>Throughput:</strong> {scenario['throughput']} Mbps</div>
+                    <div><strong>Compression:</strong> {scenario['compression']*100:.0f}% ratio</div>
+                    <div><strong>Efficiency:</strong> {scenario['efficiency']}%</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <strong>Advantages:</strong>
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            {chr(10).join([f'<li style="font-size: 13px;">{pro}</li>' for pro in scenario['pros']])}
+                        </ul>
+                    </div>
+                    <div>
+                        <strong>Considerations:</strong>
+                        <ul style="margin: 5px 0; padding-left: 20px;">
+                            {chr(10).join([f'<li style="font-size: 13px;">{con}</li>' for con in scenario['cons']])}
+                        </ul>
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
     
     with tab4:
-        st.subheader("🌐 Enhanced Network Path Visualization")
-        render_network_path_visualization(network_perf, config, agent_perf)
+        st.subheader("🌐 Network Path Visualization for Database Backups")
         
-        # Enhanced metrics with improved visibility
-        col1, col2, col3, col4 = st.columns(4)
+        # Network path specific to backup scenarios
+        st.markdown(f"**🗺️ {network_perf['path_name']}**")
+        
+        # Enhanced network segments for backup scenarios
+        segments_data = []
+        for segment in network_perf['segments']:
+            segments_data.append({
+                'Segment': segment['name'],
+                'Bandwidth (Mbps)': segment['effective_bandwidth_mbps'],
+                'Latency (ms)': segment['effective_latency_ms'],
+                'Reliability (%)': segment['reliability'] * 100,
+                'Connection Type': segment['connection_type'].replace('_', ' ').title()
+            })
+        
+        df_segments = pd.DataFrame(segments_data)
+        
+        # Create network performance chart
+        fig_network = px.bar(
+            df_segments,
+            x='Segment',
+            y='Bandwidth (Mbps)',
+            title='Database Backup Network Path Performance',
+            color='Reliability (%)',
+            color_continuous_scale='RdYlGn',
+            text='Bandwidth (Mbps)',
+            hover_data=['Latency (ms)', 'Connection Type']
+        )
+        
+        fig_network.update_traces(
+            texttemplate='%{text:.0f}',
+            textposition='outside'
+        )
+        
+        fig_network.update_layout(
+            height=500,
+            xaxis_tickangle=-45,
+            title=dict(font=dict(size=18, family="Arial Black")),
+            xaxis=dict(title=dict(text='Network Segments', font=dict(size=14))),
+            yaxis=dict(title=dict(text='Effective Bandwidth (Mbps)', font=dict(size=14))),
+            font=dict(size=12)
+        )
+        
+        st.plotly_chart(fig_network, use_container_width=True)
+        
+        # Network path details
+        st.markdown("**📋 Network Path Analysis:**")
+        
+        col1, col2 = st.columns(2)
         
         with col1:
             st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value">🎯 {network_perf['network_quality_score']:.1f}/100</div>
-                <div class="metric-label">Network Quality</div>
+            <div class="network-card">
+                <h4>🌐 Path Characteristics</h4>
+                <p><strong>Database:</strong> {network_perf['database_type'].upper()}</p>
+                <p><strong>Storage Protocol:</strong> {network_perf['storage_mount_type'].upper()}</p>
+                <p><strong>Backup Location:</strong> {network_perf['backup_location'].replace('_', ' ').title()}</p>
+                <p><strong>Total Latency:</strong> {network_perf['total_latency_ms']:.1f} ms</p>
+                <p><strong>Effective Bandwidth:</strong> {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</p>
             </div>
             """, unsafe_allow_html=True)
         
         with col2:
             st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value">⚡ {network_perf['effective_bandwidth_mbps']:,.0f} Mbps</div>
-                <div class="metric-label">Bandwidth</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value">🕐 {network_perf['total_latency_ms']:.1f} ms</div>
-                <div class="metric-label">Latency</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown(f"""
-            <div class="metric-container">
-                <div class="metric-value">🛡️ {network_perf['total_reliability']*100:.2f}%</div>
-                <div class="metric-label">Reliability</div>
+            <div class="performance-card">
+                <h4>📊 Performance Metrics</h4>
+                <p><strong>Network Quality:</strong> {network_perf['network_quality_score']:.1f}/100</p>
+                <p><strong>Reliability:</strong> {network_perf['total_reliability']*100:.2f}%</p>
+                <p><strong>Optimization Potential:</strong> {network_perf['optimization_potential']:.1f}%</p>
+                <p><strong>Environment:</strong> {network_perf['environment'].title()}</p>
+                <p><strong>Source Location:</strong> {network_perf.get('source', 'Unknown')}</p>
             </div>
             """, unsafe_allow_html=True)
     
     with tab5:
-        # Enhanced agent performance analysis
-        st.subheader("🤖 Enhanced Agent Performance Analysis")
+        st.subheader("🤖 DataSync Agent Configuration & Performance")
         
-        # Enhanced metrics with improved visibility
+        # Enhanced DataSync metrics
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
             st.markdown(f"""
             <div class="metric-container">
-                <div class="metric-value">🔧 {agent_perf['num_agents']}x {agent_perf['agent_size'].title()}</div>
-                <div class="metric-label">Configuration</div>
-                <div style="font-size: 12px; color: #6b7280;">{agent_perf['agent_type'].upper()}</div>
+                <div class="metric-value">🤖 {agent_perf['num_agents']}x {agent_perf['agent_size'].title()}</div>
+                <div class="metric-label">DataSync Agents</div>
+                <div style="font-size: 12px; color: #6b7280;">Backup file optimized</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -3316,9 +3903,9 @@ def main():
         with col3:
             st.markdown(f"""
             <div class="metric-container">
-                <div class="metric-value">🎯 {agent_perf['platform_efficiency']*100:.1f}%</div>
-                <div class="metric-label">Platform Efficiency</div>
-                <div style="font-size: 12px; color: #6b7280;">{config['server_type'].title()}</div>
+                <div class="metric-value">📁 {agent_perf['backup_file_efficiency']*100:.1f}%</div>
+                <div class="metric-label">Backup File Efficiency</div>
+                <div style="font-size: 12px; color: #6b7280;">Large file handling</div>
             </div>
             """, unsafe_allow_html=True)
         
@@ -3331,133 +3918,176 @@ def main():
             </div>
             """, unsafe_allow_html=True)
         
-        # Detailed performance breakdown with enhanced visibility
-        st.markdown("**📈 Performance Impact Breakdown**")
+        # DataSync agent performance breakdown
+        st.markdown("**📈 DataSync Performance Factor Analysis**")
         
-        impact_data = {
-            'Factor': ['Base Throughput', 'Platform Efficiency', 'I/O Protocol', 'Network Efficiency', 'Scaling Factor'],
+        performance_factors = {
+            'Factor': [
+                'Base Throughput',
+                'Platform Efficiency', 
+                'Backup File Handling',
+                'I/O Protocol',
+                'Network Efficiency',
+                'Agent Backup Optimization',
+                'Compression Impact',
+                'Scaling Factor'
+            ],
             'Impact (%)': [
                 100,
                 agent_perf['platform_efficiency'] * 100,
+                agent_perf['backup_file_efficiency'] * 100,
                 agent_perf['io_multiplier'] * 100,
                 agent_perf['network_efficiency'] * 100,
+                agent_perf['agent_backup_efficiency'] * 100,
+                agent_perf['compression_impact'] * 100,
                 agent_perf['scaling_efficiency'] * 100
-            ],
-            'Cumulative (Mbps)': [
-                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'],
-                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'] * agent_perf['platform_efficiency'],
-                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'] * agent_perf['platform_efficiency'] * agent_perf['io_multiplier'],
-                agent_perf['base_throughput_mbps'] * agent_perf['num_agents'] * agent_perf['platform_efficiency'] * agent_perf['io_multiplier'] * agent_perf['network_efficiency'],
-                agent_perf['total_agent_throughput_mbps']
             ]
         }
         
-        df_impact = pd.DataFrame(impact_data)
+        df_factors = pd.DataFrame(performance_factors)
         
-        fig_impact = px.bar(
-            df_impact,
+        fig_factors = px.bar(
+            df_factors,
             x='Factor',
-            y='Cumulative (Mbps)',
-            title='Agent Performance Impact Analysis',
+            y='Impact (%)',
+            title='DataSync Agent Performance Factor Analysis',
             color='Impact (%)',
             color_continuous_scale='RdYlGn',
-            text='Cumulative (Mbps)'
+            text='Impact (%)'
         )
         
-        fig_impact.update_traces(
-            texttemplate='%{text:.0f}',
-            textposition='outside',
-            textfont=dict(size=14, family="Arial Black")
+        fig_factors.update_traces(
+            texttemplate='%{text:.1f}%',
+            textposition='outside'
         )
         
-        fig_impact.update_layout(
+        fig_factors.update_layout(
             height=500,
-            title=dict(
-                font=dict(size=18, family="Arial Black")
-            ),
-            xaxis=dict(
-                title=dict(text='Performance Factors', font=dict(size=14)),
-                tickfont=dict(size=12)
-            ),
-            yaxis=dict(
-                title=dict(text='Cumulative Throughput (Mbps)', font=dict(size=14)),
-                tickfont=dict(size=12)
-            ),
+            xaxis_tickangle=-45,
+            title=dict(font=dict(size=18, family="Arial Black")),
+            xaxis=dict(title=dict(text='Performance Factors', font=dict(size=14))),
+            yaxis=dict(title=dict(text='Efficiency Impact (%)', font=dict(size=14))),
             font=dict(size=12)
         )
         
-        st.plotly_chart(fig_impact, use_container_width=True)
+        st.plotly_chart(fig_factors, use_container_width=True)
+        
+        # Database-specific recommendations
+        backup_info = get_database_backup_info(config['source_database_engine'])
+        
+        st.markdown(f"""
+        <div class="database-card">
+            <h4>💡 {config['source_database_engine'].upper()}-Specific DataSync Recommendations</h4>
+            <div style="font-size: 14px; line-height: 1.7;">
+                <p><strong>Recommended Tools:</strong> {', '.join(backup_info['backup_tools'][:3])}</p>
+                <p><strong>Optimal File Extensions:</strong> {', '.join(backup_info['typical_backup_extensions'])}</p>
+                <p><strong>Compression Recommendation:</strong> {'Enabled' if backup_info['compression_available'] else 'Not Available'} 
+                   ({backup_info['typical_compression_ratio']*100:.0f}% typical ratio)</p>
+                <p><strong>Storage Preference:</strong> {backup_info['preferred_storage']}</p>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with tab6:
-        st.subheader("☁️ AWS Real-Time Integration")
+        st.subheader("☁️ AWS Integration & Real-Time Monitoring")
         
         aws_integration = st.session_state.get('aws_integration')
         if aws_integration and aws_integration.session:
+            # Render AWS integration panel (reuse existing function)
             aws_data_detailed = render_aws_integration_panel(aws_integration)
             
-            # CloudWatch metrics visualization with enhanced visibility
-            st.markdown("**📊 CloudWatch Metrics**")
+            # DataSync-specific insights for backup transfers
+            st.markdown("**📊 DataSync Backup Transfer Insights**")
             
-            metrics_col1, metrics_col2 = st.columns(2)
+            col1, col2 = st.columns(2)
             
-            with metrics_col1:
-                if agent_type == 'datasync':
-                    datasync_metrics = aws_integration.get_cloudwatch_metrics('datasync')
-                    if datasync_metrics:
-                        st.markdown(f"""
-                        <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
-                            <strong style="color: #065f46;">✅ Found {len(datasync_metrics)} DataSync metrics</strong>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown("""
-                        <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
-                            <strong style="color: #01579b;">ℹ️ No recent DataSync metrics available</strong>
-                        </div>
-                        """, unsafe_allow_html=True)
-            
-            with metrics_col2:
-                dms_metrics = aws_integration.get_cloudwatch_metrics('dms')
-                if dms_metrics:
-                    st.markdown(f"""
-                    <div style="background: #d1fae5; border: 2px solid #10b981; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
-                        <strong style="color: #065f46;">✅ Found {len(dms_metrics)} DMS metrics</strong>
+            with col1:
+                st.markdown(f"""
+                <div class="aws-card">
+                    <h4>🔄 DataSync Backup Configuration</h4>
+                    <div style="font-size: 14px; line-height: 1.7;">
+                        <p><strong>Source Type:</strong> {config['source_database_engine'].upper()} Backup Files</p>
+                        <p><strong>Source Storage:</strong> {config['storage_type'].replace('_', ' ').title()}</p>
+                        <p><strong>Target:</strong> AWS S3</p>
+                        <p><strong>Transfer Method:</strong> AWS DataSync</p>
+                        <p><strong>Compression:</strong> {'Enabled' if config['backup_compression'] else 'Disabled'}</p>
+                        <p><strong>Agent Count:</strong> {config['number_of_agents']} {config['agent_size']} agents</p>
                     </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    st.markdown("""
-                    <div style="background: #e0f2fe; border: 2px solid #0288d1; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
-                        <strong style="color: #01579b;">ℹ️ No recent DMS metrics available</strong>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                final_throughput = min(network_perf['effective_bandwidth_mbps'], agent_perf['total_agent_throughput_mbps'])
+                transfer_time_hours = (config['backup_size_gb'] * config['backup_compression_ratio'] * 8 * 1000) / (final_throughput * 3600)
+                
+                st.markdown(f"""
+                <div class="backup-card">
+                    <h4>⏱️ Transfer Estimates</h4>
+                    <div style="font-size: 14px; line-height: 1.7;">
+                        <p><strong>Backup Size:</strong> {config['backup_size_gb']:,} GB</p>
+                        <p><strong>Compressed Size:</strong> {config['backup_size_gb'] * config['backup_compression_ratio']:,.0f} GB</p>
+                        <p><strong>Effective Throughput:</strong> {final_throughput:,.0f} Mbps</p>
+                        <p><strong>Estimated Transfer Time:</strong> {transfer_time_hours:.1f} hours</p>
+                        <p><strong>Daily Backup Window:</strong> {'Fits in' if transfer_time_hours <= 8 else 'Exceeds'} 8-hour window</p>
+                        <p><strong>Weekly Full Backup:</strong> {'Feasible' if transfer_time_hours <= 24 else 'Challenging'}</p>
                     </div>
-                    """, unsafe_allow_html=True)
+                </div>
+                """, unsafe_allow_html=True)
         else:
             st.markdown("""
-            <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin: 10px 0; font-size: 14px;">
-                <strong style="color: #92400e;">⚠️ AWS integration not connected. Check sidebar for connection status and configure secrets in Streamlit Cloud.</strong>
+            <div class="warning-card">
+                <strong>⚠️ AWS integration not connected.</strong><br>
+                Configure AWS credentials in the sidebar to monitor real-time DataSync tasks and get live performance metrics.
             </div>
             """, unsafe_allow_html=True)
-            aws_data_detailed = {}
     
     with tab7:
-        st.subheader("🧠 Enhanced AI Performance Analysis")
+        st.subheader("🧠 AI-Powered Database Backup Migration Analysis")
         
         claude_integration = st.session_state.get('claude_integration')
         if claude_integration and claude_integration.client:
             try:
-                placement_analyzer = AgentPlacementAnalyzer()
+                placement_analyzer = DatabasePlacementAnalyzer()
                 placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
                 
-                with st.spinner("🔄 Analyzing migration configuration with placement optimization..."):
-                    analysis = claude_integration.analyze_migration_performance(
+                with st.spinner("🔄 Analyzing database backup migration configuration..."):
+                    analysis = claude_integration.analyze_database_backup_migration(
                         config, network_perf, agent_perf, placement_options[0], {}
                     )
                 
                 st.markdown(f"""
                 <div class="ai-section">
-                    <h4>🧠 Comprehensive Migration Analysis</h4>
+                    <h4>🧠 Comprehensive Database Backup Migration Analysis</h4>
                     <div style="font-size: 15px; line-height: 1.8; color: #374151;">{analysis.replace(chr(10), '<br>')}</div>
                 </div>
                 """, unsafe_allow_html=True)
+                
+                # Database-specific recommendations
+                with st.expander(f"💡 {config['source_database_engine'].upper()}-Specific Optimization Recommendations", expanded=False):
+                    with st.spinner("🔄 Getting database-specific recommendations..."):
+                        db_recommendations = claude_integration.get_database_specific_recommendations(
+                            config['source_database_engine'], config
+                        )
+                    
+                    st.markdown(f"""
+                    <div class="ai-section">
+                        <h4>🎯 {config['source_database_engine'].upper()} Backup Migration Optimization</h4>
+                        <div style="font-size: 15px; line-height: 1.8; color: #374151;">{db_recommendations.replace(chr(10), '<br>')}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                
+                # Agent placement recommendations
+                with st.expander("📍 DataSync Agent Placement Recommendations", expanded=False):
+                    with st.spinner("🔄 Analyzing optimal agent placement..."):
+                        placement_recommendations = claude_integration.get_placement_recommendations(config, placement_options)
+                    
+                    st.markdown(f"""
+                    <div class="ai-section">
+                        <h4>🎯 Strategic Agent Placement for Backup Access</h4>
+                        <div style="font-size: 15px; line-height: 1.8; color: #374151;">{placement_recommendations.replace(chr(10), '<br>')}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
             except Exception as e:
                 st.markdown(f"""
                 <div class="warning-card">
@@ -3469,62 +4099,139 @@ def main():
             st.markdown("""
             <div class="warning-card">
                 <strong>ℹ️ Enhanced AI Analysis</strong><br>
-                Claude AI integration not connected. Check sidebar for connection status and configure your Claude API key to get intelligent migration analysis.
+                Claude AI integration not connected. Connect Claude AI to get intelligent database backup migration analysis, 
+                including database-specific recommendations and optimal DataSync agent placement strategies.
             </div>
             """, unsafe_allow_html=True)
     
-    # Enhanced executive summary
+    # Enhanced executive summary for database backup scenarios
     st.markdown("---")
-    st.markdown("### 🎯 Executive Summary & Placement Recommendations")
+    st.markdown("### 🎯 Executive Summary: Database Backup Migration Strategy")
     
-    placement_analyzer = AgentPlacementAnalyzer()
+    placement_analyzer = DatabasePlacementAnalyzer()
     placement_options = placement_analyzer.analyze_placement_options(config, network_perf, agent_manager)
     recommended_option = placement_options[0]
     
     final_throughput = recommended_option['throughput_mbps']
-    efficiency = (final_throughput / config['nic_speed']) * 100
-    migration_time = (config['database_size_gb'] * 8 * 1000) / (final_throughput * 3600)
+    backup_size_compressed = config['backup_size_gb'] * config['backup_compression_ratio']
+    transfer_time_hours = (backup_size_compressed * 8 * 1000) / (final_throughput * 3600)
+    transfer_cost = (recommended_option['monthly_cost'] / (30 * 24)) * transfer_time_hours
     
     summary_col1, summary_col2, summary_col3 = st.columns(3)
     
     with summary_col1:
+        backup_window_status = "✅ Fits" if transfer_time_hours <= 8 else "⚠️ Exceeds"
+        daily_backup_feasible = transfer_time_hours <= 4
+        
         st.markdown(f"""
-        <div class="performance-card">
-            <h4>📊 Recommended Configuration</h4>
+        <div class="database-card">
+            <h4>🗄️ Database Backup Summary</h4>
             <div style="font-size: 15px; line-height: 1.8;">
-                <p><strong>Placement Strategy:</strong> {recommended_option['strategy']['name']}</p>
-                <p><strong>Expected Throughput:</strong> {final_throughput:,.0f} Mbps</p>
-                <p><strong>Migration Time:</strong> {migration_time:.1f} hours</p>
-                <p><strong>Overall Score:</strong> {recommended_option['placement_score']:.1f}/100</p>
+                <p><strong>Database:</strong> {config['source_database_engine'].upper()}</p>
+                <p><strong>Backup Size:</strong> {config['backup_size_gb']:,} GB → {backup_size_compressed:,.0f} GB</p>
+                <p><strong>Storage:</strong> {config['storage_type'].replace('_', ' ').title()}</p>
+                <p><strong>Transfer Time:</strong> {transfer_time_hours:.1f} hours</p>
+                <p><strong>8-Hour Window:</strong> {backup_window_status}</p>
+                <p><strong>Daily Backup:</strong> {'✅ Feasible' if daily_backup_feasible else '⚠️ Challenging'}</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
     
     with summary_col2:
         st.markdown(f"""
-        <div class="network-card">
-            <h4>💰 Cost Analysis</h4>
+        <div class="backup-card">
+            <h4>🎯 Recommended Strategy</h4>
             <div style="font-size: 15px; line-height: 1.8;">
-                <p><strong>Monthly Cost:</strong> ${recommended_option['monthly_cost']:,.0f}</p>
-                <p><strong>Migration Cost:</strong> ${(recommended_option['monthly_cost']/730)*migration_time:.2f}</p>
-                <p><strong>Cost per GB:</strong> ${((recommended_option['monthly_cost']/730)*migration_time)/config['database_size_gb']:.4f}</p>
-                <p><strong>Cost Efficiency:</strong> High</p>
+                <p><strong>Placement:</strong> {recommended_option['strategy']['name']}</p>
+                <p><strong>DataSync Agents:</strong> {config['number_of_agents']}x {config['agent_size']}</p>
+                <p><strong>Expected Throughput:</strong> {final_throughput:,.0f} Mbps</p>
+                <p><strong>Performance Score:</strong> {recommended_option['placement_score']:.1f}/100</p>
+                <p><strong>Backup Access Efficiency:</strong> {recommended_option['backup_access_efficiency']*100:.0f}%</p>
+                <p><strong>Security Rating:</strong> {recommended_option['security_score']*100:.0f}%</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
     
     with summary_col3:
+        cost_per_gb = transfer_cost / config['backup_size_gb']
+        monthly_backup_cost = transfer_cost * 30  # Assuming daily backups
+        
         st.markdown(f"""
-        <div class="agent-card">
-            <h4>🚀 Implementation</h4>
+        <div class="performance-card">
+            <h4>💰 Cost Analysis</h4>
             <div style="font-size: 15px; line-height: 1.8;">
+                <p><strong>Transfer Cost:</strong> ${transfer_cost:.2f}</p>
+                <p><strong>Cost per GB:</strong> ${cost_per_gb:.4f}</p>
+                <p><strong>Monthly (Daily Backups):</strong> ${monthly_backup_cost:.0f}</p>
+                <p><strong>Annual Backup Costs:</strong> ${monthly_backup_cost * 12:.0f}</p>
                 <p><strong>Setup Time:</strong> {recommended_option['implementation_complexity']['setup_time_days']} days</p>
-                <p><strong>Skill Level:</strong> {recommended_option['implementation_complexity']['skill_level']}</p>
-                <p><strong>Security Score:</strong> {recommended_option['security_score']*100:.0f}%</p>
-                <p><strong>Management:</strong> {recommended_option['implementation_complexity']['ongoing_maintenance']}</p>
+                <p><strong>ROI Timeline:</strong> {'Immediate' if transfer_time_hours <= 8 else 'After optimization'}</p>
             </div>
         </div>
         """, unsafe_allow_html=True)
+    
+    # Implementation roadmap
+    st.markdown("### 🛣️ Implementation Roadmap")
+    
+    roadmap_phases = [
+        {
+            'phase': 'Phase 1: Infrastructure Setup',
+            'duration': '1-2 days',
+            'tasks': [
+                f'Configure {config["source_database_engine"].upper()} backup processes',
+                f'Set up {config["storage_type"].replace("_", " ").title()} storage access',
+                'Install and configure DataSync agents',
+                'Establish network connectivity to AWS S3'
+            ]
+        },
+        {
+            'phase': 'Phase 2: Testing & Validation',
+            'duration': '2-3 days', 
+            'tasks': [
+                'Test backup file access and transfer speeds',
+                'Validate compression and encryption settings',
+                'Perform test transfers with sample backup files',
+                'Monitor performance and adjust agent configurations'
+            ]
+        },
+        {
+            'phase': 'Phase 3: Production Implementation',
+            'duration': '1-2 days',
+            'tasks': [
+                'Schedule production backup transfers',
+                'Implement monitoring and alerting',
+                'Document operational procedures',
+                'Train database team on new processes'
+            ]
+        }
+    ]
+    
+    for i, phase in enumerate(roadmap_phases):
+        with st.expander(f"📋 {phase['phase']} ({phase['duration']})", expanded=i==0):
+            st.markdown("**Key Tasks:**")
+            for task in phase['tasks']:
+                st.markdown(f"• {task}")
+    
+    # Final recommendations banner
+    database_type = config['source_database_engine']
+    storage_type = config['storage_type']
+    
+    if database_type == 'sqlserver' and 'windows' in storage_type:
+        recommendation_color = "#0ea5e9"
+        recommendation_text = "SQL Server backups on Windows Share Drive are well-supported. Consider enabling backup compression and using multiple DataSync agents for large databases."
+    elif database_type in ['oracle', 'postgresql'] and 'linux' in storage_type:
+        recommendation_color = "#22c55e"
+        recommendation_text = f"{database_type.upper()} backups on Linux NAS provide excellent performance. Take advantage of superior compression ratios and NFS efficiency."
+    else:
+        recommendation_color = "#f59e0b"
+        recommendation_text = "Consider aligning your database type with the recommended storage platform for optimal performance."
+    
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 3px solid {recommendation_color}; border-radius: 12px; padding: 25px; margin: 25px 0; text-align: center;">
+        <h3 style="color: {recommendation_color}; font-size: 20px; margin-bottom: 15px;">🚀 Final Recommendation</h3>
+        <p style="font-size: 16px; line-height: 1.8; color: #1e293b; margin: 0;">{recommendation_text}</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
