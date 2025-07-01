@@ -976,233 +976,135 @@ class EnhancedNetworkAnalyzer:
             }
         }
         
-        # Enhanced Database Scenarios with AWS targets
-        self.database_scenarios = {
-            'mysql_oltp_rds': {
-                'name': 'MySQL OLTP Database → RDS MySQL',
-                'workload_type': 'oltp',
-                'aws_target': 'rds',
-                'target_service': 'Amazon RDS for MySQL',
-                'latency_sensitivity': 'high',
-                'bandwidth_requirement': 'medium',
-                'consistency_requirement': 'strict',
-                'recommended_services': ['dms'],
-                'min_bandwidth_mbps': 500,
-                'max_tolerable_latency_ms': 10,
-                'migration_complexity': 'low',
-                'downtime_sensitivity': 'high'
-            },
-            'postgresql_analytics_rds': {
-                'name': 'PostgreSQL Analytics → RDS PostgreSQL',
-                'workload_type': 'olap',
-                'aws_target': 'rds',
-                'target_service': 'Amazon RDS for PostgreSQL',
-                'latency_sensitivity': 'medium',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'eventual',
-                'recommended_services': ['dms', 'datasync'],
-                'min_bandwidth_mbps': 1000,
-                'max_tolerable_latency_ms': 50,
-                'migration_complexity': 'medium',
-                'downtime_sensitivity': 'medium'
-            },
-            'oracle_enterprise_rds': {
-                'name': 'Oracle Enterprise → RDS Oracle',
-                'workload_type': 'mixed',
-                'aws_target': 'rds',
-                'target_service': 'Amazon RDS for Oracle',
-                'latency_sensitivity': 'very_high',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'strict',
-                'recommended_services': ['dms'],
-                'min_bandwidth_mbps': 2000,
-                'max_tolerable_latency_ms': 5,
-                'migration_complexity': 'high',
-                'downtime_sensitivity': 'very_high'
-            },
-            'sqlserver_enterprise_ec2': {
-                'name': 'SQL Server Enterprise → EC2',
-                'workload_type': 'mixed',
-                'aws_target': 'ec2',
-                'target_service': 'SQL Server on Amazon EC2',
-                'latency_sensitivity': 'high',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'strict',
-                'recommended_services': ['dms', 'datasync'],
-                'min_bandwidth_mbps': 1500,
-                'max_tolerable_latency_ms': 8,
-                'migration_complexity': 'high',
-                'downtime_sensitivity': 'high'
-            },
-            'mongodb_cluster_documentdb': {
-                'name': 'MongoDB Cluster → DocumentDB',
-                'workload_type': 'mixed',
-                'aws_target': 'documentdb',
-                'target_service': 'Amazon DocumentDB',
-                'latency_sensitivity': 'medium',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'eventual',
-                'recommended_services': ['dms', 'datasync'],
-                'min_bandwidth_mbps': 1500,
-                'max_tolerable_latency_ms': 20,
-                'migration_complexity': 'medium',
-                'downtime_sensitivity': 'medium'
-            },
-            'mysql_analytics_aurora': {
-                'name': 'MySQL Analytics → Aurora MySQL',
-                'workload_type': 'olap',
-                'aws_target': 'aurora',
-                'target_service': 'Amazon Aurora MySQL',
-                'latency_sensitivity': 'medium',
-                'bandwidth_requirement': 'high',
-                'consistency_requirement': 'eventual',
-                'recommended_services': ['dms'],
-                'min_bandwidth_mbps': 1200,
-                'max_tolerable_latency_ms': 25,
-                'migration_complexity': 'medium',
-                'downtime_sensitivity': 'low'
-            },
-            'postgresql_oltp_aurora': {
-                'name': 'PostgreSQL OLTP → Aurora PostgreSQL',
-                'workload_type': 'oltp',
-                'aws_target': 'aurora',
-                'target_service': 'Amazon Aurora PostgreSQL',
-                'latency_sensitivity': 'high',
-                'bandwidth_requirement': 'medium',
-                'consistency_requirement': 'strict',
-                'recommended_services': ['dms'],
-                'min_bandwidth_mbps': 800,
-                'max_tolerable_latency_ms': 12,
-                'migration_complexity': 'low',
-                'downtime_sensitivity': 'high'
-            },
-            'mariadb_oltp_rds': {
-                'name': 'MariaDB OLTP → RDS MariaDB',
-                'workload_type': 'oltp',
-                'aws_target': 'rds',
-                'target_service': 'Amazon RDS for MariaDB',
-                'latency_sensitivity': 'high',
-                'bandwidth_requirement': 'medium',
-                'consistency_requirement': 'strict',
-                'recommended_services': ['dms'],
-                'min_bandwidth_mbps': 600,
-                'max_tolerable_latency_ms': 10,
-                'migration_complexity': 'low',
-                'downtime_sensitivity': 'high'
-            }
+# End of database_scenarios dictionary
+        'mariadb_oltp_rds': {
+            'name': 'MariaDB OLTP → RDS MariaDB',
+            'workload_type': 'oltp',
+            'aws_target': 'rds',
+            'target_service': 'Amazon RDS for MariaDB',
+            'latency_sensitivity': 'high',
+            'bandwidth_requirement': 'medium',
+            'consistency_requirement': 'strict',
+            'recommended_services': ['dms'],
+            'min_bandwidth_mbps': 600,
+            'max_tolerable_latency_ms': 10,
+            'migration_complexity': 'low',
+            'downtime_sensitivity': 'high'
         }
-        
-        # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
+      # Close the database_scenarios dictionary
+    
+    # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
+    self.migration_services = {
         'datasync': {
-                'name': 'AWS DataSync',
-                'use_case': 'File and object data transfer',
-                'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
-                'vpc_endpoint_compatible': True,
-                'encryption_in_transit': True,
-                'encryption_at_rest': True,
-                'application_efficiency': 0.92,
-                'protocol_efficiency': 0.96,
-                'latency_sensitivity': 'medium',
-                'tcp_window_scaling_required': True,
-                'vmware_deployment': True,  # NEW FLAG
-                'database_compatibility': {
-                    'file_based_backups': True,
-                    'live_replication': False,
-                    'transaction_logs': True
-                },
+            'name': 'AWS DataSync',
+            'use_case': 'File and object data transfer',
+            'protocols': ['NFS', 'SMB', 'HDFS', 'S3'],
+            'vpc_endpoint_compatible': True,
+            'encryption_in_transit': True,
+            'encryption_at_rest': True,
+            'application_efficiency': 0.92,
+            'protocol_efficiency': 0.96,
+            'latency_sensitivity': 'medium',
+            'tcp_window_scaling_required': True,
+            'vmware_deployment': True,  # NEW FLAG
+            'database_compatibility': {
+                'file_based_backups': True,
+                'live_replication': False,
+                'transaction_logs': True
+            },
             'sizes': {
-                    'small': {
-                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
-                        'vpc_endpoint_throughput_reduction': 0.1,
-                        'optimal_file_size_mb': '1-100',
-                        'concurrent_transfers': 16,
-                        'tcp_connections': 16,
-                        'instance_type': 'm5.xlarge',
-                        'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
-                        'effective_throughput_mbps': 340  # NEW: After VMware overhead
-                    },
-                'medium': {
-                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
-                        'vpc_endpoint_throughput_reduction': 0.08,
-                        'optimal_file_size_mb': '100-1000',
-                        'concurrent_transfers': 32,
-                        'tcp_connections': 32,
-                        'instance_type': 'm5.2xlarge',
-                        'vmware_overhead': 0.12,
-                        'effective_throughput_mbps': 880
-                    },
-                'large': {
-                        'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
-                        'vpc_endpoint_throughput_reduction': 0.05,
-                        'optimal_file_size_mb': '1000+',
-                        'concurrent_transfers': 64,
-                        'tcp_connections': 64,
-                        'instance_type': 'm5.4xlarge',
-                        'vmware_overhead': 0.10,
-                        'effective_throughput_mbps': 1800
-                    },
-                'xlarge': {
-                        'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
-                        'vpc_endpoint_throughput_reduction': 0.03,
-                        'optimal_file_size_mb': '1000+',
-                        'concurrent_transfers': 128,
-                        'tcp_connections': 128,
-                        'instance_type': 'm5.8xlarge',
-                        'vmware_overhead': 0.08,
-                        'effective_throughput_mbps': 3680
-                    }
-                }
-            },
-            'dms': {
-                'name': 'AWS Database Migration Service',
-                'use_case': 'Database migration and replication',
-                'protocols': ['TCP/IP', 'SSL/TLS'],
-                'vpc_endpoint_compatible': True,
-                'encryption_in_transit': True,
-                'encryption_at_rest': True,
-                'application_efficiency': 0.88,
-                'protocol_efficiency': 0.94,
-                'latency_sensitivity': 'high',
-                'requires_endpoints': True,
-                'supports_cdc': True,
-                'tcp_window_scaling_required': True,
-                'database_compatibility': {
-                    'file_based_backups': False,
-                    'live_replication': True,
-                    'transaction_logs': True,
-                    'schema_conversion': True
+                'small': {
+                    'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 400, 'cost_per_hour': 0.084,
+                    'vpc_endpoint_throughput_reduction': 0.1,
+                    'optimal_file_size_mb': '1-100',
+                    'concurrent_transfers': 16,
+                    'tcp_connections': 16,
+                    'instance_type': 'm5.xlarge',
+                    'vmware_overhead': 0.15,  # NEW: VMware virtualization overhead
+                    'effective_throughput_mbps': 340  # NEW: After VMware overhead
                 },
-                'sizes': {
-                    'small': {
-                        'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
-                        'max_connections': 50,
-                        'optimal_table_size_gb': '1-10',
-                        'tcp_connections': 4,
-                        'instance_type': 'dms.t3.medium'
-                    },
-                    'medium': {
-                        'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
-                        'max_connections': 100,
-                        'optimal_table_size_gb': '10-100',
-                        'tcp_connections': 8,
-                        'instance_type': 'dms.r5.large'
-                    },
-                    'large': {
-                        'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
-                        'max_connections': 200,
-                        'optimal_table_size_gb': '100-500',
-                        'tcp_connections': 16,
-                        'instance_type': 'dms.r5.xlarge'
-                    },
-                    'xlarge': {
-                        'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
-                        'max_connections': 400,
-                        'optimal_table_size_gb': '500+',
-                        'tcp_connections': 32,
-                        'instance_type': 'dms.r5.2xlarge'
-                    }
+                'medium': {
+                    'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1000, 'cost_per_hour': 0.168,
+                    'vpc_endpoint_throughput_reduction': 0.08,
+                    'optimal_file_size_mb': '100-1000',
+                    'concurrent_transfers': 32,
+                    'tcp_connections': 32,
+                    'instance_type': 'm5.2xlarge',
+                    'vmware_overhead': 0.12,
+                    'effective_throughput_mbps': 880
+                },
+                'large': {
+                    'vcpu': 16, 'memory_gb': 64, 'throughput_mbps': 2000, 'cost_per_hour': 0.336,
+                    'vpc_endpoint_throughput_reduction': 0.05,
+                    'optimal_file_size_mb': '1000+',
+                    'concurrent_transfers': 64,
+                    'tcp_connections': 64,
+                    'instance_type': 'm5.4xlarge',
+                    'vmware_overhead': 0.10,
+                    'effective_throughput_mbps': 1800
+                },
+                'xlarge': {
+                    'vcpu': 32, 'memory_gb': 128, 'throughput_mbps': 4000, 'cost_per_hour': 0.672,
+                    'vpc_endpoint_throughput_reduction': 0.03,
+                    'optimal_file_size_mb': '1000+',
+                    'concurrent_transfers': 128,
+                    'tcp_connections': 128,
+                    'instance_type': 'm5.8xlarge',
+                    'vmware_overhead': 0.08,  # Less overhead on larger VMs
+                    'effective_throughput_mbps': 3680
                 }
+            }
+        },
+        'dms': {
+            'name': 'AWS Database Migration Service',
+            'use_case': 'Database migration and replication',
+            'protocols': ['TCP/IP', 'SSL/TLS'],
+            'vpc_endpoint_compatible': True,
+            'encryption_in_transit': True,
+            'encryption_at_rest': True,
+            'application_efficiency': 0.88,
+            'protocol_efficiency': 0.94,
+            'latency_sensitivity': 'high',
+            'requires_endpoints': True,
+            'supports_cdc': True,
+            'tcp_window_scaling_required': True,
+            'database_compatibility': {
+                'file_based_backups': False,
+                'live_replication': True,
+                'transaction_logs': True,
+                'schema_conversion': True
             },
+            'sizes': {
+                'small': {
+                    'vcpu': 2, 'memory_gb': 4, 'throughput_mbps': 200, 'cost_per_hour': 0.042,
+                    'max_connections': 50,
+                    'optimal_table_size_gb': '1-10',
+                    'tcp_connections': 4,
+                    'instance_type': 'dms.t3.medium'
+                },
+                'medium': {
+                    'vcpu': 2, 'memory_gb': 8, 'throughput_mbps': 400, 'cost_per_hour': 0.085,
+                    'max_connections': 100,
+                    'optimal_table_size_gb': '10-100',
+                    'tcp_connections': 8,
+                    'instance_type': 'dms.r5.large'
+                },
+                'large': {
+                    'vcpu': 4, 'memory_gb': 16, 'throughput_mbps': 800, 'cost_per_hour': 0.17,
+                    'max_connections': 200,
+                    'optimal_table_size_gb': '100-500',
+                    'tcp_connections': 16,
+                    'instance_type': 'dms.r5.xlarge'
+                },
+                'xlarge': {
+                    'vcpu': 8, 'memory_gb': 32, 'throughput_mbps': 1500, 'cost_per_hour': 0.34,
+                    'max_connections': 400,
+                    'optimal_table_size_gb': '500+',
+                    'tcp_connections': 32,
+                    'instance_type': 'dms.r5.2xlarge'
+                }
+            }
+        },
             'fsx_windows': {
                 'name': 'Amazon FSx for Windows File Server',
                 'use_case': 'Windows-based file shares and applications',
