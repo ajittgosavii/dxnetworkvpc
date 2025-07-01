@@ -977,6 +977,7 @@ class EnhancedNetworkAnalyzer:
         }
         
 # End of database_scenarios dictionary
+    database_scenarios = {
         'mariadb_oltp_rds': {
             'name': 'MariaDB OLTP → RDS MariaDB',
             'workload_type': 'oltp',
@@ -991,6 +992,7 @@ class EnhancedNetworkAnalyzer:
             'migration_complexity': 'low',
             'downtime_sensitivity': 'high'
         }
+    }
       # Close the database_scenarios dictionary
     
     # Comprehensive Migration Services (ALL ORIGINAL SERVICES PRESERVED)
