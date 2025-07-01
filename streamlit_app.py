@@ -9,7 +9,7 @@ import requests
 import boto3
 from typing import Dict, List, Tuple, Optional
 import asyncio
-import aiohttp
+#import aiohttp
 from dataclasses import dataclass
 import numpy as np
 
