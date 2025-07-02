@@ -13,6 +13,37 @@ from botocore.exceptions import ClientError, NoCredentialsError
 import anthropic
 from anthropic import Anthropic
 
+
+# ADD THIS HELPER FUNCTION at the top of your file (after imports)
+def get_storage_impact(storage_technology, database_engine):
+    """Get storage technology impact on bandwidth"""
+    
+    # Storage bandwidth capabilities
+    storage_bandwidth = {
+        'traditional_san': {'min': 4000, 'max': 8000},
+        'ssd_enterprise': {'min': 8000, 'max': 15000},
+        'nvme_enterprise': {'min': 20000, 'max': 40000},
+        'nas_traditional': {'min': 2000, 'max': 6000},
+        'local_ssd': {'min': 4000, 'max': 8000},
+        'local_spinning': {'min': 1000, 'max': 3000}
+    }
+    
+    # Protocol efficiency
+    if database_engine == 'sqlserver':
+        efficiency = 0.75  # SMB overhead
+    else:
+        efficiency = 0.95  # NFS efficiency
+    
+    storage_bw = storage_bandwidth.get(storage_technology, {'min': 4000, 'max': 8000})
+    effective_min = int(storage_bw['min'] * efficiency)
+    effective_max = int(storage_bw['max'] * efficiency)
+    
+    return {
+        'bandwidth_range': f"{effective_min:,} - {effective_max:,} Mbps",
+        'min_bandwidth': effective_min,
+        'max_bandwidth': effective_max
+    }
+
 # Configure page
 st.set_page_config(
     page_title="AWS DataSync Database Backup Migration Analyzer",
@@ -492,13 +523,13 @@ class EnhancedNetworkPathManager:
                 'segments': [
                     {
                         'name': 'OS: Windows Server SQL Backup Process',
-                        'bandwidth_mbps': 25000,
-                        'latency_ms': 0.2,
+                        'bandwidth_mbps': 6000,
+                        'latency_ms': 0.3,
                         'reliability': 0.9999,
                         'connection_type': 'os_layer',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.95,
-                        'protocol_efficiency': 0.92
+                        'optimization_potential': 0.85,
+                        'protocol_efficiency': 0.75
                     },
                     {
                         'name': 'NIC: 10Gbps Ethernet Interface',
@@ -597,13 +628,13 @@ class EnhancedNetworkPathManager:
                 'segments': [
                     {
                         'name': 'OS: Windows Server SQL Backup Process',
-                        'bandwidth_mbps': 25000,
-                        'latency_ms': 0.1,
-                        'reliability': 0.99995,
+                        'bandwidth_mbps': 6000,
+                        'latency_ms': 0.3,
+                        'reliability': 0.9999,
                         'connection_type': 'os_layer',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.96,
-                        'protocol_efficiency': 0.94
+                        'optimization_potential': 0.85,
+                        'protocol_efficiency': 0.75
                     },
                     {
                         'name': 'NIC: 10Gbps Fiber Interface',
@@ -721,14 +752,14 @@ class EnhancedNetworkPathManager:
                 'backup_location': 'Linux NAS',
                 'segments': [
                     {
-                        'name': 'OS: Linux Database Backup Process',
-                        'bandwidth_mbps': 25000,
+                        'name': 'OS: Linux Database Backup Process', 
+                        'bandwidth_mbps': 10000,   # REDUCED from 25000
                         'latency_ms': 0.15,
                         'reliability': 0.99995,
                         'connection_type': 'os_layer',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.97,
-                        'protocol_efficiency': 0.95
+                        'optimization_potential': 0.92,
+                        'protocol_efficiency': 0.95 
                     },
                     {
                         'name': 'NIC: 10Gbps Ethernet Interface',
@@ -826,14 +857,14 @@ class EnhancedNetworkPathManager:
                 'backup_location': 'Linux NAS',
                 'segments': [
                     {
-                        'name': 'OS: Linux Database Backup Process',
-                        'bandwidth_mbps': 25000,
-                        'latency_ms': 0.08,
-                        'reliability': 0.99998,
+                        'name': 'OS: Linux Database Backup Process', 
+                        'bandwidth_mbps': 10000,   # REDUCED from 25000
+                        'latency_ms': 0.15,
+                        'reliability': 0.99995,
                         'connection_type': 'os_layer',
                         'cost_factor': 0.0,
-                        'optimization_potential': 0.98,
-                        'protocol_efficiency': 0.96
+                        'optimization_potential': 0.92,
+                        'protocol_efficiency': 0.95 
                     },
                     {
                         'name': 'NIC: 10Gbps Fiber Interface',
@@ -938,7 +969,165 @@ class EnhancedNetworkPathManager:
                 ]
             }
         }
+
+                # Storage technology bandwidth mapping
+        self.storage_bandwidth = {
+            'traditional_san': 6000,      # Realistic (was 25,000 in your segments)
+            'ssd_enterprise': 12000,      # Enterprise SSD arrays
+            'nvme_enterprise': 30000,     # High-end NVMe
+            'nas_traditional': 4000,      # Traditional NAS
+            'local_ssd': 6000,           # Local SSD
+            'local_spinning': 2000        # Spinning disks
+        }
+        
+        # Database protocol efficiency
+        self.protocol_efficiency = {
+            'sqlserver': 0.75,   # SMB/CIFS overhead
+            'oracle': 0.95,      # NFS efficiency
+            'postgresql': 0.95,  # NFS efficiency
+            'mysql': 0.92        # NFS efficiency
+        }      
     
+        def get_realistic_os_bandwidth(self, storage_technology, database_engine, backup_size_gb):
+            """Calculate realistic OS bandwidth based on storage technology"""
+            
+            # Get base storage bandwidth
+            base_bandwidth = self.storage_bandwidth.get(storage_technology, 6000)
+            
+            # Apply protocol efficiency
+            protocol_eff = self.protocol_efficiency.get(database_engine, 0.90)
+            
+            # Large file bonus for backup scenarios
+            if backup_size_gb > 1000:
+                large_file_bonus = 1.1
+            elif backup_size_gb > 500:
+                large_file_bonus = 1.05
+            else:
+                large_file_bonus = 1.0
+            
+            # Calculate effective bandwidth
+            effective_bandwidth = int(base_bandwidth * protocol_eff * large_file_bonus)
+            
+            return {
+                'bandwidth_mbps': effective_bandwidth,
+                'base_storage_mbps': base_bandwidth,
+                'protocol_efficiency': protocol_eff,
+                'large_file_bonus': large_file_bonus
+            }
+        
+        def calculate_network_performance(self, path_key: str, config: Dict, time_of_day: int = None) -> Dict:
+            """Calculate network performance with REALISTIC storage-based OS bandwidth"""
+            path = self.network_paths[path_key]
+            
+            if time_of_day is None:
+                time_of_day = datetime.now().hour
+            
+            # Get realistic OS bandwidth based on user's storage selection
+            storage_technology = config.get('storage_technology', 'traditional_san')
+            database_engine = config.get('source_database_engine', 'sqlserver')
+            backup_size_gb = config.get('backup_size_gb', 1000)
+            
+            os_bandwidth_info = self.get_realistic_os_bandwidth(
+                storage_technology, database_engine, backup_size_gb
+            )
+            
+            total_latency = 0
+            min_bandwidth = float('inf')
+            total_reliability = 1.0
+            total_cost_factor = 0
+            optimization_score = 1.0
+            
+            adjusted_segments = []
+            
+            for i, segment in enumerate(path['segments']):
+                # OVERRIDE the first segment (OS layer) with realistic bandwidth
+                if i == 0 and segment['connection_type'] == 'os_layer':
+                    segment_bandwidth = os_bandwidth_info['bandwidth_mbps']
+                    # Update the segment name to reflect storage technology
+                    segment['name'] = f"OS: {database_engine.upper()} Backup ({storage_technology.replace('_', ' ').title()})"
+                else:
+                    segment_bandwidth = segment['bandwidth_mbps']
+                
+                segment_latency = segment['latency_ms']
+                segment_reliability = segment['reliability']
+                
+                # Apply protocol efficiency if present
+                protocol_efficiency = segment.get('protocol_efficiency', 1.0)
+                if i == 0:  # Use calculated efficiency for OS layer
+                    protocol_efficiency = os_bandwidth_info['protocol_efficiency']
+                
+                effective_bandwidth = segment_bandwidth * protocol_efficiency
+                
+                # Time-of-day congestion adjustments (existing logic)
+                if segment['connection_type'] in ['os_layer', 'nic_layer', 'lan_switch']:
+                    congestion_factor = 1.15 if 9 <= time_of_day <= 17 else 0.92
+                elif segment['connection_type'] in ['network_link', 'private_line']:
+                    congestion_factor = 1.25 if 9 <= time_of_day <= 17 else 0.88
+                elif segment['connection_type'] in ['router', 'firewall', 'direct_connect']:
+                    congestion_factor = 1.08 if 9 <= time_of_day <= 17 else 0.96
+                else:
+                    congestion_factor = 1.0
+                
+                # Apply congestion
+                effective_bandwidth = effective_bandwidth / congestion_factor
+                effective_latency = segment_latency * congestion_factor
+                
+                # Database backup specific adjustments (existing logic)
+                if path['storage_mount_type'] == 'smb':
+                    if 'SMB' in segment['name'] or 'Windows' in segment['name'] or i == 0:
+                        effective_bandwidth *= 0.85  # Reduced from 0.78
+                        effective_latency *= 1.3     # Reduced from 1.4
+                elif path['storage_mount_type'] == 'nfs':
+                    if 'NFS' in segment['name'] or 'Linux' in segment['name'] or i == 0:
+                        effective_bandwidth *= 0.96  # Slightly better
+                        effective_latency *= 1.05    # Reduced from 1.1
+                
+                optimization_score *= segment['optimization_potential']
+                
+                # Accumulate metrics
+                total_latency += effective_latency
+                min_bandwidth = min(min_bandwidth, effective_bandwidth)
+                total_reliability *= segment_reliability
+                total_cost_factor += segment['cost_factor']
+                
+                adjusted_segments.append({
+                    **segment,
+                    'effective_bandwidth_mbps': effective_bandwidth,
+                    'effective_latency_ms': effective_latency,
+                    'congestion_factor': congestion_factor,
+                    'protocol_efficiency': protocol_efficiency
+                })
+            
+            # Calculate quality scores
+            latency_score = max(0, 100 - (total_latency * 1.5))
+            bandwidth_score = min(100, (min_bandwidth / 1000) * 15)
+            reliability_score = total_reliability * 100
+            
+            network_quality = (latency_score * 0.25 + bandwidth_score * 0.45 + reliability_score * 0.30)
+            
+            result = {
+                'path_name': path['name'],
+                'destination_storage': path['destination_storage'],
+                'environment': path['environment'],
+                'database_engine': path['database_engine'],
+                'backup_location': path['backup_location'],
+                'os_type': path['os_type'],
+                'storage_mount_type': path['storage_mount_type'],
+                'storage_technology': storage_technology,  # NEW: Add this
+                'os_bandwidth_info': os_bandwidth_info,    # NEW: Add this
+                'total_latency_ms': total_latency,
+                'effective_bandwidth_mbps': min_bandwidth,
+                'total_reliability': total_reliability,
+                'network_quality_score': network_quality,
+                'optimization_potential': (1 - optimization_score) * 100,
+                'total_cost_factor': total_cost_factor,
+                'segments': adjusted_segments
+            }
+            
+            return result
+    
+                 
+        
     def get_network_path_key(self, config: Dict) -> str:
         """Get network path key based on database engine and configuration"""
         database_engine = config['source_database_engine']
@@ -1624,6 +1813,64 @@ def render_enhanced_sidebar():
         }[x]
     )
     
+    # *** ADD THIS SECTION - Storage Technology Selection ***
+    st.sidebar.subheader("💽 Backup Storage Technology")
+    
+    # Default storage technology based on database engine
+    if source_database_engine == 'sqlserver':
+        default_storage_options = ["traditional_san", "ssd_enterprise", "nvme_enterprise"]
+        default_index = 0  # Traditional SAN most common for SQL Server
+        default_protocol = "SMB/CIFS"
+        default_os = "windows_server_2019"
+    else:
+        default_storage_options = ["ssd_enterprise", "nvme_enterprise", "traditional_san", "nas_traditional"]
+        default_index = 0  # SSD Enterprise most common for modern Oracle/PostgreSQL
+        default_protocol = "NFS"
+        default_os = "rhel_8"
+    
+    # Storage technology selection
+    storage_technology = st.sidebar.selectbox(
+        "Backup Storage Technology",
+        default_storage_options,
+        index=default_index,
+        format_func=lambda x: {
+            'traditional_san': '💾 Traditional SAN (6-8 Gbps)',
+            'ssd_enterprise': '⚡ Enterprise SSD (10-15 Gbps)', 
+            'nvme_enterprise': '🚀 NVMe Enterprise (25-40 Gbps)',
+            'nas_traditional': '📁 Traditional NAS (2-6 Gbps)',
+            'local_ssd': '💻 Local SSD (4-8 Gbps)',
+            'local_spinning': '⏳ Local Spinning Disks (1-3 Gbps)'
+        }[x],
+        help="Storage technology where database backup files are stored"
+    )
+    
+    # Show storage impact
+    storage_impact = get_storage_impact(storage_technology, source_database_engine)
+    st.sidebar.info(f"**Expected OS Bandwidth:** {storage_impact['bandwidth_range']}")
+    st.sidebar.info(f"**Protocol:** {default_protocol}")
+    
+    # Storage location description (now dynamic based on technology)
+    if source_database_engine == 'sqlserver':
+        if storage_technology == 'nvme_enterprise':
+            backup_storage_description = "High-Performance Windows Share (SMB3)"
+        else:
+            backup_storage_description = "Windows File Share (SMB/CIFS)"
+        storage_type = "windows_share"
+        operating_system = default_os
+        storage_protocol = default_protocol
+    else:
+        if storage_technology == 'nvme_enterprise':
+            backup_storage_description = "High-Performance Linux NAS (NFSv4)"
+        elif storage_technology == 'nas_traditional':
+            backup_storage_description = "Traditional Linux NAS (NFS)"
+        else:
+            backup_storage_description = "Enterprise Linux NAS (NFS)"
+        storage_type = "linux_nas"
+        operating_system = default_os
+        storage_protocol = default_protocol
+    
+    
+    
     # Environment
     environment = st.sidebar.selectbox(
         "Environment", 
@@ -1713,6 +1960,7 @@ def render_enhanced_sidebar():
         'backup_size_gb': backup_size_gb,
         'backup_format': backup_format,
         'storage_protocol': storage_protocol,
+        'storage_technology': storage_technology,  # NEW: Add this
         'operating_system': operating_system,
         'server_type': server_type,
         'storage_type': storage_type,
@@ -2229,7 +2477,7 @@ def main():
     
     # Get network path and performance
     path_key = network_manager.get_network_path_key(config)
-    network_perf = network_manager.calculate_network_performance(path_key)
+    network_perf = network_manager.calculate_network_performance(path_key, config)
     
     # Storage characteristics based on database engine
     storage_type_mapping = {
