@@ -2477,7 +2477,7 @@ def main():
     
     # Get network path and performance
     path_key = network_manager.get_network_path_key(config)
-    network_perf = network_manager.calculate_network_performance(path_key, config)
+    network_perf = network_manager.calculate_network_performance(path_key, config=config)
     
     # Storage characteristics based on database engine
     storage_type_mapping = {
