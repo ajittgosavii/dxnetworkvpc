@@ -416,7 +416,7 @@ class WaterfallBandwidthAnalyzer:
             cumulative_latency += latency
             cumulative_reliability *= reliability
             
-            # Calculate bottleneck severity
+            # Calculate bottleneck ratio
             if i == 0:
                 bottleneck_ratio = 1.0
             else:
@@ -970,7 +970,7 @@ class EnhancedNetworkPathManager:
             }
         }
 
-                # Storage technology bandwidth mapping
+        # Storage technology bandwidth mapping
         self.storage_bandwidth = {
             'traditional_san': 6000,      # Realistic (was 25,000 in your segments)
             'ssd_enterprise': 12000,      # Enterprise SSD arrays
@@ -988,169 +988,48 @@ class EnhancedNetworkPathManager:
             'mysql': 0.92        # NFS efficiency
         }      
     
-        def get_realistic_os_bandwidth(self, storage_technology, database_engine, backup_size_gb):
-            """Calculate realistic OS bandwidth based on storage technology"""
-            
-            # Get base storage bandwidth
-            base_bandwidth = self.storage_bandwidth.get(storage_technology, 6000)
-            
-            # Apply protocol efficiency
-            protocol_eff = self.protocol_efficiency.get(database_engine, 0.90)
-            
-            # Large file bonus for backup scenarios
-            if backup_size_gb > 1000:
-                large_file_bonus = 1.1
-            elif backup_size_gb > 500:
-                large_file_bonus = 1.05
-            else:
-                large_file_bonus = 1.0
-            
-            # Calculate effective bandwidth
-            effective_bandwidth = int(base_bandwidth * protocol_eff * large_file_bonus)
-            
-            return {
-                'bandwidth_mbps': effective_bandwidth,
-                'base_storage_mbps': base_bandwidth,
-                'protocol_efficiency': protocol_eff,
-                'large_file_bonus': large_file_bonus
-            }
+    def get_realistic_os_bandwidth(self, storage_technology, database_engine, backup_size_gb):
+        """Calculate realistic OS bandwidth based on storage technology"""
         
-        def calculate_network_performance(self, path_key: str, config: Dict, time_of_day: int = None) -> Dict:
-            """Calculate network performance with REALISTIC storage-based OS bandwidth"""
-            path = self.network_paths[path_key]
-            
-            if time_of_day is None:
-                time_of_day = datetime.now().hour
-            
-            # Get realistic OS bandwidth based on user's storage selection
-            storage_technology = config.get('storage_technology', 'traditional_san')
-            database_engine = config.get('source_database_engine', 'sqlserver')
-            backup_size_gb = config.get('backup_size_gb', 1000)
-            
-            os_bandwidth_info = self.get_realistic_os_bandwidth(
-                storage_technology, database_engine, backup_size_gb
-            )
-            
-            total_latency = 0
-            min_bandwidth = float('inf')
-            total_reliability = 1.0
-            total_cost_factor = 0
-            optimization_score = 1.0
-            
-            adjusted_segments = []
-            
-            for i, segment in enumerate(path['segments']):
-                # OVERRIDE the first segment (OS layer) with realistic bandwidth
-                if i == 0 and segment['connection_type'] == 'os_layer':
-                    segment_bandwidth = os_bandwidth_info['bandwidth_mbps']
-                    # Update the segment name to reflect storage technology
-                    segment['name'] = f"OS: {database_engine.upper()} Backup ({storage_technology.replace('_', ' ').title()})"
-                else:
-                    segment_bandwidth = segment['bandwidth_mbps']
-                
-                segment_latency = segment['latency_ms']
-                segment_reliability = segment['reliability']
-                
-                # Apply protocol efficiency if present
-                protocol_efficiency = segment.get('protocol_efficiency', 1.0)
-                if i == 0:  # Use calculated efficiency for OS layer
-                    protocol_efficiency = os_bandwidth_info['protocol_efficiency']
-                
-                effective_bandwidth = segment_bandwidth * protocol_efficiency
-                
-                # Time-of-day congestion adjustments (existing logic)
-                if segment['connection_type'] in ['os_layer', 'nic_layer', 'lan_switch']:
-                    congestion_factor = 1.15 if 9 <= time_of_day <= 17 else 0.92
-                elif segment['connection_type'] in ['network_link', 'private_line']:
-                    congestion_factor = 1.25 if 9 <= time_of_day <= 17 else 0.88
-                elif segment['connection_type'] in ['router', 'firewall', 'direct_connect']:
-                    congestion_factor = 1.08 if 9 <= time_of_day <= 17 else 0.96
-                else:
-                    congestion_factor = 1.0
-                
-                # Apply congestion
-                effective_bandwidth = effective_bandwidth / congestion_factor
-                effective_latency = segment_latency * congestion_factor
-                
-                # Database backup specific adjustments (existing logic)
-                if path['storage_mount_type'] == 'smb':
-                    if 'SMB' in segment['name'] or 'Windows' in segment['name'] or i == 0:
-                        effective_bandwidth *= 0.85  # Reduced from 0.78
-                        effective_latency *= 1.3     # Reduced from 1.4
-                elif path['storage_mount_type'] == 'nfs':
-                    if 'NFS' in segment['name'] or 'Linux' in segment['name'] or i == 0:
-                        effective_bandwidth *= 0.96  # Slightly better
-                        effective_latency *= 1.05    # Reduced from 1.1
-                
-                optimization_score *= segment['optimization_potential']
-                
-                # Accumulate metrics
-                total_latency += effective_latency
-                min_bandwidth = min(min_bandwidth, effective_bandwidth)
-                total_reliability *= segment_reliability
-                total_cost_factor += segment['cost_factor']
-                
-                adjusted_segments.append({
-                    **segment,
-                    'effective_bandwidth_mbps': effective_bandwidth,
-                    'effective_latency_ms': effective_latency,
-                    'congestion_factor': congestion_factor,
-                    'protocol_efficiency': protocol_efficiency
-                })
-            
-            # Calculate quality scores
-            latency_score = max(0, 100 - (total_latency * 1.5))
-            bandwidth_score = min(100, (min_bandwidth / 1000) * 15)
-            reliability_score = total_reliability * 100
-            
-            network_quality = (latency_score * 0.25 + bandwidth_score * 0.45 + reliability_score * 0.30)
-            
-            result = {
-                'path_name': path['name'],
-                'destination_storage': path['destination_storage'],
-                'environment': path['environment'],
-                'database_engine': path['database_engine'],
-                'backup_location': path['backup_location'],
-                'os_type': path['os_type'],
-                'storage_mount_type': path['storage_mount_type'],
-                'storage_technology': storage_technology,  # NEW: Add this
-                'os_bandwidth_info': os_bandwidth_info,    # NEW: Add this
-                'total_latency_ms': total_latency,
-                'effective_bandwidth_mbps': min_bandwidth,
-                'total_reliability': total_reliability,
-                'network_quality_score': network_quality,
-                'optimization_potential': (1 - optimization_score) * 100,
-                'total_cost_factor': total_cost_factor,
-                'segments': adjusted_segments
-            }
-            
-            return result
-    
-                 
+        # Get base storage bandwidth
+        base_bandwidth = self.storage_bandwidth.get(storage_technology, 6000)
         
-    def get_network_path_key(self, config: Dict) -> str:
-        """Get network path key based on database engine and configuration"""
-        database_engine = config['source_database_engine']
-        environment = config['environment']
+        # Apply protocol efficiency
+        protocol_eff = self.protocol_efficiency.get(database_engine, 0.90)
         
-        # Determine path based on database engine
-        if database_engine == 'sqlserver':
-            if environment == 'non-production':
-                return 'nonprod_sj_sqlserver_windows_share_s3'
-            else:
-                return 'prod_sa_sqlserver_windows_share_s3'
-        else:  # Oracle, PostgreSQL, MySQL
-            if environment == 'non-production':
-                return 'nonprod_sj_oracle_linux_nas_s3'
-            else:
-                return 'prod_sa_oracle_linux_nas_s3'
-    
-    def calculate_network_performance(self, path_key: str, time_of_day: int = None) -> Dict:
-        """Calculate network performance with backup-specific considerations"""
+        # Large file bonus for backup scenarios
+        if backup_size_gb > 1000:
+            large_file_bonus = 1.1
+        elif backup_size_gb > 500:
+            large_file_bonus = 1.05
+        else:
+            large_file_bonus = 1.0
+        
+        # Calculate effective bandwidth
+        effective_bandwidth = int(base_bandwidth * protocol_eff * large_file_bonus)
+        
+        return {
+            'bandwidth_mbps': effective_bandwidth,
+            'base_storage_mbps': base_bandwidth,
+            'protocol_efficiency': protocol_eff,
+            'large_file_bonus': large_file_bonus
+        }
+        
+    def calculate_network_performance(self, path_key: str, config: Dict, time_of_day: int = None) -> Dict:
+        """Calculate network performance with REALISTIC storage-based OS bandwidth"""
         path = self.network_paths[path_key]
         
         if time_of_day is None:
             time_of_day = datetime.now().hour
+        
+        # Get realistic OS bandwidth based on user's storage selection
+        storage_technology = config.get('storage_technology', 'traditional_san')
+        database_engine = config.get('source_database_engine', 'sqlserver')
+        backup_size_gb = config.get('backup_size_gb', 1000)
+        
+        os_bandwidth_info = self.get_realistic_os_bandwidth(
+            storage_technology, database_engine, backup_size_gb
+        )
         
         total_latency = 0
         min_bandwidth = float('inf')
@@ -1160,16 +1039,26 @@ class EnhancedNetworkPathManager:
         
         adjusted_segments = []
         
-        for segment in path['segments']:
+        for i, segment in enumerate(path['segments']):
+            # OVERRIDE the first segment (OS layer) with realistic bandwidth
+            if i == 0 and segment['connection_type'] == 'os_layer':
+                segment_bandwidth = os_bandwidth_info['bandwidth_mbps']
+                # Update the segment name to reflect storage technology
+                segment['name'] = f"OS: {database_engine.upper()} Backup ({storage_technology.replace('_', ' ').title()})"
+            else:
+                segment_bandwidth = segment['bandwidth_mbps']
+            
             segment_latency = segment['latency_ms']
-            segment_bandwidth = segment['bandwidth_mbps']
             segment_reliability = segment['reliability']
             
             # Apply protocol efficiency if present
             protocol_efficiency = segment.get('protocol_efficiency', 1.0)
+            if i == 0:  # Use calculated efficiency for OS layer
+                protocol_efficiency = os_bandwidth_info['protocol_efficiency']
+            
             effective_bandwidth = segment_bandwidth * protocol_efficiency
             
-            # Time-of-day congestion adjustments
+            # Time-of-day congestion adjustments (existing logic)
             if segment['connection_type'] in ['os_layer', 'nic_layer', 'lan_switch']:
                 congestion_factor = 1.15 if 9 <= time_of_day <= 17 else 0.92
             elif segment['connection_type'] in ['network_link', 'private_line']:
@@ -1183,17 +1072,15 @@ class EnhancedNetworkPathManager:
             effective_bandwidth = effective_bandwidth / congestion_factor
             effective_latency = segment_latency * congestion_factor
             
-            # Database backup specific adjustments
+            # Database backup specific adjustments (existing logic)
             if path['storage_mount_type'] == 'smb':
-                # SMB has higher overhead for large backup files
-                if 'SMB' in segment['name'] or 'Windows' in segment['name']:
-                    effective_bandwidth *= 0.78  # More aggressive reduction for backup files
-                    effective_latency *= 1.4
+                if 'SMB' in segment['name'] or 'Windows' in segment['name'] or i == 0:
+                    effective_bandwidth *= 0.85  # Reduced from 0.78
+                    effective_latency *= 1.3     # Reduced from 1.4
             elif path['storage_mount_type'] == 'nfs':
-                # NFS performs better with large sequential reads (backup files)
-                if 'NFS' in segment['name'] or 'Linux' in segment['name']:
-                    effective_bandwidth *= 0.94
-                    effective_latency *= 1.1
+                if 'NFS' in segment['name'] or 'Linux' in segment['name'] or i == 0:
+                    effective_bandwidth *= 0.96  # Slightly better
+                    effective_latency *= 1.05    # Reduced from 1.1
             
             optimization_score *= segment['optimization_potential']
             
@@ -1226,6 +1113,8 @@ class EnhancedNetworkPathManager:
             'backup_location': path['backup_location'],
             'os_type': path['os_type'],
             'storage_mount_type': path['storage_mount_type'],
+            'storage_technology': storage_technology,  # NEW: Add this
+            'os_bandwidth_info': os_bandwidth_info,    # NEW: Add this
             'total_latency_ms': total_latency,
             'effective_bandwidth_mbps': min_bandwidth,
             'total_reliability': total_reliability,
@@ -1236,6 +1125,23 @@ class EnhancedNetworkPathManager:
         }
         
         return result
+                 
+    def get_network_path_key(self, config: Dict) -> str:
+        """Get network path key based on database engine and configuration"""
+        database_engine = config['source_database_engine']
+        environment = config['environment']
+        
+        # Determine path based on database engine
+        if database_engine == 'sqlserver':
+            if environment == 'non-production':
+                return 'nonprod_sj_sqlserver_windows_share_s3'
+            else:
+                return 'prod_sa_sqlserver_windows_share_s3'
+        else:  # Oracle, PostgreSQL, MySQL
+            if environment == 'non-production':
+                return 'nonprod_sj_oracle_linux_nas_s3'
+            else:
+                return 'prod_sa_oracle_linux_nas_s3'
 
 class EnhancedAgentManager:
     """Enhanced agent manager focused on DataSync for database backup migrations"""
