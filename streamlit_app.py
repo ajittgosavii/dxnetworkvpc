@@ -890,7 +890,7 @@ def main():
                     formatted_tool = 'UNKNOWN'
                 
                 st.info(f"""
-                **📋 Quick Summary:**
+                **Quick Summary:**
                 • **Migration Time:** {migration_time:.1f} hours
                 • **Monthly AWS Cost:** ${total_cost:,.2f}
                 • **Readiness Score:** {readiness_score}/100
