@@ -49,7 +49,6 @@ st.set_page_config(
 )
 
 # Professional CSS styling
-# Professional CSS styling
 st.markdown("""
 <style>
     .main-header {
@@ -62,119 +61,6 @@ st.markdown("""
         box-shadow: 0 2px 10px rgba(30,58,138,0.1);
         border: 1px solid rgba(255,255,255,0.1);
     }
-
-    .main-header h1 {
-        margin: 0 0 0.5rem 0;
-        font-size: 2.2rem;
-        font-weight: 600;
-    }
-    
-    .professional-card {
-        background: #ffffff;
-        padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
-        margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #3b82f6;
-        border: 1px solid #e5e7eb;
-    }
-    
-    .insight-card {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-        padding: 1.5rem;
-        border-radius: 6px;
-        color: #374151;
-        margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border-left: 3px solid #3b82f6;
-        border: 1px solid #e5e7eb;
-    }
-    
-    .metric-card {
-        background: #ffffff;
-        padding: 1.5rem;
-        border-radius: 6px;
-        border-left: 3px solid #3b82f6;
-        margin: 1rem 0;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        border: 1px solid #e5e7eb;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-    
-    .agent-scaling-card {
-        background: #ffffff;
-        padding: 1rem;
-        border-radius: 6px;
-        margin: 0.5rem 0;
-        color: #374151;
-        font-size: 0.9rem;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .api-status-card {
-        background: #ffffff;
-        padding: 1rem;
-        border-radius: 6px;
-        margin: 0.5rem 0;
-        color: #374151;
-        font-size: 0.9rem;
-        border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .status-indicator {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        margin-right: 8px;
-        vertical-align: middle;
-    }
-    
-    .status-online { background-color: #22c55e; }
-    .status-offline { background-color: #ef4444; }
-    .status-warning { background-color: #f59e0b; }
-    
-    .enterprise-footer {
-        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 6px;
-        margin-top: 2rem;
-        text-align: center;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-    
-    .cost-table {
-        width: 100%;
-        margin: 1rem 0;
-    }
-    
-    .cost-table th {
-        background-color: #f8fafc;
-        padding: 12px;
-        text-align: left;
-        border-bottom: 2px solid #e5e7eb;
-        font-weight: 600;
-    }
-    
-    .cost-table td {
-        padding: 10px 12px;
-        border-bottom: 1px solid #e5e7eb;
-    }
-    
-    .cost-table tr:hover {
-        background-color: #f9fafb;
-    }
-    
-    .total-row {
-        background-color: #f3f4f6;
-        font-weight: 600;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 def render_comprehensive_cost_analysis_tab_enhanced(analysis: Dict, config: Dict):
     """Render enhanced comprehensive AWS cost analysis tab with detailed tables"""
