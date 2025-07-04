@@ -894,7 +894,7 @@ def main():
                 f"• **Migration Time:** {migration_time:.1f} hours
                 f"• **Monthly AWS Cost:** ${total_cost:,.2f}
                 f" **Readiness Score:** {readiness_score}/100
-                f" **Primary Tool:** AWS {formatted_tool}
+                • **Primary Tool:** AWS {formatted_tool}
                 """)
     
     # Footer
