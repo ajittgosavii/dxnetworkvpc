@@ -269,12 +269,12 @@ def render_comprehensive_cost_analysis_tab_enhanced(analysis: Dict, config: Dict
         total_monthly_savings = sum(opt.get('potential_monthly_savings', 0) for opt in optimization_opportunities)
         total_annual_savings = sum(opt.get('potential_annual_savings', 0) for opt in optimization_opportunities)
         
-        st.success(f"""
-        **💰 Total Optimization Potential:**
-        • **Monthly Savings:** ${total_monthly_savings:,.2f}
-        • **Annual Savings:** ${total_annual_savings:,.2f}
-        • **3-Year Savings:** ${total_annual_savings * 3:,.2f}
-        """)
+        st.success(
+        "**💰 Total Optimization Potential:**\n" +
+        f"• **Monthly Savings:** ${total_monthly_savings:,.2f}\n" +
+        f"• **Annual Savings:** ${total_annual_savings:,.2f}\n" +
+        f"• **3-Year Savings:** ${total_annual_savings * 3:,.2f}"
+    )
     else:
         st.info("No specific optimization opportunities identified. Current configuration appears cost-optimized.")
     
