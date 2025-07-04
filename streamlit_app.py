@@ -510,7 +510,7 @@ def render_aws_sizing_recommendations_tab(analysis: Dict, config: Dict):
             
             # SQL Server specific info
             if ec2_rec.get('sql_server_considerations', False):
-                deployment_type = ec2_rec.get('sql_server_deployment_type', 'standalone') or 'standalone'
+                deployment_type = ec2_rec.get('sql_server_deployment_type', 'standalone')
                 instance_count = ec2_rec.get('instance_count', 1)
                 
                 # Safely format deployment type
@@ -519,6 +519,7 @@ def render_aws_sizing_recommendations_tab(analysis: Dict, config: Dict):
                 else:
                     formatted_deployment = 'Standalone'
                 
+                # Fixed: Use the safely formatted version
                 st.markdown(f"**SQL Server Config:** {formatted_deployment}")
                 st.markdown(f"**Instance Count:** {instance_count}")
                 
