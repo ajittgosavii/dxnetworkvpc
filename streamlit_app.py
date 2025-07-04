@@ -890,11 +890,11 @@ def main():
                     formatted_tool = 'UNKNOWN'
                 
                 st.info(f"""
-                **Quick Summary:**
-                • **Migration Time:** {migration_time:.1f} hours
-                • **Monthly AWS Cost:** ${total_cost:,.2f}
-                • **Readiness Score:** {readiness_score}/100
-                • **Primary Tool:** AWS {formatted_tool}
+                f"**📋 Quick Summary:**
+                f"• **Migration Time:** {migration_time:.1f} hours
+                f"• **Monthly AWS Cost:** ${total_cost:,.2f}
+                f" **Readiness Score:** {readiness_score}/100
+                f" **Primary Tool:** AWS {formatted_tool}
                 """)
     
     # Footer
