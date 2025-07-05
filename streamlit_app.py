@@ -4012,13 +4012,6 @@ def render_enhanced_sidebar_controls():
         if not is_homogeneous:
             st.sidebar.warning(f"**Schema Conversion:** {source_database_engine.upper()} → {target_db_engine.upper()}")
 
-# Show migration method info
-    if migration_method == 'backup_restore':
-        st.sidebar.info(f"**Method:** Backup/Restore via DataSync from {backup_storage_type.replace('_', ' ').title()}")
-        st.sidebar.write(f"**Backup Size:** {int(backup_size_multiplier*100)}% of database ({backup_size_multiplier:.1f}x)")
-    else:
-        st.sidebar.info(f"**Method:** Direct replication ({'homogeneous' if is_homogeneous else 'heterogeneous'})")
-
     number_of_agents = st.sidebar.number_input(
     "Number of Migration Agents",
     min_value=1, max_value=10, value=2, step=1,
