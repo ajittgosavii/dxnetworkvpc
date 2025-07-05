@@ -32,7 +32,6 @@ import uuid
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 # Page configuration
 st.set_page_config(
 page_title="AWS Enterprise Database Migration Analyzer AI v3.0",
@@ -7275,60 +7274,59 @@ def create_simple_network_path_diagram(network_perf: Dict) -> Optional[go.Figure
 class AgentScalingOptimizer:
     """AI-powered agent scaling optimization with detailed recommendations"""
 
-    def __init__(self, ai_manager, agent_manager):
-        """Initialize the optimizer with AI and agent managers"""
+    def __init__(self, ai_manager: AnthropicAIManager, agent_manager: EnhancedAgentSizingManager):
         self.ai_manager = ai_manager
         self.agent_manager = agent_manager
 
     async def analyze_agent_scaling_optimization(self, config: Dict, analysis: Dict) -> Dict:
         """Comprehensive agent scaling optimization analysis"""
-        try:
-            # Extract current configuration
-            current_config = self._extract_current_agent_config(config, analysis)
-            
-            # Generate optimal configurations
-            optimal_configs = await self._generate_optimal_configurations(config, analysis)
-            
-            # Get AI recommendations
-            ai_recommendations = await self._get_ai_scaling_recommendations(
-                config, analysis, current_config, optimal_configs
-            )
-            
-            # Perform various analyses
-            cost_analysis = self._analyze_cost_vs_performance(optimal_configs, config)
-            bottleneck_analysis = self._analyze_bottlenecks(config, analysis)
-            scaling_scenarios = self._generate_scaling_scenarios(config, analysis)
-            
-            # Generate summary
-            optimization_summary = self._generate_optimization_summary(
-                current_config, optimal_configs, ai_recommendations
-            )
+        current_config = self._extract_current_agent_config(config, analysis)
+        optimal_configs = await self._generate_optimal_configurations(config, analysis)
+        ai_recommendations = await self._get_ai_scaling_recommendations(config, analysis, current_config, optimal_configs)
+        cost_analysis = self._analyze_cost_vs_performance(optimal_configs, config)
+        bottleneck_analysis = self._analyze_bottlenecks(config, analysis)
+        scaling_scenarios = self._generate_scaling_scenarios(config, analysis)
 
-            return {
-                'current_configuration': current_config,
-                'optimal_configurations': optimal_configs,
-                'ai_recommendations': ai_recommendations,
-                'cost_vs_performance': cost_analysis,
-                'bottleneck_analysis': bottleneck_analysis,
-                'scaling_scenarios': scaling_scenarios,
-                'optimization_summary': optimization_summary
-            }
-
-        except Exception as e:
-            logger.error(f"Agent scaling optimization failed: {e}")
-            return self._create_error_response(str(e))
-
-    def _create_error_response(self, error_msg: str) -> Dict:
-        """Create error response when optimization fails"""
         return {
-            'current_configuration': {'error': error_msg},
-            'optimal_configurations': {},
-            'ai_recommendations': {'ai_analysis_available': False, 'error': error_msg},
-            'cost_vs_performance': {'analysis_available': False},
-            'bottleneck_analysis': {'current_bottleneck': 'Analysis failed'},
-            'scaling_scenarios': {},
-            'optimization_summary': {'optimization_available': False, 'error': error_msg}
+            'current_configuration': current_config,
+            'optimal_configurations': optimal_configs,
+            'ai_recommendations': ai_recommendations,
+            'cost_vs_performance': cost_analysis,
+            'bottleneck_analysis': bottleneck_analysis,
+            'scaling_scenarios': scaling_scenarios,
+            'optimization_summary': self._generate_optimization_summary(current_config, optimal_configs, ai_recommendations)
         }
+
+    def run_agent_optimization_sync(self, config: Dict, analysis: Dict) -> Dict:
+        """Run agent optimization synchronously for Streamlit"""
+        import asyncio
+
+        # Check if we're in an event loop
+        try:
+            loop = asyncio.get_running_loop()
+            # We're in an event loop, so we need to run in a thread
+            import concurrent.futures
+            import threading
+
+            def run_async():
+                # Create a new event loop for this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    return new_loop.run_until_complete(
+                        self.analyze_agent_scaling_optimization(config, analysis)
+                    )
+                finally:
+                    new_loop.close()
+
+            # Run in a separate thread with its own event loop
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_async)
+                return future.result(timeout=60)  # 60 second timeout
+
+        except RuntimeError:
+            # No event loop running, safe to use asyncio.run()
+            return asyncio.run(self.analyze_agent_scaling_optimization(config, analysis))
 
     def _extract_current_agent_config(self, config: Dict, analysis: Dict) -> Dict:
         """Extract current agent configuration details"""
@@ -7354,137 +7352,97 @@ class AgentScalingOptimizer:
         """Generate multiple optimal agent configurations"""
         optimal_configs = {}
 
-        # Configuration parameters
+        # Test different agent counts and sizes
         agent_counts = [1, 2, 3, 4, 5, 6, 8]
         agent_sizes = ['small', 'medium', 'large', 'xlarge']
-        
-        migration_method = config.get('migration_method', 'direct_replication')
-        is_homogeneous = config.get('source_database_engine') == config.get('database_engine')
-        destination_storage = config.get('destination_storage_type', 'S3')
 
-        # Determine primary tool
-        primary_tool = self._determine_primary_tool(migration_method, is_homogeneous)
+        migration_method = config.get('migration_method', 'direct_replication')
+        is_homogeneous = config['source_database_engine'] == config['database_engine']
+
+        if migration_method == 'backup_restore':
+            primary_tool = 'datasync'
+        else:
+            primary_tool = 'datasync' if is_homogeneous else 'dms'
+
+        destination_storage = config.get('destination_storage_type', 'S3')
 
         # Test all combinations
         for count in agent_counts:
             for size in agent_sizes:
-                test_sizes = self._get_valid_sizes_for_tool(primary_tool, size)
-                
+                if primary_tool == 'dms' and size == 'xlarge':
+                    # DMS has xxlarge option
+                    test_sizes = [size, 'xxlarge']
+                else:
+                    test_sizes = [size]
+
                 for test_size in test_sizes:
-                    config_key = f"{count}x_{test_size}"
-                    
-                    try:
-                        agent_config = self.agent_manager.calculate_agent_configuration(
-                            primary_tool, test_size, count, destination_storage
-                        )
-                        
-                        # Calculate efficiency score
-                        efficiency_score = self._calculate_configuration_score(agent_config, config)
-                        
-                        optimal_configs[config_key] = {
-                            'agent_count': count,
-                            'agent_size': test_size,
-                            'primary_tool': primary_tool,
-                            'configuration': agent_config,
-                            'efficiency_score': efficiency_score,
-                            'total_throughput': agent_config.get('total_max_throughput_mbps', 0),
-                            'monthly_cost': agent_config.get('total_monthly_cost', 0),
-                            'cost_per_mbps': self._calculate_cost_per_mbps(agent_config),
-                            'management_complexity': self._calculate_management_complexity(count, test_size),
-                            'recommended_for': self._get_recommendation_category(agent_config, config)
-                        }
-                    except Exception as e:
-                        logger.warning(f"Failed to calculate config {config_key}: {e}")
+                    if primary_tool == 'dms' and test_size not in ['small', 'medium', 'large', 'xlarge', 'xxlarge']:
+                        continue
+                    if primary_tool == 'datasync' and test_size not in ['small', 'medium', 'large', 'xlarge']:
                         continue
 
-        # Sort by efficiency score and return top 10
-        sorted_configs = dict(sorted(
-            optimal_configs.items(),
-            key=lambda x: x[1]['efficiency_score'], 
-            reverse=True
-        ))
+                    config_key = f"{count}x_{test_size}"
 
+                    agent_config = self.agent_manager.calculate_agent_configuration(
+                        primary_tool, test_size, count, destination_storage
+                    )
+
+                    # Calculate efficiency score
+                    efficiency_score = self._calculate_configuration_score(agent_config, config)
+
+                    optimal_configs[config_key] = {
+                        'agent_count': count,
+                        'agent_size': test_size,
+                        'primary_tool': primary_tool,
+                        'configuration': agent_config,
+                        'efficiency_score': efficiency_score,
+                        'total_throughput': agent_config['total_max_throughput_mbps'],
+                        'monthly_cost': agent_config['total_monthly_cost'],
+                        'cost_per_mbps': agent_config['total_monthly_cost'] / max(agent_config['total_max_throughput_mbps'], 1),
+                        'management_complexity': self._calculate_management_complexity(count, test_size),
+                        'recommended_for': self._get_recommendation_category(agent_config, config)
+                    }
+
+        # Sort by efficiency score
+        sorted_configs = dict(sorted(optimal_configs.items(),
+                                   key=lambda x: x[1]['efficiency_score'], reverse=True))
+
+        # Return top 10 configurations
         return dict(list(sorted_configs.items())[:10])
-
-    def _determine_primary_tool(self, migration_method: str, is_homogeneous: bool) -> str:
-        """Determine the primary migration tool"""
-        if migration_method == 'backup_restore':
-            return 'datasync'
-        else:
-            return 'datasync' if is_homogeneous else 'dms'
-
-    def _get_valid_sizes_for_tool(self, primary_tool: str, size: str) -> List[str]:
-        """Get valid sizes for the specified tool"""
-        if primary_tool == 'dms':
-            valid_sizes = ['small', 'medium', 'large', 'xlarge', 'xxlarge']
-            if size == 'xlarge':
-                return [size, 'xxlarge']
-            elif size in valid_sizes:
-                return [size]
-        elif primary_tool == 'datasync':
-            valid_sizes = ['small', 'medium', 'large', 'xlarge']
-            if size in valid_sizes:
-                return [size]
-        
-        return []
-
-    def _calculate_cost_per_mbps(self, agent_config: Dict) -> float:
-        """Calculate cost per Mbps safely"""
-        total_cost = agent_config.get('total_monthly_cost', 0)
-        total_throughput = agent_config.get('total_max_throughput_mbps', 0)
-        
-        if total_throughput > 0:
-            return total_cost / total_throughput
-        return float('inf')
 
     def _calculate_configuration_score(self, agent_config: Dict, config: Dict) -> float:
         """Calculate overall configuration efficiency score"""
-        try:
-            # Base score factors
-            throughput = agent_config.get('total_max_throughput_mbps', 0)
-            throughput_score = min(100, (throughput / 5000) * 100)
-            
-            scaling_efficiency = agent_config.get('scaling_efficiency', 1.0) * 100
-            
-            monthly_cost = agent_config.get('total_monthly_cost', 0)
-            cost_efficiency = max(0, 100 - (monthly_cost / 50))
+        # Base score factors
+        throughput_score = min(100, (agent_config['total_max_throughput_mbps'] / 5000) * 100)
+        scaling_efficiency = agent_config.get('scaling_efficiency', 1.0) * 100
+        cost_efficiency = max(0, 100 - (agent_config['total_monthly_cost'] / 50))
 
-            # Management complexity penalty
-            management_penalty = agent_config.get('management_overhead_factor', 1.0) - 1.0
-            complexity_score = max(0, 100 - (management_penalty * 100))
+        # Management complexity penalty
+        management_penalty = agent_config.get('management_overhead_factor', 1.0) - 1.0
+        complexity_score = max(0, 100 - (management_penalty * 100))
 
-            # Storage performance bonus
-            storage_bonus = (agent_config.get('storage_performance_multiplier', 1.0) - 1.0) * 50
+        # Storage performance bonus
+        storage_bonus = (agent_config.get('storage_performance_multiplier', 1.0) - 1.0) * 50
 
-            # Database size appropriateness
-            size_factor = self._calculate_size_factor(agent_config, config)
-
-            # Calculate weighted score
-            overall_score = (
-                throughput_score * 0.3 +
-                scaling_efficiency * 0.25 +
-                cost_efficiency * 0.2 +
-                complexity_score * 0.15 +
-                storage_bonus * 0.1
-            ) * size_factor
-
-            return min(100, max(0, overall_score))
-            
-        except Exception as e:
-            logger.warning(f"Error calculating configuration score: {e}")
-            return 0.0
-
-    def _calculate_size_factor(self, agent_config: Dict, config: Dict) -> float:
-        """Calculate size appropriateness factor"""
+        # Database size appropriateness
         database_size = config.get('database_size_gb', 1000)
-        agent_count = agent_config.get('number_of_agents', 1)
-        
         if database_size < 1000:
-            return 1.0 if agent_count <= 2 else 0.8
+            size_factor = 1.0 if agent_config['number_of_agents'] <= 2 else 0.8
         elif database_size < 5000:
-            return 1.0 if agent_count <= 4 else 0.9
+            size_factor = 1.0 if agent_config['number_of_agents'] <= 4 else 0.9
         else:
-            return 1.0 if agent_count <= 6 else 0.85
+            size_factor = 1.0 if agent_config['number_of_agents'] <= 6 else 0.85
+
+        # Calculate weighted score
+        overall_score = (
+            throughput_score * 0.3 +
+            scaling_efficiency * 0.25 +
+            cost_efficiency * 0.2 +
+            complexity_score * 0.15 +
+            storage_bonus * 0.1
+        ) * size_factor
+
+        return min(100, overall_score)
 
     def _calculate_management_complexity(self, agent_count: int, agent_size: str) -> str:
         """Calculate management complexity rating"""
@@ -7505,9 +7463,8 @@ class AgentScalingOptimizer:
     def _get_recommendation_category(self, agent_config: Dict, config: Dict) -> str:
         """Get recommendation category for configuration"""
         database_size = config.get('database_size_gb', 1000)
-        agent_count = agent_config.get('number_of_agents', 1)
-        throughput = agent_config.get('total_max_throughput_mbps', 0)
-        monthly_cost = agent_config.get('total_monthly_cost', 0)
+        agent_count = agent_config['number_of_agents']
+        throughput = agent_config['total_max_throughput_mbps']
 
         if database_size < 1000 and agent_count <= 2:
             return "Small databases, quick migrations"
@@ -7517,29 +7474,114 @@ class AgentScalingOptimizer:
             return "Large databases, high-throughput needs"
         elif throughput > 3000:
             return "High-performance requirements"
-        elif monthly_cost < 500:
+        elif agent_config['total_monthly_cost'] < 500:
             return "Cost-optimized scenarios"
         else:
             return "General purpose workloads"
 
     async def _get_ai_scaling_recommendations(self, config: Dict, analysis: Dict,
-                                           current_config: Dict, optimal_configs: Dict) -> Dict:
+                                            current_config: Dict, optimal_configs: Dict) -> Dict:
         """Get AI-powered scaling recommendations"""
-        
-        if not self.ai_manager or not getattr(self.ai_manager, 'connected', False):
+        if not self.ai_manager.connected:
             return self._fallback_ai_recommendations(current_config, optimal_configs)
 
         try:
-            # Get top 3 configurations for AI analysis
+            # Get top 3 optimal configurations for AI analysis
             top_configs = list(optimal_configs.items())[:3]
-            
-            # Create AI prompt
-            prompt = self._create_ai_prompt(config, current_config, top_configs)
-            
-            # Get AI response with timeout
-            ai_response = await self._get_ai_response(prompt)
-            
-            return self._parse_ai_recommendations(ai_response, top_configs, config)
+
+            migration_method = config.get('migration_method', 'direct_replication')
+            backup_storage_info = ""
+
+            if migration_method == 'backup_restore':
+                backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+                backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+                backup_storage_info = f"""
+                BACKUP STORAGE MIGRATION:
+                - Backup Storage Type: {backup_storage_type.replace('_', ' ').title()}
+                - Backup Size Multiplier: {backup_size_multiplier} ({int(backup_size_multiplier*100)}%)
+                - Protocol: {'SMB' if backup_storage_type == 'windows_share' else 'NFS'}
+                """
+
+            prompt = f"""
+            As a senior AWS migration architect specializing in agent optimization, analyze this migration scenario and provide detailed agent scaling recommendations:
+
+            CURRENT CONFIGURATION:
+            - Migration Method: {migration_method.replace('_', ' ').title()}
+            - Database Size: {config.get('database_size_gb', 0):,} GB
+            - Source Database: {config.get('source_database_engine', 'Unknown')}
+            - Target Database: {config.get('database_engine', 'Unknown')}
+            - Environment: {config.get('environment', 'Unknown')}
+            - Destination Storage: {config.get('destination_storage_type', 'S3')}
+            {backup_storage_info}
+
+            CURRENT AGENT SETUP:
+            - Primary Tool: {current_config['primary_tool']}
+            - Agent Count: {current_config['agent_count']}
+            - Agent Size: {current_config['agent_size']}
+            - Current Throughput: {current_config['current_throughput_mbps']:,.0f} Mbps
+            - Monthly Cost: ${current_config['current_cost_monthly']:,.0f}
+            - Efficiency: {current_config['current_efficiency']*100:.1f}%
+            - Bottleneck: {current_config['bottleneck']}
+
+            TOP OPTIMAL CONFIGURATIONS IDENTIFIED:
+            """
+
+            for i, (config_key, config_data) in enumerate(top_configs, 1):
+                prompt += f"""
+            {i}. {config_key}: {config_data['agent_count']}x {config_data['agent_size']} agents
+            - Throughput: {config_data['total_throughput']:,.0f} Mbps
+            - Monthly Cost: ${config_data['monthly_cost']:,.0f}
+            - Efficiency Score: {config_data['efficiency_score']:.1f}/100
+            - Cost per Mbps: ${config_data['cost_per_mbps']:.2f}
+            - Management: {config_data['management_complexity']}
+            - Best for: {config_data['recommended_for']}
+            """
+
+            prompt += """
+
+            Please provide comprehensive agent scaling recommendations including:
+
+            1. **OPTIMAL CONFIGURATION ANALYSIS**: Which of the top 3 configurations is most suitable and why?
+            2. **SCALING STRATEGY**: Detailed recommendations for scaling approach (scale up vs scale out)
+            3. **COST OPTIMIZATION**: How to achieve best cost-performance ratio
+            4. **PERFORMANCE OPTIMIZATION**: Specific tuning recommendations for chosen configuration
+            5. **BOTTLENECK RESOLUTION**: Specific steps to address bottlenecks
+            6. **RISK MITIGATION**: Potential risks and mitigation strategies
+            7. **IMPLEMENTATION PLAN**: Step-by-step implementation plan
+            8. **MONITORING RECOMMENDATIONS**: Key metrics to monitor
+            9. **FALLBACK STRATEGY**: Alternative configurations
+
+            Provide specific, actionable recommendations with quantified benefits where possible.
+            """
+
+            # Create the message with timeout handling
+            message = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.ai_manager.client.messages.create,
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=4000,
+                    temperature=0.2,
+                    messages=[{"role": "user", "content": prompt}]
+                ),
+                timeout=30.0  # 30 second timeout
+            )
+
+            ai_response = message.content[0].text
+
+            return {
+                'ai_analysis_available': True,
+                'recommended_configuration': top_configs[0][0] if top_configs else None,
+                'scaling_strategy': self._extract_scaling_strategy(ai_response),
+                'cost_optimization_tips': self._extract_cost_optimization(ai_response),
+                'performance_tuning': self._extract_performance_tuning(ai_response),
+                'risk_mitigation': self._extract_risk_mitigation(ai_response),
+                'implementation_plan': self._extract_implementation_plan(ai_response),
+                'monitoring_recommendations': self._extract_monitoring_recommendations(ai_response),
+                'fallback_options': self._extract_fallback_options(ai_response),
+                'raw_ai_response': ai_response,
+                'confidence_level': 'high',
+                'backup_storage_considerations': self._extract_backup_storage_considerations(ai_response, migration_method)
+            }
 
         except asyncio.TimeoutError:
             logger.error("AI agent scaling analysis timed out")
@@ -7548,126 +7590,15 @@ class AgentScalingOptimizer:
             logger.error(f"AI agent scaling analysis failed: {e}")
             return self._fallback_ai_recommendations(current_config, optimal_configs)
 
-    def _create_ai_prompt(self, config: Dict, current_config: Dict, top_configs: List) -> str:
-        """Create AI prompt for scaling recommendations"""
-        migration_method = config.get('migration_method', 'direct_replication')
-        backup_storage_info = self._get_backup_storage_info(config, migration_method)
-
-        prompt = f"""
-        As a senior AWS migration architect specializing in agent optimization, analyze this migration scenario and provide detailed agent scaling recommendations:
-
-        CURRENT CONFIGURATION:
-        - Migration Method: {migration_method.replace('_', ' ').title()}
-        - Database Size: {config.get('database_size_gb', 0):,} GB
-        - Source Database: {config.get('source_database_engine', 'Unknown')}
-        - Target Database: {config.get('database_engine', 'Unknown')}
-        - Environment: {config.get('environment', 'Unknown')}
-        - Destination Storage: {config.get('destination_storage_type', 'S3')}
-        {backup_storage_info}
-
-        CURRENT AGENT SETUP:
-        - Primary Tool: {current_config['primary_tool']}
-        - Agent Count: {current_config['agent_count']}
-        - Agent Size: {current_config['agent_size']}
-        - Current Throughput: {current_config['current_throughput_mbps']:,.0f} Mbps
-        - Monthly Cost: ${current_config['current_cost_monthly']:,.0f}
-        - Efficiency: {current_config['current_efficiency']*100:.1f}%
-        - Bottleneck: {current_config['bottleneck']}
-
-        TOP OPTIMAL CONFIGURATIONS IDENTIFIED:
-        """
-
-        for i, (config_key, config_data) in enumerate(top_configs, 1):
-            prompt += f"""
-        {i}. {config_key}: {config_data['agent_count']}x {config_data['agent_size']} agents
-           - Throughput: {config_data['total_throughput']:,.0f} Mbps
-           - Monthly Cost: ${config_data['monthly_cost']:,.0f}
-           - Efficiency Score: {config_data['efficiency_score']:.1f}/100
-           - Cost per Mbps: ${config_data['cost_per_mbps']:.2f}
-           - Management: {config_data['management_complexity']}
-           - Best for: {config_data['recommended_for']}
-        """
-
-        prompt += """
-
-        Please provide comprehensive agent scaling recommendations including:
-
-        1. **OPTIMAL CONFIGURATION ANALYSIS**: Which configuration is most suitable and why?
-        2. **SCALING STRATEGY**: Detailed recommendations for scaling approach
-        3. **COST OPTIMIZATION**: How to achieve best cost-performance ratio
-        4. **PERFORMANCE OPTIMIZATION**: Specific tuning recommendations
-        5. **BOTTLENECK RESOLUTION**: Steps to address bottlenecks
-        6. **RISK MITIGATION**: Potential risks and mitigation strategies
-        7. **IMPLEMENTATION PLAN**: Step-by-step implementation plan
-        8. **MONITORING RECOMMENDATIONS**: Key metrics to monitor
-        9. **FALLBACK STRATEGY**: Alternative configurations
-
-        Provide specific, actionable recommendations with quantified benefits where possible.
-        """
-
-        return prompt
-
-    def _get_backup_storage_info(self, config: Dict, migration_method: str) -> str:
-        """Get backup storage information for AI prompt"""
-        if migration_method != 'backup_restore':
-            return ""
-            
-        backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-        backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
-        
-        return f"""
-        BACKUP STORAGE MIGRATION:
-        - Backup Storage Type: {backup_storage_type.replace('_', ' ').title()}
-        - Backup Size Multiplier: {backup_size_multiplier} ({int(backup_size_multiplier*100)}%)
-        - Protocol: {'SMB' if backup_storage_type == 'windows_share' else 'NFS'}
-        """
-
-    async def _get_ai_response(self, prompt: str) -> str:
-        """Get AI response with timeout handling"""
-        message = await asyncio.wait_for(
-            asyncio.to_thread(
-                self.ai_manager.client.messages.create,
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=4000,
-                temperature=0.2,
-                messages=[{"role": "user", "content": prompt}]
-            ),
-            timeout=30.0
-        )
-        
-        return message.content[0].text
-
-    def _parse_ai_recommendations(self, ai_response: str, top_configs: List, config: Dict) -> Dict:
-        """Parse AI response into structured recommendations"""
-        migration_method = config.get('migration_method', 'direct_replication')
-        
-        return {
-            'ai_analysis_available': True,
-            'recommended_configuration': top_configs[0][0] if top_configs else None,
-            'scaling_strategy': self._extract_scaling_strategy(ai_response),
-            'cost_optimization_tips': self._extract_cost_optimization(ai_response),
-            'performance_tuning': self._extract_performance_tuning(ai_response),
-            'risk_mitigation': self._extract_risk_mitigation(ai_response),
-            'implementation_plan': self._extract_implementation_plan(ai_response),
-            'monitoring_recommendations': self._extract_monitoring_recommendations(ai_response),
-            'fallback_options': self._extract_fallback_options(ai_response),
-            'raw_ai_response': ai_response,
-            'confidence_level': 'high',
-            'backup_storage_considerations': self._extract_backup_storage_considerations(
-                ai_response, migration_method
-            )
-        }
-
     def _extract_scaling_strategy(self, ai_response: str) -> List[str]:
         """Extract scaling strategy from AI response"""
+        # Simple extraction - in production, you might use more sophisticated parsing
         strategies = []
-        response_lower = ai_response.lower()
-        
-        if "scale out" in response_lower:
+        if "scale out" in ai_response.lower():
             strategies.append("Scale out with multiple smaller agents for better fault tolerance")
-        if "scale up" in response_lower:
+        if "scale up" in ai_response.lower():
             strategies.append("Scale up with fewer, larger agents for better per-agent efficiency")
-        if "hybrid" in response_lower:
+        if "hybrid" in ai_response.lower():
             strategies.append("Hybrid approach balancing scale-up and scale-out")
 
         if not strategies:
@@ -7677,71 +7608,78 @@ class AgentScalingOptimizer:
 
     def _extract_cost_optimization(self, ai_response: str) -> List[str]:
         """Extract cost optimization tips from AI response"""
-        return [
+        tips = [
             "Right-size agents based on actual throughput requirements",
             "Consider Reserved Instances for long-running migrations",
             "Monitor agent utilization and adjust as needed",
             "Use Spot Instances for non-production migrations"
         ]
+        return tips
 
     def _extract_performance_tuning(self, ai_response: str) -> List[str]:
         """Extract performance tuning recommendations"""
-        return [
+        tuning = [
             "Configure parallel processing parameters optimally",
             "Optimize network settings for high throughput",
             "Monitor and adjust concurrency settings",
             "Implement proper error handling and retry logic"
         ]
+        return tuning
 
     def _extract_risk_mitigation(self, ai_response: str) -> List[str]:
         """Extract risk mitigation strategies"""
-        return [
+        risks = [
             "Implement agent health monitoring and alerting",
-            "Plan for agent failover scenarios", 
+            "Plan for agent failover scenarios",
             "Test configuration in non-production first",
             "Have rollback procedures documented"
         ]
+        return risks
 
     def _extract_implementation_plan(self, ai_response: str) -> List[str]:
         """Extract implementation plan steps"""
-        return [
+        plan = [
             "1. Set up monitoring and logging infrastructure",
             "2. Deploy optimal agent configuration in test environment",
             "3. Conduct performance validation tests",
             "4. Gradually scale to production configuration",
             "5. Monitor and fine-tune based on actual performance"
         ]
+        return plan
 
     def _extract_monitoring_recommendations(self, ai_response: str) -> List[str]:
         """Extract monitoring recommendations"""
-        return [
+        monitoring = [
             "Monitor agent CPU and memory utilization",
             "Track migration throughput and progress",
             "Set up alerts for agent failures or performance degradation",
             "Monitor network bandwidth utilization",
             "Track error rates and retry attempts"
         ]
+        return monitoring
 
     def _extract_fallback_options(self, ai_response: str) -> List[str]:
         """Extract fallback configuration options"""
-        return [
+        fallbacks = [
             "Reduce agent count if management complexity becomes an issue",
             "Switch to larger agents if network becomes the bottleneck",
             "Use smaller agents for better cost control if budget is constrained",
             "Implement staged scaling approach if full configuration is too complex"
         ]
+        return fallbacks
 
     def _extract_backup_storage_considerations(self, ai_response: str, migration_method: str) -> List[str]:
         """Extract backup storage specific considerations"""
         if migration_method != 'backup_restore':
             return ["Not applicable for direct replication method"]
 
-        return [
+        considerations = [
             "Optimize backup storage access patterns for agent efficiency",
             "Consider backup file size and agent parallelization",
             "Monitor backup storage I/O performance during migration",
             "Plan for backup storage network bandwidth requirements"
         ]
+        return considerations
 
     def _fallback_ai_recommendations(self, current_config: Dict, optimal_configs: Dict) -> Dict:
         """Fallback recommendations when AI is not available"""
@@ -7749,7 +7687,7 @@ class AgentScalingOptimizer:
 
         return {
             'ai_analysis_available': False,
-            'recommended_configuration': top_config[0] if top_config else 'Unknown',
+            'recommended_configuration': top_config[0] if top_config else current_config,
             'scaling_strategy': ["Consider scaling based on database size and performance requirements"],
             'cost_optimization_tips': ["Monitor agent utilization", "Right-size based on actual needs"],
             'performance_tuning': ["Optimize parallel processing", "Monitor network utilization"],
@@ -7830,6 +7768,7 @@ class AgentScalingOptimizer:
         current_bottleneck = agent_analysis.get('bottleneck', 'Unknown')
         bottleneck_severity = agent_analysis.get('bottleneck_severity', 'medium')
 
+        # Analyze bottleneck types
         bottleneck_analysis = {
             'current_bottleneck': current_bottleneck,
             'severity': bottleneck_severity,
@@ -7838,23 +7777,7 @@ class AgentScalingOptimizer:
             'prevention_tips': []
         }
 
-        # Analyze different bottleneck types
-        self._analyze_agent_bottleneck(bottleneck_analysis, agent_analysis, network_perf)
-        self._analyze_network_bottleneck(bottleneck_analysis, agent_analysis, network_perf)
-        self._analyze_backup_storage_bottleneck(bottleneck_analysis, config, agent_analysis)
-
-        # Add prevention tips
-        bottleneck_analysis['prevention_tips'] = [
-            "Monitor all components during migration",
-            "Test configuration before production migration",
-            "Have scaling plans ready for different scenarios",
-            "Implement comprehensive monitoring and alerting"
-        ]
-
-        return bottleneck_analysis
-
-    def _analyze_agent_bottleneck(self, bottleneck_analysis: Dict, agent_analysis: Dict, network_perf: Dict):
-        """Analyze agent-related bottlenecks"""
+        # Agent bottleneck
         agent_throughput = agent_analysis.get('total_max_throughput_mbps', 0)
         network_throughput = network_perf.get('effective_bandwidth_mbps', 1000)
 
@@ -7871,11 +7794,7 @@ class AgentScalingOptimizer:
                 "Optimize agent configuration"
             ]
 
-    def _analyze_network_bottleneck(self, bottleneck_analysis: Dict, agent_analysis: Dict, network_perf: Dict):
-        """Analyze network-related bottlenecks"""
-        agent_throughput = agent_analysis.get('total_max_throughput_mbps', 0)
-        network_throughput = network_perf.get('effective_bandwidth_mbps', 1000)
-
+        # Network bottleneck
         if network_throughput < agent_throughput:
             bottleneck_analysis['bottleneck_types']['network'] = {
                 'detected': True,
@@ -7889,10 +7808,8 @@ class AgentScalingOptimizer:
                 "Reduce agent count to match network capacity"
             ]
 
-    def _analyze_backup_storage_bottleneck(self, bottleneck_analysis: Dict, config: Dict, agent_analysis: Dict):
-        """Analyze backup storage bottlenecks (for backup/restore method)"""
+        # Backup storage bottleneck (for backup/restore method)
         migration_method = config.get('migration_method', 'direct_replication')
-        
         if migration_method == 'backup_restore':
             backup_storage_type = config.get('backup_storage_type', 'nas_drive')
             backup_efficiency = agent_analysis.get('backup_efficiency', 1.0)
@@ -7902,7 +7819,7 @@ class AgentScalingOptimizer:
                     'detected': True,
                     'severity': 'medium',
                     'description': f"Backup storage protocol efficiency: {backup_efficiency*100:.1f}%",
-                    'impact': "Protocol overhead reducing effective throughput"
+                    'impact': f"Protocol overhead reducing effective throughput"
                 }
                 bottleneck_analysis['resolution_strategies']['backup_storage'] = [
                     f"Optimize {backup_storage_type.replace('_', ' ')} performance",
@@ -7910,28 +7827,25 @@ class AgentScalingOptimizer:
                     "Upgrade backup storage infrastructure"
                 ]
 
+        # Prevention tips
+        bottleneck_analysis['prevention_tips'] = [
+            "Monitor all components during migration",
+            "Test configuration before production migration",
+            "Have scaling plans ready for different scenarios",
+            "Implement comprehensive monitoring and alerting"
+        ]
+
+        return bottleneck_analysis
+
     def _generate_scaling_scenarios(self, config: Dict, analysis: Dict) -> Dict:
         """Generate different scaling scenarios"""
         database_size = config.get('database_size_gb', 1000)
         migration_method = config.get('migration_method', 'direct_replication')
 
-        scenarios = {
-            'conservative': self._create_conservative_scenario(database_size),
-            'balanced': self._create_balanced_scenario(database_size),
-            'aggressive': self._create_aggressive_scenario(database_size)
-        }
+        scenarios = {}
 
-        # Add backup storage considerations if applicable
-        if migration_method == 'backup_restore':
-            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-            for scenario in scenarios.values():
-                scenario['backup_considerations'] = f"Optimized for {backup_storage_type.replace('_', ' ')} access"
-
-        return scenarios
-
-    def _create_conservative_scenario(self, database_size: int) -> Dict:
-        """Create conservative scaling scenario"""
-        return {
+        # Conservative scenario
+        scenarios['conservative'] = {
             'name': 'Conservative Scaling',
             'description': 'Minimal risk, proven performance',
             'agent_count': 1 if database_size < 2000 else 2,
@@ -7942,9 +7856,8 @@ class AgentScalingOptimizer:
             'suitable_for': ['First-time migrations', 'Risk-averse environments', 'Small to medium databases']
         }
 
-    def _create_balanced_scenario(self, database_size: int) -> Dict:
-        """Create balanced scaling scenario"""
-        return {
+        # Balanced scenario
+        scenarios['balanced'] = {
             'name': 'Balanced Scaling',
             'description': 'Good balance of performance and cost',
             'agent_count': 2 if database_size < 5000 else 3,
@@ -7955,9 +7868,8 @@ class AgentScalingOptimizer:
             'suitable_for': ['Most production workloads', 'Standard migration timelines', 'Balanced requirements']
         }
 
-    def _create_aggressive_scenario(self, database_size: int) -> Dict:
-        """Create aggressive scaling scenario"""
-        return {
+        # Aggressive scenario
+        scenarios['aggressive'] = {
             'name': 'High-Performance Scaling',
             'description': 'Maximum performance, higher complexity',
             'agent_count': 4 if database_size < 10000 else 6,
@@ -7967,6 +7879,14 @@ class AgentScalingOptimizer:
             'cost_level': 'High',
             'suitable_for': ['Large databases', 'Tight migration windows', 'High-performance requirements']
         }
+
+        # Add backup storage considerations
+        if migration_method == 'backup_restore':
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+            for scenario in scenarios.values():
+                scenario['backup_considerations'] = f"Optimized for {backup_storage_type.replace('_', ' ')} access"
+
+        return scenarios
 
     def _generate_optimization_summary(self, current_config: Dict, optimal_configs: Dict, ai_recommendations: Dict) -> Dict:
         """Generate optimization summary"""
@@ -7980,9 +7900,9 @@ class AgentScalingOptimizer:
         optimal_throughput = top_config.get('total_throughput', 0)
         optimal_cost = top_config.get('monthly_cost', 0)
 
-        # Calculate improvements safely
-        throughput_improvement = self._calculate_percentage_change(optimal_throughput, current_throughput)
-        cost_change = self._calculate_percentage_change(optimal_cost, current_cost)
+        # Calculate improvements
+        throughput_improvement = ((optimal_throughput - current_throughput) / max(current_throughput, 1)) * 100
+        cost_change = ((optimal_cost - current_cost) / max(current_cost, 1)) * 100
 
         return {
             'optimization_available': True,
@@ -8002,157 +7922,96 @@ class AgentScalingOptimizer:
             },
             'efficiency_gain': top_config.get('efficiency_score', 0) - 70,  # Assuming current is ~70
             'implementation_complexity': ai_recommendations.get('implementation_plan', []),
-            'key_benefits': self._generate_key_benefits(throughput_improvement, cost_change, top_config)
+            'key_benefits': [
+                f"{'Increase' if throughput_improvement > 0 else 'Optimize'} throughput by {abs(throughput_improvement):.1f}%",
+                f"{'Increase' if cost_change > 0 else 'Reduce'} costs by {abs(cost_change):.1f}%",
+                f"Improve overall efficiency to {top_config.get('efficiency_score', 0):.1f}/100"
+            ]
         }
 
-    def _calculate_percentage_change(self, new_value: float, old_value: float) -> float:
-        """Calculate percentage change safely"""
-        if old_value == 0:
-            return 100.0 if new_value > 0 else 0.0
-        return ((new_value - old_value) / old_value) * 100
+async def main():
+    """Main Streamlit application"""
 
-    def _generate_key_benefits(self, throughput_improvement: float, cost_change: float, top_config: Dict) -> List[str]:
-        """Generate key benefits list"""
-        benefits = []
-        
-        if throughput_improvement > 0:
-            benefits.append(f"Increase throughput by {throughput_improvement:.1f}%")
-        else:
-            benefits.append(f"Optimize throughput configuration")
-            
-        if cost_change > 0:
-            benefits.append(f"Investment of {cost_change:.1f}% for better performance")
-        else:
-            benefits.append(f"Reduce costs by {abs(cost_change):.1f}%")
-            
-        benefits.append(f"Improve overall efficiency to {top_config.get('efficiency_score', 0):.1f}/100")
-        
-        return benefits
+    # Render enhanced header
+    render_enhanced_header()
 
+    # Enhanced sidebar controls
+    config = render_enhanced_sidebar_controls()
 
-# Standalone function for Streamlit synchronous execution
-def run_agent_optimization_sync(optimizer: AgentScalingOptimizer, config: Dict, analysis: Dict) -> Dict:
-    """Run agent optimization synchronously for Streamlit"""
-    
-    def run_async():
-        """Run async function in a new thread with its own event loop"""
-        new_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(new_loop)
-        try:
-            return new_loop.run_until_complete(
-                optimizer.analyze_agent_scaling_optimization(config, analysis)
-            )
-        finally:
-            new_loop.close()
-            asyncio.set_event_loop(None)
+    # Run analysis when configuration is set
+    if st.button("🚀 Run Enhanced AI Migration Analysis", type="primary", use_container_width=True):
 
-    try:
-        # Check if we're in an event loop
-        loop = asyncio.get_running_loop()
-        if loop and loop.is_running():
-            # We're in an event loop, so run in a thread
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(run_async)
-                return future.result(timeout=120)  # 2 minute timeout
-        else:
-            # No event loop running, safe to use asyncio.run()
-            return asyncio.run(optimizer.analyze_agent_scaling_optimization(config, analysis))
-            
-    except RuntimeError:
-        # No event loop running, safe to use asyncio.run()
-        return asyncio.run(optimizer.analyze_agent_scaling_optimization(config, analysis))
-    except Exception as e:
-        logger.error(f"Agent optimization sync execution failed: {e}")
-        return optimizer._create_error_response(str(e))
+        with st.spinner("🤖 Running comprehensive AI migration analysis..."):
+            try:
+                # Initialize analyzer
+                analyzer = EnhancedMigrationAnalyzer()
 
+                # Run comprehensive analysis
+                analysis = await analyzer.comprehensive_ai_migration_analysis(config)
 
-# Example usage and testing functions
-def create_mock_ai_manager():
-    """Create mock AI manager for testing"""
-    class MockAIManager:
-        def __init__(self):
-            self.connected = True
-            
-        class MockClient:
-            class MockMessages:
-                def create(self, **kwargs):
-                    class MockMessage:
-                        content = [type('obj', (object,), {'text': 'Mock AI response for testing'})]
-                    return MockMessage()
-            messages = MockMessages()
-        
-        client = MockClient()
-    
-    return MockAIManager()
+                # Store analysis in session state
+                st.session_state['analysis'] = analysis
+                st.session_state['config'] = config
 
+                st.success("✅ AI Analysis Complete!")
 
-def create_mock_agent_manager():
-    """Create mock agent manager for testing"""
-    class MockAgentManager:
-        def calculate_agent_configuration(self, tool, size, count, storage):
-            # Return mock configuration
-            base_throughput = {'small': 200, 'medium': 400, 'large': 800, 'xlarge': 1200}.get(size, 400)
-            base_cost = {'small': 50, 'medium': 100, 'large': 200, 'xlarge': 300}.get(size, 100)
-            
-            return {
-                'number_of_agents': count,
-                'total_max_throughput_mbps': base_throughput * count,
-                'total_monthly_cost': base_cost * count,
-                'scaling_efficiency': min(1.0, 1.0 / count),
-                'management_overhead_factor': 1.0 + (count - 1) * 0.1,
-                'storage_performance_multiplier': 1.2 if storage == 'FSx' else 1.0
-            }
-    
-    return MockAgentManager()
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                logger.error(f"Analysis error: {e}")
+                return
 
+    # Display results if analysis is available
+    if 'analysis' in st.session_state and 'config' in st.session_state:
+        analysis = st.session_state['analysis']
+        config = st.session_state['config']
 
-# Example usage
-async def example_usage():
-    """Example of how to use the AgentScalingOptimizer"""
-    # Create mock managers
-    ai_manager = create_mock_ai_manager()
-    agent_manager = create_mock_agent_manager()
-    
-    # Initialize optimizer
-    optimizer = AgentScalingOptimizer(ai_manager, agent_manager)
-    
-    # Example configuration
-    config = {
-        'migration_method': 'backup_restore',
-        'database_size_gb': 5000,
-        'source_database_engine': 'sqlserver',
-        'database_engine': 'sqlserver',
-        'environment': 'production',
-        'destination_storage_type': 'S3',
-        'backup_storage_type': 'windows_share',
-        'number_of_agents': 2,
-        'datasync_agent_size': 'medium'
-    }
-    
-    # Example analysis
-    analysis = {
-        'agent_analysis': {
-            'primary_tool': 'DataSync',
-            'total_effective_throughput': 800,
-            'monthly_cost': 200,
-            'scaling_efficiency': 0.85,
-            'bottleneck': 'Agent CPU',
-            'bottleneck_severity': 'medium'
-        },
-        'network_performance': {
-            'effective_bandwidth_mbps': 1000
-        }
-    }
-    
-    # Run analysis
-    result = await optimizer.analyze_agent_scaling_optimization(config, analysis)
-    
-    return result
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+            "📊 Migration Dashboard",
+            "🧠 AI Insights",
+            "🌐 Network Intelligence",
+            "💰 Complete Cost Analysis",
+            "💻 OS Performance",
+            "🎯 AWS Sizing",
+            "🗄️ FSx Comparisons",
+            "🤖 Agent Scaling Optimizer"
+        ])
+
+        with tab1:
+            render_migration_dashboard_tab(analysis, config)
+
+        with tab2:
+            render_ai_insights_tab_enhanced(analysis, config)
+
+        with tab3:
+            render_network_intelligence_tab(analysis, config)
+
+        with tab4:
+            render_comprehensive_cost_analysis_tab(analysis, config)
+
+        with tab5:
+            render_os_performance_tab(analysis, config)
+
+        with tab6:
+            render_aws_sizing_tab(analysis, config)
+
+        with tab7:
+            render_fsx_comparisons_tab(analysis, config)
+
+        with tab8:
+            render_agent_scaling_optimizer_tab(analysis, config)
+
+    # Professional footer with backup storage capabilities
+    st.markdown("""
+    <div class="enterprise-footer">
+    <h4>🚀 AWS Enterprise Database Migration Analyzer AI v3.0</h4>
+    <p>Powered by Anthropic Claude AI • Real-time AWS Integration • Professional Migration Analysis • Advanced Agent Scaling • FSx Destination Analysis • Backup Storage Migration Support</p>
+    <p style="font-size: 0.9rem; margin-top: 1rem;">
+    🔬 Advanced Network Intelligence • 🎯 AI-Driven Recommendations • 📊 Executive Reporting • 🤖 Multi-Agent Optimization • 🗄️ S3/FSx Comparisons • 💾 SMB/NFS Backup Support
+    </p>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 if __name__ == "__main__":
-    # Run example
     import asyncio
-    result = asyncio.run(example_usage())
-    print("Optimization completed successfully!")
-    print(f"Found {len(result['optimal_configurations'])} optimal configurations")
+    asyncio.run(main())
