@@ -3303,11 +3303,11 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
             temp_config = config.copy()
             temp_config['destination_storage_type'] = dest_type
 
-# Network path
+            # Network path
             network_path_key = self._get_network_path_key(temp_config)
             network_perf = self.network_manager.calculate_ai_enhanced_path_performance(network_path_key)
 
-# Agent configuration
+            # Agent configuration
             migration_method = config.get('migration_method', 'direct_replication')
             if migration_method == 'backup_restore':
                 primary_tool = 'datasync'
@@ -3320,12 +3320,12 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
             num_agents = config.get('number_of_agents', 1)
 
             agent_config = self.agent_manager.calculate_agent_configuration(
-            primary_tool, agent_size, num_agents, dest_type
+                primary_tool, agent_size, num_agents, dest_type
             )
 
-# Migration time
+            # Migration time
             migration_throughput = min(agent_config['total_max_throughput_mbps'],
-            network_perf['effective_bandwidth_mbps'])
+                                    network_perf['effective_bandwidth_mbps'])
 
             if migration_throughput > 0:
                 if migration_method == 'backup_restore':
@@ -3333,34 +3333,33 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
                     migration_time = (backup_size_gb * 8 * 1000) / (migration_throughput * 3600)
                 else:
                     migration_time = (config['database_size_gb'] * 8 * 1000) / (migration_throughput * 3600)
-                else:
-                    migration_time = float('inf')
+            else:
+                migration_time = float('inf')
 
-# Storage cost
+            # Storage cost
             storage_cost = self._calculate_destination_storage_cost(config, dest_type)
 
             comparisons[dest_type] = {
-            'destination_type': dest_type,
-            'estimated_migration_time_hours': migration_time,
-            'migration_throughput_mbps': migration_throughput,
-            'estimated_monthly_storage_cost': storage_cost,
-            'performance_rating': self._get_performance_rating(dest_type),
-            'cost_rating': self._get_cost_rating(dest_type),
-            'complexity_rating': self._get_complexity_rating(dest_type),
-            'recommendations': [
-            f'{dest_type} is suitable for this workload',
-            f'Consider performance vs cost trade-offs'
-            ],
-            'network_performance': network_perf,
-            'agent_configuration': {
-            'number_of_agents': num_agents,
-            'total_monthly_cost': agent_config['total_monthly_cost'],
-            'storage_performance_multiplier': agent_config['storage_performance_multiplier']
-            }
+                'destination_type': dest_type,
+                'estimated_migration_time_hours': migration_time,
+                'migration_throughput_mbps': migration_throughput,
+                'estimated_monthly_storage_cost': storage_cost,
+                'performance_rating': self._get_performance_rating(dest_type),
+                'cost_rating': self._get_cost_rating(dest_type),
+                'complexity_rating': self._get_complexity_rating(dest_type),
+                'recommendations': [
+                    f'{dest_type} is suitable for this workload',
+                    f'Consider performance vs cost trade-offs'
+                ],
+                'network_performance': network_perf,
+                'agent_configuration': {
+                    'number_of_agents': num_agents,
+                    'total_monthly_cost': agent_config['total_monthly_cost'],
+                    'storage_performance_multiplier': agent_config['storage_performance_multiplier']
+                }
             }
 
         return comparisons
-
     def _get_performance_rating(self, dest_type: str) -> str:
         """Get performance rating for destination"""
         ratings = {'S3': 'Good', 'FSx_Windows': 'Very Good', 'FSx_Lustre': 'Excellent'}
