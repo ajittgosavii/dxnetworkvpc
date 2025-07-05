@@ -2792,6 +2792,7 @@ class EnhancedMigrationAnalyzer:
             'primary_reasons': primary_reasons
         }
     
+    
     def _calculate_rds_sizing(self, config: Dict, pricing_data: Dict) -> Dict:
         """Calculate RDS sizing based on database size and performance metrics"""
         database_size_gb = config['database_size_gb']
@@ -2910,203 +2911,6 @@ class EnhancedMigrationAnalyzer:
                 'current_iops': current_iops,
                 'current_throughput_mbps': current_throughput_mbps
             }
-        }
-    
-    def _calculate_ec2_sizing(self, config: Dict, pricing_data: Dict) -> Dict:
-        """Calculate EC2 sizing based on database size and performance metrics"""
-        database_size_gb = config['database_size_gb']
-        
-        # Get current database performance metrics for better sizing
-        current_memory_gb = config.get('current_db_max_memory_gb', 0)
-        current_cpu_cores = config.get('current_db_max_cpu_cores', 0)
-        current_iops = config.get('current_db_max_iops', 0)
-        current_throughput_mbps = config.get('current_db_max_throughput_mbps', 0)
-        
-        # Get the actual database engine for EC2
-        database_engine = config.get('ec2_database_engine') or config.get('database_engine', 'mysql')
-        
-        # SQL Server deployment configuration
-        sql_server_deployment_type = config.get('sql_server_deployment_type', 'standalone')
-        is_sql_server_always_on = (database_engine == 'sqlserver' and sql_server_deployment_type == 'always_on')
-        
-        # Base sizing on database size (existing logic)
-        if database_size_gb < 1000:
-            base_instance_type = 't3.large'
-            base_cost_per_hour = 0.0832
-        elif database_size_gb < 5000:
-            base_instance_type = 'r6i.large'
-            base_cost_per_hour = 0.252
-        else:
-            base_instance_type = 'r6i.xlarge'
-            base_cost_per_hour = 0.504
-        
-        # For SQL Server Always On, upgrade instance size for cluster requirements
-        if is_sql_server_always_on:
-            if database_size_gb < 1000:
-                base_instance_type = 'r6i.large'  # Upgrade from t3.large
-                base_cost_per_hour = 0.252
-            elif database_size_gb < 5000:
-                base_instance_type = 'r6i.xlarge'  # Upgrade from r6i.large
-                base_cost_per_hour = 0.504
-            else:
-                base_instance_type = 'r6i.2xlarge'  # Upgrade from r6i.xlarge
-                base_cost_per_hour = 1.008
-        
-        # Performance-based sizing recommendations
-        recommended_instance_type = base_instance_type
-        performance_based_cost = base_cost_per_hour
-        sizing_reasoning = ["Based on database size"]
-        
-        # Adjust based on current memory usage
-        if current_memory_gb > 0:
-            # Add 25% buffer for OS overhead and growth (EC2 needs more overhead than RDS)
-            required_memory = current_memory_gb * 1.25
-            
-            if required_memory > 128:
-                recommended_instance_type = 'r6i.4xlarge'
-                performance_based_cost = 2.016
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 64:
-                recommended_instance_type = 'r6i.2xlarge'
-                performance_based_cost = 1.008
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 32:
-                recommended_instance_type = 'r6i.xlarge'
-                performance_based_cost = 0.504
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 16:
-                recommended_instance_type = 'r6i.large'
-                performance_based_cost = 0.252
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 8:
-                recommended_instance_type = 't3.xlarge'
-                performance_based_cost = 0.1664
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-        
-        # Adjust based on current CPU usage
-        if current_cpu_cores > 0:
-            # Add 30% buffer for peak load handling (more than RDS due to OS overhead)
-            required_vcpu = current_cpu_cores * 1.3
-            
-            if required_vcpu > 16:
-                if recommended_instance_type not in ['r6i.4xlarge', 'c5.4xlarge']:
-                    recommended_instance_type = 'r6i.4xlarge'
-                    performance_based_cost = 2.016
-                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-            elif required_vcpu > 8:
-                if recommended_instance_type in ['t3.large', 't3.xlarge', 'r6i.large']:
-                    recommended_instance_type = 'r6i.2xlarge'
-                    performance_based_cost = 1.008
-                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-            elif required_vcpu > 4:
-                if recommended_instance_type in ['t3.large', 't3.xlarge']:
-                    recommended_instance_type = 'r6i.xlarge'
-                    performance_based_cost = 0.504
-                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-        
-        # Adjust based on IOPS requirements
-        if current_iops > 0:
-            # Add 35% buffer for peak operations (more than RDS)
-            required_iops = current_iops * 1.35
-            
-            if required_iops > 50000:
-                sizing_reasoning.append(f"Very high IOPS requirement: {required_iops:.0f} IOPS - consider io1/io2 EBS")
-            elif required_iops > 25000:
-                sizing_reasoning.append(f"High IOPS requirement: {required_iops:.0f} IOPS - consider gp3 with provisioned IOPS")
-            elif required_iops > 10000:
-                sizing_reasoning.append(f"Medium IOPS requirement: {required_iops:.0f} IOPS")
-        
-        # SQL Server specific adjustments
-        if database_engine == 'sqlserver':
-            sizing_reasoning.append("SQL Server on EC2 requires additional resources")
-            
-            # SQL Server needs more memory and CPU
-            if current_memory_gb > 0 and current_memory_gb < 16:
-                if recommended_instance_type in ['t3.large', 't3.xlarge']:
-                    recommended_instance_type = 'r6i.large'
-                    performance_based_cost = 0.252
-                    sizing_reasoning.append("SQL Server minimum memory recommendation")
-            
-            # SQL Server licensing considerations
-            licensing_factor = 1.0  # Assume BYOL for now
-            sizing_reasoning.append("Consider SQL Server licensing costs (BYOL assumed)")
-        
-        # Use the performance-based recommendation
-        final_instance_type = recommended_instance_type
-        cost_per_hour = performance_based_cost
-        
-        # Get real pricing if available
-        ec2_instances = pricing_data.get('ec2_instances', {})
-        if final_instance_type in ec2_instances:
-            cost_per_hour = ec2_instances[final_instance_type].get('cost_per_hour', cost_per_hour)
-        
-        # Storage sizing - EC2 needs more storage overhead
-        storage_size = max(database_size_gb * 2.5, 100)
-        storage_cost = storage_size * 0.08
-        
-        # EBS optimization for high IOPS workloads
-        if current_iops > 20000:
-            storage_cost *= 1.5  # io1/io2 premium
-            sizing_reasoning.append("High IOPS workload - io1/io2 EBS recommended")
-        
-        # Operating system licensing
-        os_licensing = 0
-        if 'windows' in config.get('operating_system', ''):
-            if database_engine == 'sqlserver':
-                os_licensing = 200
-                sizing_reasoning.append("Windows OS licensing included")
-            else:
-                os_licensing = 150
-                sizing_reasoning.append("Windows OS licensing included")
-        
-        # Calculate number of instances
-        if is_sql_server_always_on:
-            instance_count = 3  # Always On requires 3 nodes
-            deployment_description = "3-Node Always On Cluster"
-        else:
-            instance_count = 1  # Standalone deployment
-            deployment_description = "Single Instance"
-        
-        return {
-            'primary_instance': final_instance_type,
-            'base_recommendation': base_instance_type,
-            'performance_based_recommendation': recommended_instance_type,
-            'database_engine': database_engine,
-            'instance_specs': pricing_data.get('ec2_instances', {}).get(final_instance_type, {'vcpu': 2, 'memory': 8}),
-            'storage_type': 'gp3' if current_iops <= 20000 else 'io1',
-            'storage_size_gb': storage_size,
-            'monthly_instance_cost': cost_per_hour * 24 * 30 * instance_count,
-            'monthly_storage_cost': storage_cost * instance_count,
-            'os_licensing_cost': os_licensing,
-            'total_monthly_cost': (cost_per_hour * 24 * 30 * instance_count) + (storage_cost * instance_count) + os_licensing,
-            'ebs_optimized': True,
-            'enhanced_networking': True,
-            'sizing_reasoning': sizing_reasoning,
-            'performance_metrics_used': {
-                'current_memory_gb': current_memory_gb,
-                'current_cpu_cores': current_cpu_cores,
-                'current_iops': current_iops,
-                'current_throughput_mbps': current_throughput_mbps
-            },
-            'sql_server_considerations': database_engine == 'sqlserver',
-            'sql_server_deployment_type': sql_server_deployment_type,
-            'instance_count': instance_count,
-            'deployment_description': deployment_description,
-            'is_always_on_cluster': is_sql_server_always_on,
-            'cost_per_hour_per_instance': cost_per_hour,
-            'total_cost_per_hour': cost_per_hour * instance_count,
-            'always_on_benefits': [
-                "Automatic failover capability",
-                "Read-scale with secondary replicas", 
-                "Zero data loss with synchronous replicas",
-                "Enhanced backup strategies"
-            ] if is_sql_server_always_on else [],
-            'cluster_requirements': [
-                "Windows Server Failover Clustering (WSFC)",
-                "Shared storage or storage replication",
-                "Dedicated cluster network",
-                "Quorum configuration"
-            ] if is_sql_server_always_on else []
         }
     
     async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizing: Dict, 
@@ -3318,26 +3122,728 @@ class EnhancedMigrationAnalyzer:
                 'backup_efficiency': agent_analysis.get('backup_efficiency', 1.0)
             }
         }
-
-def config_has_changed(current_config, stored_config):
-    """Check if configuration has changed significantly"""
-    if stored_config is None:
-        return True
     
-    # Key fields that trigger re-analysis
-    key_fields = [
-        'database_size_gb', 'source_database_engine', 'database_engine', 
-        'migration_method', 'backup_storage_type', 'destination_storage_type',
-        'number_of_agents', 'datasync_agent_size', 'dms_agent_size',
-        'operating_system', 'ram_gb', 'cpu_cores', 'environment',
-        'target_platform', 'sql_server_deployment_type'
-    ]
+    async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
+        """AI-enhanced AWS sizing"""
+        
+        # Get real-time pricing
+        pricing_data = await self.aws_api.get_real_time_pricing()
+        
+        # RDS sizing
+        rds_sizing = self._calculate_rds_sizing(config, pricing_data)
+        
+        # EC2 sizing  
+        ec2_sizing = self._calculate_ec2_sizing(config, pricing_data)
+        
+        # Reader/writer configuration
+        reader_writer_config = self._calculate_reader_writer_config(config)
+        
+        # Deployment recommendation
+        deployment_recommendation = self._recommend_deployment_type(config, rds_sizing, ec2_sizing)
+        
+        # AI analysis
+        ai_analysis = await self.ai_manager.analyze_migration_workload(config, {})
+        
+        return {
+            'rds_recommendations': rds_sizing,
+            'ec2_recommendations': ec2_sizing,
+            'reader_writer_config': reader_writer_config,
+            'deployment_recommendation': deployment_recommendation,
+            'ai_analysis': ai_analysis,
+            'pricing_data': pricing_data
+        }
     
-    for field in key_fields:
-        if current_config.get(field) != stored_config.get(field):
+    async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float, 
+                                                     onprem_performance: Dict, agent_analysis: Dict) -> float:
+        """AI-enhanced migration time calculation with backup storage considerations"""
+        
+        database_size_gb = config['database_size_gb']
+        num_agents = config.get('number_of_agents', 1)
+        destination_storage = config.get('destination_storage_type', 'S3')
+        migration_method = config.get('migration_method', 'direct_replication')
+        
+        # Calculate data size to transfer
+        if migration_method == 'backup_restore':
+            # For backup/restore, calculate backup file size
+            backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+            data_size_gb = database_size_gb * backup_size_multiplier
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+            
+            # Base calculation for file transfer
+            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
+            
+            # Backup storage specific factors
+            if backup_storage_type == 'windows_share':
+                complexity_factor = 1.2  # SMB protocol overhead
+            else:  # nas_drive
+                complexity_factor = 1.1  # NFS is more efficient
+            
+            # Add backup preparation time
+            backup_prep_time = 0.5 + (database_size_gb / 10000)  # 0.5-2 hours for backup prep
+            
+        else:
+            # For direct replication, use database size
+            data_size_gb = database_size_gb
+            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
+            complexity_factor = 1.0
+            backup_prep_time = 0
+        
+        # Database engine complexity
+        if config['source_database_engine'] != config['database_engine']:
+            complexity_factor *= 1.3
+        
+        # OS and platform factors
+        if 'windows' in config['operating_system']:
+            complexity_factor *= 1.1
+        
+        if config['server_type'] == 'vmware':
+            complexity_factor *= 1.05
+        
+        # Destination storage adjustments
+        if destination_storage == 'FSx_Windows':
+            complexity_factor *= 0.9
+        elif destination_storage == 'FSx_Lustre':
+            complexity_factor *= 0.7
+        
+        # Agent scaling adjustments
+        scaling_efficiency = agent_analysis.get('scaling_efficiency', 1.0)
+        storage_multiplier = agent_analysis.get('storage_performance_multiplier', 1.0)
+        
+        if num_agents > 1:
+            agent_time_factor = (1 / min(num_agents * scaling_efficiency * storage_multiplier, 6.0))
+            complexity_factor *= agent_time_factor
+            
+            if num_agents > 5:
+                complexity_factor *= 1.1
+        
+        total_time = base_time_hours * complexity_factor + backup_prep_time
+        
+        return total_time
+    
+    async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
+        """Enhanced migration agent analysis with scaling support and backup storage considerations"""
+        
+        num_agents = config.get('number_of_agents', 1)
+        destination_storage = config.get('destination_storage_type', 'S3')
+        migration_method = config.get('migration_method', 'direct_replication')
+        
+        # For backup/restore, always use DataSync
+        if migration_method == 'backup_restore':
+            primary_tool = 'datasync'
+            agent_size = config.get('datasync_agent_size', 'medium')
+            agent_config = self.agent_manager.calculate_agent_configuration('datasync', agent_size, num_agents, destination_storage)
+        elif primary_tool == 'datasync':
+            agent_size = config['datasync_agent_size']
+            agent_config = self.agent_manager.calculate_agent_configuration('datasync', agent_size, num_agents, destination_storage)
+        else:
+            agent_size = config['dms_agent_size']
+            agent_config = self.agent_manager.calculate_agent_configuration('dms', agent_size, num_agents, destination_storage)
+        
+        total_max_throughput = agent_config['total_max_throughput_mbps']
+        network_bandwidth = network_perf['effective_bandwidth_mbps']
+        
+        # Apply backup storage efficiency factors
+        if migration_method == 'backup_restore':
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+            if backup_storage_type == 'windows_share':
+                # SMB has some overhead
+                backup_efficiency = 0.85
+            else:  # nas_drive with NFS
+                backup_efficiency = 0.92
+            
+            effective_throughput = min(total_max_throughput * backup_efficiency, network_bandwidth)
+        else:
+            effective_throughput = min(total_max_throughput, network_bandwidth)
+            backup_efficiency = 1.0
+        
+        # Determine bottleneck
+        if total_max_throughput < network_bandwidth:
+            bottleneck = f'agents ({num_agents} agents)'
+            bottleneck_severity = 'high' if effective_throughput / total_max_throughput < 0.7 else 'medium'
+        else:
+            bottleneck = 'network'
+            bottleneck_severity = 'medium' if effective_throughput / network_bandwidth > 0.8 else 'high'
+        
+        # Add backup storage specific bottleneck detection
+        if migration_method == 'backup_restore':
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+            if backup_storage_type == 'windows_share' and effective_throughput < total_max_throughput * 0.9:
+                bottleneck = f'{bottleneck} + SMB protocol overhead'
+        
+        return {
+            'primary_tool': primary_tool,
+            'agent_size': agent_size,
+            'number_of_agents': num_agents,
+            'destination_storage': destination_storage,
+            'migration_method': migration_method,
+            'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
+            'agent_configuration': agent_config,
+            'total_max_throughput_mbps': total_max_throughput,
+            'total_effective_throughput': effective_throughput,
+            'backup_efficiency': backup_efficiency,
+            'bottleneck': bottleneck,
+            'bottleneck_severity': bottleneck_severity,
+            'scaling_efficiency': agent_config['scaling_efficiency'],
+            'management_overhead': agent_config['management_overhead_factor'],
+            'storage_performance_multiplier': agent_config.get('storage_performance_multiplier', 1.0),
+            'cost_per_hour': agent_config['effective_cost_per_hour'],
+            'monthly_cost': agent_config['total_monthly_cost']
+        }
+        
+    def _get_network_path_key(self, config: Dict) -> str:
+        """Get network path key based on migration method and backup storage"""
+        os_lower = config.get('operating_system', '').lower()
+        if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel']):
+            os_type = 'linux'
+        else:
+            os_type = 'windows'
+        
+        environment = config.get('environment', 'non-production').replace('-', '_').lower()
+        destination_storage = config.get('destination_storage_type', 'S3').lower()
+        migration_method = config.get('migration_method', 'direct_replication')
+        backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+        
+        # For backup/restore method, use backup storage paths
+        if migration_method == 'backup_restore':
+            if environment in ['non_production', 'nonprod']:
+                if backup_storage_type == 'windows_share':
+                    return "nonprod_sj_windows_share_s3"
+                else:  # nas_drive
+                    return "nonprod_sj_nas_drive_s3"
+            elif environment == 'production':
+                if backup_storage_type == 'windows_share':
+                    return "prod_sa_windows_share_s3"
+                else:  # nas_drive
+                    return "prod_sa_nas_drive_s3"
+        
+        # For direct replication, use original paths
+        else:
+            if environment in ['non_production', 'nonprod']:
+                if destination_storage == 's3':
+                    return f"nonprod_sj_{os_type}_nas_s3"
+                elif destination_storage == 'fsx_windows':
+                    return f"nonprod_sj_{os_type}_nas_fsx_windows"
+                elif destination_storage == 'fsx_lustre':
+                    return f"nonprod_sj_{os_type}_nas_fsx_lustre"
+            elif environment == 'production':
+                if destination_storage == 's3':
+                    return f"prod_sa_{os_type}_nas_s3"
+        
+        # Default fallback for direct replication
+        return f"nonprod_sj_{os_type}_nas_s3"
+    
+    def _calculate_ec2_sizing(self, config: Dict, pricing_data: Dict) -> Dict:
+        """Calculate EC2 sizing based on database size and performance metrics"""
+        database_size_gb = config['database_size_gb']
+        
+        # Get current database performance metrics for better sizing
+        current_memory_gb = config.get('current_db_max_memory_gb', 0)
+        current_cpu_cores = config.get('current_db_max_cpu_cores', 0)
+        current_iops = config.get('current_db_max_iops', 0)
+        current_throughput_mbps = config.get('current_db_max_throughput_mbps', 0)
+        
+        # Get the actual database engine for EC2
+        database_engine = config.get('ec2_database_engine') or config.get('database_engine', 'mysql')
+        
+        # SQL Server deployment configuration
+        sql_server_deployment_type = config.get('sql_server_deployment_type', 'standalone')
+        is_sql_server_always_on = (database_engine == 'sqlserver' and sql_server_deployment_type == 'always_on')
+        
+        # Base sizing on database size (existing logic)
+        if database_size_gb < 1000:
+            base_instance_type = 't3.large'
+            base_cost_per_hour = 0.0832
+        elif database_size_gb < 5000:
+            base_instance_type = 'r6i.large'
+            base_cost_per_hour = 0.252
+        else:
+            base_instance_type = 'r6i.xlarge'
+            base_cost_per_hour = 0.504
+        
+        # For SQL Server Always On, upgrade instance size for cluster requirements
+        if is_sql_server_always_on:
+            if database_size_gb < 1000:
+                base_instance_type = 'r6i.large'  # Upgrade from t3.large
+                base_cost_per_hour = 0.252
+            elif database_size_gb < 5000:
+                base_instance_type = 'r6i.xlarge'  # Upgrade from r6i.large
+                base_cost_per_hour = 0.504
+            else:
+                base_instance_type = 'r6i.2xlarge'  # Upgrade from r6i.xlarge
+                base_cost_per_hour = 1.008
+        
+        # Performance-based sizing recommendations
+        recommended_instance_type = base_instance_type
+        performance_based_cost = base_cost_per_hour
+        sizing_reasoning = ["Based on database size"]
+        
+        # Adjust based on current memory usage
+        if current_memory_gb > 0:
+            # Add 25% buffer for OS overhead and growth (EC2 needs more overhead than RDS)
+            required_memory = current_memory_gb * 1.25
+            
+            if required_memory > 128:
+                recommended_instance_type = 'r6i.4xlarge'
+                performance_based_cost = 2.016
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 64:
+                recommended_instance_type = 'r6i.2xlarge'
+                performance_based_cost = 1.008
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 32:
+                recommended_instance_type = 'r6i.xlarge'
+                performance_based_cost = 0.504
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 16:
+                recommended_instance_type = 'r6i.large'
+                performance_based_cost = 0.252
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 8:
+                recommended_instance_type = 't3.xlarge'
+                performance_based_cost = 0.1664
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+        
+        # Adjust based on current CPU usage
+        if current_cpu_cores > 0:
+            # Add 30% buffer for peak load handling (more than RDS due to OS overhead)
+            required_vcpu = current_cpu_cores * 1.3
+            
+            if required_vcpu > 16:
+                if recommended_instance_type not in ['r6i.4xlarge', 'c5.4xlarge']:
+                    recommended_instance_type = 'r6i.4xlarge'
+                    performance_based_cost = 2.016
+                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
+            elif required_vcpu > 8:
+                if recommended_instance_type in ['t3.large', 't3.xlarge', 'r6i.large']:
+                    recommended_instance_type = 'r6i.2xlarge'
+                    performance_based_cost = 1.008
+                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
+            elif required_vcpu > 4:
+                if recommended_instance_type in ['t3.large', 't3.xlarge']:
+                    recommended_instance_type = 'r6i.xlarge'
+                    performance_based_cost = 0.504
+                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
+        
+        # Adjust based on IOPS requirements
+        if current_iops > 0:
+            # Add 35% buffer for peak operations (more than RDS)
+            required_iops = current_iops * 1.35
+            
+            if required_iops > 50000:
+                sizing_reasoning.append(f"Very high IOPS requirement: {required_iops:.0f} IOPS - consider io1/io2 EBS")
+            elif required_iops > 25000:
+                sizing_reasoning.append(f"High IOPS requirement: {required_iops:.0f} IOPS - consider gp3 with provisioned IOPS")
+            elif required_iops > 10000:
+                sizing_reasoning.append(f"Medium IOPS requirement: {required_iops:.0f} IOPS")
+        
+        # SQL Server specific adjustments
+        if database_engine == 'sqlserver':
+            sizing_reasoning.append("SQL Server on EC2 requires additional resources")
+            
+            # SQL Server needs more memory and CPU
+            if current_memory_gb > 0 and current_memory_gb < 16:
+                if recommended_instance_type in ['t3.large', 't3.xlarge']:
+                    recommended_instance_type = 'r6i.large'
+                    performance_based_cost = 0.252
+                    sizing_reasoning.append("SQL Server minimum memory recommendation")
+            
+            # SQL Server licensing considerations
+            licensing_factor = 1.0  # Assume BYOL for now
+            sizing_reasoning.append("Consider SQL Server licensing costs (BYOL assumed)")
+        
+        # Use the performance-based recommendation
+        final_instance_type = recommended_instance_type
+        cost_per_hour = performance_based_cost
+        
+        # Get real pricing if available
+        ec2_instances = pricing_data.get('ec2_instances', {})
+        if final_instance_type in ec2_instances:
+            cost_per_hour = ec2_instances[final_instance_type].get('cost_per_hour', cost_per_hour)
+        
+        # Storage sizing - EC2 needs more storage overhead
+        storage_size = max(database_size_gb * 2.5, 100)
+        storage_cost = storage_size * 0.08
+        
+        # EBS optimization for high IOPS workloads
+        if current_iops > 20000:
+            storage_cost *= 1.5  # io1/io2 premium
+            sizing_reasoning.append("High IOPS workload - io1/io2 EBS recommended")
+        
+        # Operating system licensing
+        os_licensing = 0
+        if 'windows' in config.get('operating_system', ''):
+            if database_engine == 'sqlserver':
+                os_licensing = 200
+                sizing_reasoning.append("Windows OS licensing included")
+            else:
+                os_licensing = 150
+                sizing_reasoning.append("Windows OS licensing included")
+        
+        # Calculate number of instances
+        if is_sql_server_always_on:
+            instance_count = 3  # Always On requires 3 nodes
+            deployment_description = "3-Node Always On Cluster"
+        else:
+            instance_count = 1  # Standalone deployment
+            deployment_description = "Single Instance"
+        
+        return {
+            'primary_instance': final_instance_type,
+            'base_recommendation': base_instance_type,
+            'performance_based_recommendation': recommended_instance_type,
+            'database_engine': database_engine,
+            'instance_specs': pricing_data.get('ec2_instances', {}).get(final_instance_type, {'vcpu': 2, 'memory': 8}),
+            'storage_type': 'gp3' if current_iops <= 20000 else 'io1',
+            'storage_size_gb': storage_size,
+            'monthly_instance_cost': cost_per_hour * 24 * 30 * instance_count,
+            'monthly_storage_cost': storage_cost * instance_count,
+            'os_licensing_cost': os_licensing,
+            'total_monthly_cost': (cost_per_hour * 24 * 30 * instance_count) + (storage_cost * instance_count) + os_licensing,
+            'ebs_optimized': True,
+            'enhanced_networking': True,
+            'sizing_reasoning': sizing_reasoning,
+            'performance_metrics_used': {
+                'current_memory_gb': current_memory_gb,
+                'current_cpu_cores': current_cpu_cores,
+                'current_iops': current_iops,
+                'current_throughput_mbps': current_throughput_mbps
+            },
+            'sql_server_considerations': database_engine == 'sqlserver',
+            'sql_server_deployment_type': sql_server_deployment_type,
+            'instance_count': instance_count,
+            'deployment_description': deployment_description,
+            'is_always_on_cluster': is_sql_server_always_on,
+            'cost_per_hour_per_instance': cost_per_hour,
+            'total_cost_per_hour': cost_per_hour * instance_count,
+            'always_on_benefits': [
+                "Automatic failover capability",
+                "Read-scale with secondary replicas", 
+                "Zero data loss with synchronous replicas",
+                "Enhanced backup strategies"
+            ] if is_sql_server_always_on else [],
+            'cluster_requirements': [
+                "Windows Server Failover Clustering (WSFC)",
+                "Shared storage or storage replication",
+                "Dedicated cluster network",
+                "Quorum configuration"
+            ] if is_sql_server_always_on else []
+        }
+    
+    
+    
+    
+    def config_has_changed(current_config, stored_config):
+        """Check if configuration has changed significantly"""
+        if stored_config is None:
             return True
+        
+        # Key fields that trigger re-analysis
+        key_fields = [
+            'database_size_gb', 'source_database_engine', 'database_engine', 
+            'migration_method', 'backup_storage_type', 'destination_storage_type',
+            'number_of_agents', 'datasync_agent_size', 'dms_agent_size',
+            'operating_system', 'ram_gb', 'cpu_cores', 'environment',
+            'target_platform', 'sql_server_deployment_type'  # ADD THIS LINE
+        ]
+        
+        for field in key_fields:
+            if current_config.get(field) != stored_config.get(field):
+                return True
+        
+        return False
     
-    return False
+    
+
+        database_size_gb = config['database_size_gb']
+        performance_req = config.get('performance_requirements', 'standard')
+        environment = config.get('environment', 'non-production')
+        
+        writers = 1
+        readers = 0
+        
+        if database_size_gb > 500:
+            readers += 1
+        if database_size_gb > 2000:
+            readers += 1
+        if database_size_gb > 10000:
+            readers += 2
+        
+        if performance_req == 'high':
+            readers += 2
+        
+        if environment == 'production':
+            readers = max(readers, 2)
+        
+        total_instances = writers + readers
+        
+        return {
+            'writers': writers,
+            'readers': readers,
+            'total_instances': total_instances,
+            'write_capacity_percent': (writers / total_instances) * 100 if total_instances > 0 else 100,
+            'read_capacity_percent': (readers / total_instances) * 100 if total_instances > 0 else 0,
+            'recommended_read_split': min(80, (readers / total_instances) * 100) if total_instances > 0 else 0,
+            'reasoning': f"AI-optimized for {database_size_gb}GB database"
+        }
+    
+def _recommend_deployment_type(self, config: Dict, rds_rec: Dict, ec2_rec: Dict) -> Dict:
+        """Recommend deployment type based on user selection and analysis"""
+        target_platform = config.get('target_platform', 'rds')
+        
+        # Use user's explicit choice but provide analysis
+        rds_score = 0
+        ec2_score = 0
+        
+        if config['database_size_gb'] < 2000:
+            rds_score += 40
+        elif config['database_size_gb'] > 10000:
+            ec2_score += 30
+        
+        if config['performance_requirements'] == 'high':
+            ec2_score += 30
+        else:
+            rds_score += 35
+        
+        if config['environment'] == 'production':
+            rds_score += 20
+        
+        rds_score += 20  # Management simplicity
+        
+        # Override with user selection
+        recommendation = target_platform
+        
+        # Calculate confidence based on alignment with analysis
+        analytical_recommendation = 'rds' if rds_score > ec2_score else 'ec2'
+        confidence = 0.9 if recommendation == analytical_recommendation else 0.6
+        
+        primary_reasons = [
+            f"User selected {target_platform.upper()} platform",
+            f"Suitable for {config['database_size_gb']:,}GB database",
+            f"Appropriate for {config.get('environment', 'non-production')} environment"
+        ]
+        
+        if recommendation != analytical_recommendation:
+            primary_reasons.append(f"Note: Analysis suggests {analytical_recommendation.upper()} might be optimal")
+        
+        return {
+            'recommendation': recommendation,
+            'user_choice': target_platform,
+            'analytical_recommendation': analytical_recommendation,
+            'confidence': confidence,
+            'rds_score': rds_score,
+            'ec2_score': ec2_score,
+            'primary_reasons': primary_reasons
+        }
+    
+async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizing: Dict, 
+                                                     agent_analysis: Dict, network_perf: Dict) -> Dict:
+        """AI-enhanced cost calculation"""
+        
+        deployment_rec = aws_sizing['deployment_recommendation']['recommendation']
+        
+        if deployment_rec == 'rds':
+            aws_compute_cost = aws_sizing['rds_recommendations']['monthly_instance_cost']
+            aws_storage_cost = aws_sizing['rds_recommendations']['monthly_storage_cost']
+        else:
+            aws_compute_cost = aws_sizing['ec2_recommendations']['monthly_instance_cost']
+            aws_storage_cost = aws_sizing['ec2_recommendations']['monthly_storage_cost']
+        
+        # Agent costs
+        agent_monthly_cost = agent_analysis.get('monthly_cost', 0)
+        
+        # Destination storage costs
+        destination_storage = config.get('destination_storage_type', 'S3')
+        destination_storage_cost = self._calculate_destination_storage_cost(config, destination_storage)
+        
+        # Network and other costs
+        network_cost = 500
+        os_licensing_cost = 300
+        management_cost = 200
+        
+        # Backup storage costs (if applicable)
+        migration_method = config.get('migration_method', 'direct_replication')
+        backup_storage_cost = 0
+        if migration_method == 'backup_restore':
+            backup_size_gb = config['database_size_gb'] * config.get('backup_size_multiplier', 0.7)
+            backup_storage_cost = backup_size_gb * 0.01  # Estimated backup storage cost
+        
+        total_monthly_cost = (aws_compute_cost + aws_storage_cost + agent_monthly_cost + 
+                            destination_storage_cost + network_cost + os_licensing_cost + 
+                            management_cost + backup_storage_cost)
+        
+        # One-time costs
+        one_time_migration_cost = config['database_size_gb'] * 0.1 + config.get('number_of_agents', 1) * 500
+        if migration_method == 'backup_restore':
+            one_time_migration_cost += 1000  # Additional setup cost for backup/restore
+        
+        return {
+            'aws_compute_cost': aws_compute_cost,
+            'aws_storage_cost': aws_storage_cost,
+            'agent_cost': agent_monthly_cost,
+            'destination_storage_cost': destination_storage_cost,
+            'destination_storage_type': destination_storage,
+            'backup_storage_cost': backup_storage_cost,
+            'network_cost': network_cost,
+            'os_licensing_cost': os_licensing_cost,
+            'management_cost': management_cost,
+            'total_monthly_cost': total_monthly_cost,
+            'one_time_migration_cost': one_time_migration_cost,
+            'estimated_monthly_savings': 500,
+            'roi_months': 12
+        }
+    
+def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
+        """Calculate destination storage cost"""
+        database_size_gb = config['database_size_gb']
+        storage_costs = {'S3': 0.023, 'FSx_Windows': 0.13, 'FSx_Lustre': 0.14}
+        base_cost_per_gb = storage_costs.get(destination_storage, 0.023)
+        return database_size_gb * 1.5 * base_cost_per_gb
+    
+async def _generate_fsx_destination_comparisons(self, config: Dict) -> Dict:
+        """Generate FSx destination comparisons"""
+        comparisons = {}
+        destination_types = ['S3', 'FSx_Windows', 'FSx_Lustre']
+        
+        for dest_type in destination_types:
+            temp_config = config.copy()
+            temp_config['destination_storage_type'] = dest_type
+            
+            # Network path
+            network_path_key = self._get_network_path_key(temp_config)
+            network_perf = self.network_manager.calculate_ai_enhanced_path_performance(network_path_key)
+            
+            # Agent configuration
+            migration_method = config.get('migration_method', 'direct_replication')
+            if migration_method == 'backup_restore':
+                primary_tool = 'datasync'
+                agent_size = config.get('datasync_agent_size', 'medium')
+            else:
+                is_homogeneous = config['source_database_engine'] == config['database_engine']
+                primary_tool = 'datasync' if is_homogeneous else 'dms'
+                agent_size = config.get('datasync_agent_size' if is_homogeneous else 'dms_agent_size', 'medium')
+                
+            num_agents = config.get('number_of_agents', 1)
+            
+            agent_config = self.agent_manager.calculate_agent_configuration(
+                primary_tool, agent_size, num_agents, dest_type
+            )
+            
+            # Migration time
+            migration_throughput = min(agent_config['total_max_throughput_mbps'], 
+                                     network_perf['effective_bandwidth_mbps'])
+            
+            if migration_throughput > 0:
+                if migration_method == 'backup_restore':
+                    backup_size_gb = config['database_size_gb'] * config.get('backup_size_multiplier', 0.7)
+                    migration_time = (backup_size_gb * 8 * 1000) / (migration_throughput * 3600)
+                else:
+                    migration_time = (config['database_size_gb'] * 8 * 1000) / (migration_throughput * 3600)
+            else:
+                migration_time = float('inf')
+            
+            # Storage cost
+            storage_cost = self._calculate_destination_storage_cost(config, dest_type)
+            
+            comparisons[dest_type] = {
+                'destination_type': dest_type,
+                'estimated_migration_time_hours': migration_time,
+                'migration_throughput_mbps': migration_throughput,
+                'estimated_monthly_storage_cost': storage_cost,
+                'performance_rating': self._get_performance_rating(dest_type),
+                'cost_rating': self._get_cost_rating(dest_type),
+                'complexity_rating': self._get_complexity_rating(dest_type),
+                'recommendations': [
+                    f'{dest_type} is suitable for this workload',
+                    f'Consider performance vs cost trade-offs'
+                ],
+                'network_performance': network_perf,
+                'agent_configuration': {
+                    'number_of_agents': num_agents,
+                    'total_monthly_cost': agent_config['total_monthly_cost'],
+                    'storage_performance_multiplier': agent_config['storage_performance_multiplier']
+                }
+            }
+        
+        return comparisons
+    
+def _get_performance_rating(self, dest_type: str) -> str:
+        """Get performance rating for destination"""
+        ratings = {'S3': 'Good', 'FSx_Windows': 'Very Good', 'FSx_Lustre': 'Excellent'}
+        return ratings.get(dest_type, 'Good')
+    
+def _get_cost_rating(self, dest_type: str) -> str:
+        """Get cost rating for destination"""
+        ratings = {'S3': 'Excellent', 'FSx_Windows': 'Good', 'FSx_Lustre': 'Fair'}
+        return ratings.get(dest_type, 'Good')
+    
+def _get_complexity_rating(self, dest_type: str) -> str:
+        """Get complexity rating for destination"""
+        ratings = {'S3': 'Low', 'FSx_Windows': 'Medium', 'FSx_Lustre': 'High'}
+        return ratings.get(dest_type, 'Low')
+    
+async def _generate_ai_overall_assessment_with_agents(self, config: Dict, onprem_performance: Dict, 
+                                                        aws_sizing: Dict, migration_time: float, 
+                                                        agent_analysis: Dict) -> Dict:
+        """Generate AI overall assessment"""
+        
+        readiness_score = 80
+        success_probability = 85
+        risk_level = 'Medium'
+        
+        # Adjust based on configuration
+        migration_method = config.get('migration_method', 'direct_replication')
+        
+        if config['database_size_gb'] > 10000:
+            readiness_score -= 10
+        
+        if config['source_database_engine'] != config['database_engine'] and migration_method != 'backup_restore':
+            readiness_score -= 15
+        
+        if migration_time > 24:
+            readiness_score -= 10
+        
+        # Backup storage adjustments
+        if migration_method == 'backup_restore':
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+            if backup_storage_type == 'windows_share':
+                readiness_score -= 5  # SMB overhead
+            else:
+                readiness_score += 5  # NFS efficiency
+        
+        return {
+            'migration_readiness_score': readiness_score,
+            'success_probability': success_probability,
+            'risk_level': risk_level,
+            'readiness_factors': [
+                'System appears ready for migration',
+                f"{migration_method.replace('_', ' ').title()} migration method selected"
+            ],
+            'recommended_next_steps': [
+                'Conduct detailed performance baseline',
+                'Set up AWS environment and testing',
+                'Plan comprehensive testing strategy'
+            ],
+            'timeline_recommendation': {
+                'planning_phase_weeks': 2,
+                'testing_phase_weeks': 3,
+                'migration_window_hours': migration_time,
+                'total_project_weeks': 6,
+                'recommended_approach': 'staged'
+            },
+            'agent_scaling_impact': {
+                'scaling_efficiency': agent_analysis.get('scaling_efficiency', 1.0) * 100,
+                'current_agents': config.get('number_of_agents', 1)
+            },
+            'destination_storage_impact': {
+                'storage_type': config.get('destination_storage_type', 'S3'),
+                'storage_performance_multiplier': agent_analysis.get('storage_performance_multiplier', 1.0)
+            },
+            'backup_storage_impact': {
+                'migration_method': migration_method,
+                'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
+                'backup_efficiency': agent_analysis.get('backup_efficiency', 1.0)
+            }
+        }
 
 # Helper functions for rendering
 def render_enhanced_header():
@@ -3748,7 +4254,8 @@ def render_enhanced_sidebar_controls():
         'dms_agent_size': dms_agent_size,
         'enable_ai_analysis': enable_ai_analysis
     }
-
+    
+    
 def render_bandwidth_waterfall_analysis(analysis, config):
     """Show complete bandwidth degradation from user hardware to final throughput including backup storage"""
     st.markdown("**🌊 Bandwidth Waterfall Analysis: From Your Hardware to Migration Throughput**")
@@ -4434,27 +4941,13 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
         st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
         return
     
-    # Render main sections
-    _render_executive_summary(comprehensive_costs)
-    _render_service_breakdown(comprehensive_costs, analysis)
-    _render_one_time_costs(comprehensive_costs.get('migration_costs', {}))
-    _render_cost_visualizations(comprehensive_costs)
-    _render_optimization_recommendations(comprehensive_costs)
-    _render_analysis_summary(comprehensive_costs, analysis, config)
-
-
-def _render_executive_summary(comprehensive_costs: Dict):
-    """Render the executive cost summary section"""
+    # Executive Cost Summary
     st.markdown("**📊 Executive Cost Summary**")
     
     col1, col2, col3, col4 = st.columns(4)
     
-    total_monthly = comprehensive_costs.get('total_monthly', 0)
-    total_one_time = comprehensive_costs.get('total_one_time', 0)
-    three_year_total = comprehensive_costs.get('three_year_total', 0)
-    monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
-    
     with col1:
+        total_monthly = comprehensive_costs.get('total_monthly', 0)
         st.metric(
             "💰 Total Monthly",
             f"${total_monthly:,.0f}",
@@ -4462,6 +4955,7 @@ def _render_executive_summary(comprehensive_costs: Dict):
         )
     
     with col2:
+        total_one_time = comprehensive_costs.get('total_one_time', 0)
         st.metric(
             "🔄 One-Time Costs",
             f"${total_one_time:,.0f}",
@@ -4469,6 +4963,7 @@ def _render_executive_summary(comprehensive_costs: Dict):
         )
     
     with col3:
+        three_year_total = comprehensive_costs.get('three_year_total', 0)
         st.metric(
             "📅 3-Year Total",
             f"${three_year_total:,.0f}",
@@ -4476,160 +4971,89 @@ def _render_executive_summary(comprehensive_costs: Dict):
         )
     
     with col4:
-        largest_cost = _get_largest_monthly_cost(monthly_breakdown)
+        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1]) if monthly_breakdown else ('Unknown', 0)
         st.metric(
             "🎯 Largest Cost",
             largest_cost[0].replace('_', ' ').title(),
             delta=f"${largest_cost[1]:,.0f}/mo"
         )
-
-
-def _get_largest_monthly_cost(monthly_breakdown: Dict) -> Tuple[str, float]:
-    """Get the largest monthly cost item"""
-    if not monthly_breakdown:
-        return ('Unknown', 0)
-    return max(monthly_breakdown.items(), key=lambda x: x[1])
-
-
-def _render_service_breakdown(comprehensive_costs: Dict, analysis: Dict):
-    """Render AWS services cost breakdown section"""
+    
+    # AWS Services Cost Breakdown - Clear and Organized
     st.markdown("---")
     st.markdown("**🔧 AWS Services Cost Breakdown**")
     
-    service_breakdown_data = _build_service_breakdown_data(comprehensive_costs, analysis)
-    
-    if not service_breakdown_data:
-        st.info("No service breakdown data available")
-        return
-    
-    st.markdown("**📋 Complete AWS Services Breakdown:**")
-    df_services = pd.DataFrame(service_breakdown_data)
-    
-    # Group by category and display
-    categories = df_services['Category'].unique()
-    
-    for category in categories:
-        category_data = df_services[df_services['Category'] == category]
-        category_total = _calculate_category_total(category_data)
-        
-        with st.expander(f"🔧 {category} - ${category_total:,.0f}/month", expanded=True):
-            display_data = category_data.drop('Category', axis=1)
-            st.dataframe(display_data, use_container_width=True, hide_index=True)
-
-
-def _build_service_breakdown_data(comprehensive_costs: Dict, analysis: Dict) -> List[Dict]:
-    """Build comprehensive service breakdown data"""
+    # Create a comprehensive service breakdown table
     service_breakdown_data = []
     
+    # Get all cost components
     compute_costs = comprehensive_costs.get('compute_costs', {})
     storage_costs = comprehensive_costs.get('storage_costs', {})
     network_costs = comprehensive_costs.get('network_costs', {})
     migration_costs = comprehensive_costs.get('migration_costs', {})
     
-    # Add compute costs (RDS or EC2)
-    service_breakdown_data.extend(_build_compute_costs(compute_costs))
-    
-    # Add storage costs
-    service_breakdown_data.extend(_build_storage_costs(storage_costs))
-    
-    # Add network costs
-    service_breakdown_data.extend(_build_network_costs(network_costs))
-    
-    # Add migration costs
-    service_breakdown_data.extend(_build_migration_costs(migration_costs, analysis))
-    
-    return service_breakdown_data
-
-
-def _build_compute_costs(compute_costs: Dict) -> List[Dict]:
-    """Build compute-related cost entries"""
-    costs = []
-    
+    # Add RDS/EC2 costs
     if compute_costs.get('service_type') == 'RDS':
-        costs.extend(_build_rds_costs(compute_costs))
+        # RDS Writer
+        writer_cost = compute_costs.get('writer_monthly_cost', 0)
+        if writer_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'RDS Writer Instance',
+                'Service Type': compute_costs.get('primary_instance', 'Unknown'),
+                'Monthly Cost': f"${writer_cost:,.0f}",
+                'Usage': f"{compute_costs.get('writer_instances', 1)} instance(s)",
+                'Category': 'Database Compute'
+            })
+        
+        # RDS Readers
+        reader_cost = compute_costs.get('reader_monthly_cost', 0)
+        if reader_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'RDS Read Replicas',
+                'Service Type': compute_costs.get('primary_instance', 'Unknown'),
+                'Monthly Cost': f"${reader_cost:,.0f}",
+                'Usage': f"{compute_costs.get('reader_instances', 0)} instance(s)",
+                'Category': 'Database Compute'
+            })
+        
+        # Multi-AZ
+        multi_az_cost = compute_costs.get('multi_az_cost', 0)
+        if multi_az_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'RDS Multi-AZ',
+                'Service Type': 'High Availability',
+                'Monthly Cost': f"${multi_az_cost:,.0f}",
+                'Usage': 'Multi-AZ deployment',
+                'Category': 'Database Compute'
+            })
+    
     else:
-        costs.extend(_build_ec2_costs(compute_costs))
-    
-    return costs
-
-
-def _build_rds_costs(compute_costs: Dict) -> List[Dict]:
-    """Build RDS-specific cost entries"""
-    costs = []
-    
-    # RDS Writer
-    writer_cost = compute_costs.get('writer_monthly_cost', 0)
-    if writer_cost > 0:
-        costs.append({
-            'AWS Service': 'RDS Writer Instance',
-            'Service Type': compute_costs.get('primary_instance', 'Unknown'),
-            'Monthly Cost': f"${writer_cost:,.0f}",
-            'Usage': f"{compute_costs.get('writer_instances', 1)} instance(s)",
-            'Category': 'Database Compute'
-        })
-    
-    # RDS Readers
-    reader_cost = compute_costs.get('reader_monthly_cost', 0)
-    if reader_cost > 0:
-        costs.append({
-            'AWS Service': 'RDS Read Replicas',
-            'Service Type': compute_costs.get('primary_instance', 'Unknown'),
-            'Monthly Cost': f"${reader_cost:,.0f}",
-            'Usage': f"{compute_costs.get('reader_instances', 0)} instance(s)",
-            'Category': 'Database Compute'
-        })
-    
-    # Multi-AZ
-    multi_az_cost = compute_costs.get('multi_az_cost', 0)
-    if multi_az_cost > 0:
-        costs.append({
-            'AWS Service': 'RDS Multi-AZ',
-            'Service Type': 'High Availability',
-            'Monthly Cost': f"${multi_az_cost:,.0f}",
-            'Usage': 'Multi-AZ deployment',
-            'Category': 'Database Compute'
-        })
-    
-    return costs
-
-
-def _build_ec2_costs(compute_costs: Dict) -> List[Dict]:
-    """Build EC2-specific cost entries"""
-    costs = []
-    
-    # EC2 instances
-    instance_cost = compute_costs.get('monthly_instance_cost', 0)
-    if instance_cost > 0:
-        costs.append({
-            'AWS Service': 'EC2 Instances',
-            'Service Type': compute_costs.get('primary_instance', 'Unknown'),
-            'Monthly Cost': f"${instance_cost:,.0f}",
-            'Usage': f"{compute_costs.get('instance_count', 1)} instance(s)",
-            'Category': 'Database Compute'
-        })
-    
-    # OS Licensing
-    os_cost = compute_costs.get('os_licensing_cost', 0)
-    if os_cost > 0:
-        costs.append({
-            'AWS Service': 'OS Licensing',
-            'Service Type': 'Windows Licensing',
-            'Monthly Cost': f"${os_cost:,.0f}",
-            'Usage': f"{compute_costs.get('instance_count', 1)} license(s)",
-            'Category': 'Database Compute'
-        })
-    
-    return costs
-
-
-def _build_storage_costs(storage_costs: Dict) -> List[Dict]:
-    """Build storage-related cost entries"""
-    costs = []
+        # EC2 instances
+        instance_cost = compute_costs.get('monthly_instance_cost', 0)
+        if instance_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'EC2 Instances',
+                'Service Type': compute_costs.get('primary_instance', 'Unknown'),
+                'Monthly Cost': f"${instance_cost:,.0f}",
+                'Usage': f"{compute_costs.get('instance_count', 1)} instance(s)",
+                'Category': 'Database Compute'
+            })
+        
+        # OS Licensing
+        os_cost = compute_costs.get('os_licensing_cost', 0)
+        if os_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'OS Licensing',
+                'Service Type': 'Windows Licensing',
+                'Monthly Cost': f"${os_cost:,.0f}",
+                'Usage': f"{compute_costs.get('instance_count', 1)} license(s)",
+                'Category': 'Database Compute'
+            })
     
     # EBS Storage
     primary_storage = storage_costs.get('primary_storage', {})
     if primary_storage.get('monthly_cost', 0) > 0:
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': 'EBS Storage',
             'Service Type': primary_storage.get('type', 'gp3').upper(),
             'Monthly Cost': f"${primary_storage.get('monthly_cost', 0):,.0f}",
@@ -4640,7 +5064,7 @@ def _build_storage_costs(storage_costs: Dict) -> List[Dict]:
     # S3/FSx Destination Storage
     destination_storage = storage_costs.get('destination_storage', {})
     if destination_storage.get('monthly_cost', 0) > 0:
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': destination_storage.get('type', 'S3'),
             'Service Type': 'Destination Storage',
             'Monthly Cost': f"${destination_storage.get('monthly_cost', 0):,.0f}",
@@ -4648,10 +5072,10 @@ def _build_storage_costs(storage_costs: Dict) -> List[Dict]:
             'Category': 'Migration Storage'
         })
     
-    # Backup Storage
+    # Backup Storage (if applicable)
     backup_storage = storage_costs.get('backup_storage', {})
     if backup_storage.get('applicable', False) and backup_storage.get('monthly_cost', 0) > 0:
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': 'S3 Backup Storage',
             'Service Type': 'Migration Backup',
             'Monthly Cost': f"${backup_storage.get('monthly_cost', 0):,.0f}",
@@ -4659,17 +5083,10 @@ def _build_storage_costs(storage_costs: Dict) -> List[Dict]:
             'Category': 'Migration Storage'
         })
     
-    return costs
-
-
-def _build_network_costs(network_costs: Dict) -> List[Dict]:
-    """Build network-related cost entries"""
-    costs = []
-    
     # Direct Connect
     dx_costs = network_costs.get('direct_connect', {})
     if dx_costs.get('monthly_cost', 0) > 0:
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': 'Direct Connect',
             'Service Type': dx_costs.get('capacity', 'Unknown'),
             'Monthly Cost': f"${dx_costs.get('monthly_cost', 0):,.0f}",
@@ -4680,7 +5097,7 @@ def _build_network_costs(network_costs: Dict) -> List[Dict]:
     # Data Transfer
     transfer_costs = network_costs.get('data_transfer', {})
     if transfer_costs.get('monthly_cost', 0) > 0:
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': 'Data Transfer Out',
             'Service Type': 'DX Data Transfer',
             'Monthly Cost': f"${transfer_costs.get('monthly_cost', 0):,.0f}",
@@ -4688,10 +5105,10 @@ def _build_network_costs(network_costs: Dict) -> List[Dict]:
             'Category': 'Network'
         })
     
-    # VPN
+    # VPN (if applicable)
     vpn_costs = network_costs.get('vpn_backup', {})
     if vpn_costs.get('monthly_cost', 0) > 0:
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': 'VPN Gateway',
             'Service Type': 'Backup Connectivity',
             'Monthly Cost': f"${vpn_costs.get('monthly_cost', 0):,.0f}",
@@ -4699,18 +5116,11 @@ def _build_network_costs(network_costs: Dict) -> List[Dict]:
             'Category': 'Network'
         })
     
-    return costs
-
-
-def _build_migration_costs(migration_costs: Dict, analysis: Dict) -> List[Dict]:
-    """Build migration-related cost entries"""
-    costs = []
-    
-    # Migration Agents
+    # Migration Agents (DataSync/DMS)
     agent_costs = migration_costs.get('agent_costs', {})
     if agent_costs.get('monthly_cost', 0) > 0:
         primary_tool = analysis.get('agent_analysis', {}).get('primary_tool', 'DMS')
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': f'{primary_tool} Agents (EC2)',
             'Service Type': 'Migration Processing',
             'Monthly Cost': f"${agent_costs.get('monthly_cost', 0):,.0f}",
@@ -4718,21 +5128,22 @@ def _build_migration_costs(migration_costs: Dict, analysis: Dict) -> List[Dict]:
             'Category': 'Migration Services'
         })
     
-    # DataSync Usage
+    # DataSync Usage (if applicable)
     datasync_costs = migration_costs.get('datasync', {})
-    if datasync_costs.get('applicable', False) and datasync_costs.get('monthly_sync_cost', 0) > 0:
-        costs.append({
-            'AWS Service': 'DataSync Usage',
-            'Service Type': 'Data Transfer Service',
-            'Monthly Cost': f"${datasync_costs.get('monthly_sync_cost', 0):,.0f}",
-            'Usage': f"{datasync_costs.get('data_size_gb', 0):,.0f} GB/month",
-            'Category': 'Migration Services'
-        })
+    if datasync_costs.get('applicable', False):
+        if datasync_costs.get('monthly_sync_cost', 0) > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'DataSync Usage',
+                'Service Type': 'Data Transfer Service',
+                'Monthly Cost': f"${datasync_costs.get('monthly_sync_cost', 0):,.0f}",
+                'Usage': f"{datasync_costs.get('data_size_gb', 0):,.0f} GB/month",
+                'Category': 'Migration Services'
+            })
     
-    # DMS Usage
+    # DMS Usage (if applicable)
     dms_costs = migration_costs.get('dms', {})
     if dms_costs.get('applicable', False) and dms_costs.get('monthly_cost', 0) > 0:
-        costs.append({
+        service_breakdown_data.append({
             'AWS Service': 'DMS Replication',
             'Service Type': 'Database Migration',
             'Monthly Cost': f"${dms_costs.get('monthly_cost', 0):,.0f}",
@@ -4740,30 +5151,30 @@ def _build_migration_costs(migration_costs: Dict, analysis: Dict) -> List[Dict]:
             'Category': 'Migration Services'
         })
     
-    return costs
-
-
-def _calculate_category_total(category_data: pd.DataFrame) -> float:
-    """Calculate total cost for a category"""
-    total = 0
-    for _, row in category_data.iterrows():
-        try:
-            cost_str = str(row['Monthly Cost']).replace('$', '').replace(',', '').strip()
-            if cost_str.replace('.', '').isdigit():
-                total += float(cost_str)
-        except (ValueError, AttributeError):
-            continue
-    return total
-
-
-def _render_one_time_costs(migration_costs: Dict):
-    """Render one-time migration costs section"""
+    # Display the comprehensive service breakdown table
+    if service_breakdown_data:
+        st.markdown("**📋 Complete AWS Services Breakdown:**")
+        df_services = pd.DataFrame(service_breakdown_data)
+        
+        # Group by category and show
+        categories = df_services['Category'].unique()
+        
+        for category in categories:
+            category_data = df_services[df_services['Category'] == category]
+            category_total = sum([float(row['Monthly Cost'].replace('$', '').replace(',', '')) for _, row in category_data.iterrows()])
+            
+            with st.expander(f"🔧 {category} - ${category_total:,.0f}/month", expanded=True):
+                # Remove category column for display since it's in the header
+                display_data = category_data.drop('Category', axis=1)
+                st.dataframe(display_data, use_container_width=True, hide_index=True)
+    
+    # One-Time Costs Summary
     st.markdown("---")
     st.markdown("**💸 One-Time Migration Costs**")
     
-    col1, col2 = st.columns(2)
+    one_time_col1, one_time_col2 = st.columns(2)
     
-    with col1:
+    with one_time_col1:
         st.info("**Migration Setup Costs**")
         setup_costs = migration_costs.get('setup_and_professional_services', {})
         setup_cost = setup_costs.get('one_time_cost', 0)
@@ -4775,89 +5186,69 @@ def _render_one_time_costs(migration_costs: Dict):
             for service in includes:
                 st.write(f"• {service}")
     
-    with col2:
+    with one_time_col2:
         st.success("**Data Transfer Costs**")
-        _render_data_transfer_costs(migration_costs)
-
-
-def _render_data_transfer_costs(migration_costs: Dict):
-    """Render data transfer costs"""
-    datasync_costs = migration_costs.get('datasync', {})
-    dms_costs = migration_costs.get('dms', {})
+        
+        # DataSync one-time transfer
+        if datasync_costs.get('applicable', False):
+            transfer_cost = datasync_costs.get('one_time_transfer_cost', 0)
+            transfer_size = datasync_costs.get('data_size_gb', 0)
+            st.write(f"**DataSync Transfer:** ${transfer_cost:,.0f}")
+            st.write(f"**Data Size:** {transfer_size:,.0f} GB")
+        
+        # DMS one-time setup
+        if dms_costs.get('applicable', False):
+            dms_setup = dms_costs.get('one_time_setup', 0)
+            st.write(f"**DMS Setup:** ${dms_setup:,.0f}")
+        
+        if not datasync_costs.get('applicable', False) and not dms_costs.get('applicable', False):
+            st.write("**No significant one-time data transfer costs**")
     
-    has_costs = False
-    
-    # DataSync one-time transfer
-    if datasync_costs.get('applicable', False):
-        transfer_cost = datasync_costs.get('one_time_transfer_cost', 0)
-        transfer_size = datasync_costs.get('data_size_gb', 0)
-        st.write(f"**DataSync Transfer:** ${transfer_cost:,.0f}")
-        st.write(f"**Data Size:** {transfer_size:,.0f} GB")
-        has_costs = True
-    
-    # DMS one-time setup
-    if dms_costs.get('applicable', False):
-        dms_setup = dms_costs.get('one_time_setup', 0)
-        st.write(f"**DMS Setup:** ${dms_setup:,.0f}")
-        has_costs = True
-    
-    if not has_costs:
-        st.write("**No significant one-time data transfer costs**")
-
-
-def _render_cost_visualizations(comprehensive_costs: Dict):
-    """Render cost visualization charts"""
+    # Cost Visualization
     st.markdown("---")
     st.markdown("**📊 Cost Analysis & Projections**")
     
-    col1, col2 = st.columns(2)
+    viz_col1, viz_col2 = st.columns(2)
     
-    with col1:
-        _render_monthly_cost_pie_chart(comprehensive_costs)
+    with viz_col1:
+        st.markdown("**Monthly Cost Distribution**")
+        
+        # Create pie chart for monthly costs by category
+        if service_breakdown_data:
+            category_totals = {}
+            for service in service_breakdown_data:
+                category = service['Category']
+                cost = float(service['Monthly Cost'].replace('$', '').replace(',', ''))
+                category_totals[category] = category_totals.get(category, 0) + cost
+            
+            if category_totals:
+                fig_pie = px.pie(
+                    values=list(category_totals.values()),
+                    names=list(category_totals.keys()),
+                    title="Monthly Costs by Service Category"
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+            else:
+                st.info("Cost breakdown data not available for visualization")
+        else:
+            st.info("Service breakdown data not available")
     
-    with col2:
-        _render_cost_projection_chart(comprehensive_costs)
-
-
-def _render_monthly_cost_pie_chart(comprehensive_costs: Dict):
-    """Render monthly cost distribution pie chart"""
-    st.markdown("**Monthly Cost Distribution**")
-    
-    # This would need the service breakdown data to create the chart
-    # For now, show a placeholder
-    monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
-    
-    if monthly_breakdown:
-        try:
-            fig_pie = px.pie(
-                values=list(monthly_breakdown.values()),
-                names=list(monthly_breakdown.keys()),
-                title="Monthly Costs by Service Category"
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
-        except Exception as e:
-            st.info("Cost breakdown visualization not available")
-    else:
-        st.info("Cost breakdown data not available for visualization")
-
-
-def _render_cost_projection_chart(comprehensive_costs: Dict):
-    """Render 3-year cost projection chart"""
-    st.markdown("**3-Year Cost Projection**")
-    
-    total_monthly = comprehensive_costs.get('total_monthly', 0)
-    total_one_time = comprehensive_costs.get('total_one_time', 0)
-    
-    # Create cost projection over 3 years
-    months = list(range(0, 37, 6))  # Every 6 months for 3 years
-    cumulative_costs = [total_one_time + (total_monthly * month) for month in months]
-    
-    projection_data = {
-        'Months': months,
-        'Cumulative Cost ($)': cumulative_costs
-    }
-    
-    try:
+    with viz_col2:
+        st.markdown("**3-Year Cost Projection**")
+        
+        # Create cost projection over 3 years
+        months = list(range(0, 37, 6))  # Every 6 months for 3 years
+        cumulative_costs = []
+        
+        for month in months:
+            cumulative_cost = total_one_time + (total_monthly * month)
+            cumulative_costs.append(cumulative_cost)
+        
+        projection_data = {
+            'Months': months,
+            'Cumulative Cost ($)': cumulative_costs
+        }
+        
         fig_line = px.line(
             projection_data,
             x='Months',
@@ -4867,138 +5258,94 @@ def _render_cost_projection_chart(comprehensive_costs: Dict):
         )
         fig_line.update_traces(line_color='#3498db', marker_color='#e74c3c')
         st.plotly_chart(fig_line, use_container_width=True)
-    except Exception as e:
-        st.error(f"Unable to render cost projection chart: {str(e)}")
-
-
-def _render_optimization_recommendations(comprehensive_costs: Dict):
-    """Render cost optimization recommendations"""
+    
+    # Cost Optimization Recommendations
     st.markdown("---")
     st.markdown("**💡 Cost Optimization Opportunities**")
     
     recommendations = comprehensive_costs.get('cost_optimization_recommendations', [])
     
     if recommendations:
-        col1, col2 = st.columns(2)
+        opt_col1, opt_col2 = st.columns(2)
         
-        with col1:
+        with opt_col1:
             st.success("**Immediate Opportunities (0-3 months)**")
             for i, rec in enumerate(recommendations[:3], 1):
-                potential_savings = _get_potential_savings(rec)
+                potential_savings = "20-30%" if 'Reserved' in rec else "60-70%" if 'Spot' in rec else "10-25%"
                 st.write(f"**{i}.** {rec}")
                 st.write(f"   💰 Potential savings: {potential_savings}")
                 st.write("")
         
-        with col2:
+        with opt_col2:
             st.info("**Medium-term Opportunities (3-12 months)**")
             for i, rec in enumerate(recommendations[3:6], 4):
-                potential_savings = _get_potential_savings(rec)
+                potential_savings = "15-25%" if 'lifecycle' in rec.lower() else "5-15%"
                 st.write(f"**{i}.** {rec}")
                 st.write(f"   💰 Potential savings: {potential_savings}")
                 st.write("")
     else:
         st.info("✅ Current configuration appears well-optimized. Continue monitoring for opportunities.")
-
-
-def _get_potential_savings(recommendation: str) -> str:
-    """Get potential savings percentage based on recommendation type"""
-    rec_lower = recommendation.lower()
     
-    if 'reserved' in rec_lower:
-        return "20-30%"
-    elif 'spot' in rec_lower:
-        return "60-70%"
-    elif 'lifecycle' in rec_lower:
-        return "15-25%"
-    else:
-        return "10-25%"
-
-
-def _render_analysis_summary(comprehensive_costs: Dict, analysis: Dict, config: Dict):
-    """Render analysis summary and export functionality"""
+    # Data Source and Summary
     st.markdown("---")
     st.markdown("**📊 Analysis Summary & Data Sources**")
     
-    col1, col2 = st.columns(2)
+    summary_col1, summary_col2 = st.columns(2)
     
-    with col1:
-        _render_cost_summary(comprehensive_costs, analysis)
+    with summary_col1:
+        st.info("**Cost Summary**")
+        st.write(f"**Monthly Operating Cost:** ${total_monthly:,.0f}")
+        st.write(f"**One-time Migration Cost:** ${total_one_time:,.0f}")
+        st.write(f"**Annual Operating Cost:** ${total_monthly * 12:,.0f}")
+        st.write(f"**3-Year Total Cost:** ${three_year_total:,.0f}")
+        
+        # ROI calculation
+        cost_analysis = analysis.get('cost_analysis', {})
+        estimated_savings = cost_analysis.get('estimated_monthly_savings', 0)
+        if estimated_savings > 0:
+            roi_months = total_one_time / estimated_savings if estimated_savings > 0 else 0
+            st.write(f"**Estimated ROI Period:** {roi_months:.1f} months")
     
-    with col2:
-        _render_data_sources(comprehensive_costs)
+    with summary_col2:
+        st.success("**Data Sources & Reliability**")
+        
+        pricing_data = comprehensive_costs.get('pricing_data', {})
+        data_source = pricing_data.get('data_source', 'unknown')
+        last_updated = pricing_data.get('last_updated', 'Unknown')
+        
+        if data_source == 'aws_api':
+            st.write("✅ **Pricing Data:** Real-time AWS API")
+            st.write(f"📅 **Last Updated:** {last_updated}")
+            st.write("🎯 **Accuracy:** High (±5%)")
+        else:
+            st.write("⚠️ **Pricing Data:** Fallback estimates")
+            st.write("🎯 **Accuracy:** Moderate (±15%)")
+        
+        st.write(f"🔧 **Services Analyzed:** {len(service_breakdown_data)} AWS services")
+        st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
     # Export functionality
     if st.button("📤 Export Complete Cost Analysis", use_container_width=True):
-        _export_cost_analysis(comprehensive_costs, analysis, config)
-
-
-def _render_cost_summary(comprehensive_costs: Dict, analysis: Dict):
-    """Render cost summary information"""
-    st.info("**Cost Summary**")
+        export_data = {
+            'analysis_date': datetime.now().isoformat(),
+            'configuration': config,
+            'cost_summary': {
+                'total_monthly': total_monthly,
+                'total_one_time': total_one_time,
+                'three_year_total': three_year_total
+            },
+            'service_breakdown': service_breakdown_data,
+            'optimization_recommendations': recommendations,
+            'data_source': data_source
+        }
+        
+        st.download_button(
+            label="💾 Download Cost Analysis (JSON)",
+            data=json.dumps(export_data, indent=2),
+            file_name=f"aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json"
+        )
     
-    total_monthly = comprehensive_costs.get('total_monthly', 0)
-    total_one_time = comprehensive_costs.get('total_one_time', 0)
-    three_year_total = comprehensive_costs.get('three_year_total', 0)
-    
-    st.write(f"**Monthly Operating Cost:** ${total_monthly:,.0f}")
-    st.write(f"**One-time Migration Cost:** ${total_one_time:,.0f}")
-    st.write(f"**Annual Operating Cost:** ${total_monthly * 12:,.0f}")
-    st.write(f"**3-Year Total Cost:** ${three_year_total:,.0f}")
-    
-    # ROI calculation
-    cost_analysis = analysis.get('cost_analysis', {})
-    estimated_savings = cost_analysis.get('estimated_monthly_savings', 0)
-    if estimated_savings > 0:
-        roi_months = total_one_time / estimated_savings if estimated_savings > 0 else 0
-        st.write(f"**Estimated ROI Period:** {roi_months:.1f} months")
-
-
-def _render_data_sources(comprehensive_costs: Dict):
-    """Render data sources and reliability information"""
-    st.success("**Data Sources & Reliability**")
-    
-    pricing_data = comprehensive_costs.get('pricing_data', {})
-    data_source = pricing_data.get('data_source', 'unknown')
-    last_updated = pricing_data.get('last_updated', 'Unknown')
-    
-    if data_source == 'aws_api':
-        st.write("✅ **Pricing Data:** Real-time AWS API")
-        st.write(f"📅 **Last Updated:** {last_updated}")
-        st.write("🎯 **Accuracy:** High (±5%)")
-    else:
-        st.write("⚠️ **Pricing Data:** Fallback estimates")
-        st.write("🎯 **Accuracy:** Moderate (±15%)")
-    
-    st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-
-
-def _export_cost_analysis(comprehensive_costs: Dict, analysis: Dict, config: Dict):
-    """Export cost analysis data"""
-    total_monthly = comprehensive_costs.get('total_monthly', 0)
-    total_one_time = comprehensive_costs.get('total_one_time', 0)
-    three_year_total = comprehensive_costs.get('three_year_total', 0)
-    recommendations = comprehensive_costs.get('cost_optimization_recommendations', [])
-    pricing_data = comprehensive_costs.get('pricing_data', {})
-    
-    export_data = {
-        'analysis_date': datetime.now().isoformat(),
-        'configuration': config,
-        'cost_summary': {
-            'total_monthly': total_monthly,
-            'total_one_time': total_one_time,
-            'three_year_total': three_year_total
-        },
-        'optimization_recommendations': recommendations,
-        'data_source': pricing_data.get('data_source', 'unknown')
-    }
-    
-    st.download_button(
-        label="💾 Download Cost Analysis (JSON)",
-        data=json.dumps(export_data, indent=2),
-        file_name=f"aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-        mime="application/json"
-    )
-
 def render_os_performance_tab(analysis: Dict, config: Dict):
     """Render OS performance analysis tab using native Streamlit components"""
     st.subheader("💻 Operating System Performance Analysis")
@@ -5217,25 +5564,14 @@ def render_aws_sizing_tab(analysis: Dict, config: Dict):
             
             primary_instance = ec2_rec.get('primary_instance', 'Unknown')
             instance_specs = ec2_rec.get('instance_specs', {})
-            database_engine = ec2_rec.get('database_engine', 'Unknown')
             
-            st.write(f"**Database Engine:** {database_engine.upper()}")
-            st.write(f"**Instance Type:** {primary_instance}")
+            st.write(f"**Primary Instance Type:** {primary_instance}")
             st.write(f"**vCPUs:** {instance_specs.get('vcpu', 'Unknown')}")
             st.write(f"**Memory:** {instance_specs.get('memory', 'Unknown')} GB")
+            st.write(f"**EBS Optimized:** {'Yes' if ec2_rec.get('ebs_optimized', False) else 'No'}")
+            st.write(f"**Enhanced Networking:** {'Yes' if ec2_rec.get('enhanced_networking', False) else 'No'}")
             st.write(f"**Storage Type:** {ec2_rec.get('storage_type', 'gp3')}")
             st.write(f"**Storage Size:** {ec2_rec.get('storage_size_gb', 0):,.0f} GB")
-            st.write(f"**EBS Optimized:** {'Yes' if ec2_rec.get('ebs_optimized', True) else 'No'}")
-            st.write(f"**Enhanced Networking:** {'Yes' if ec2_rec.get('enhanced_networking', True) else 'No'}")
-            
-            # SQL Server specific information
-            if database_engine == 'sqlserver':
-                deployment_type = ec2_rec.get('sql_server_deployment_type', 'standalone')
-                instance_count = ec2_rec.get('instance_count', 1)
-                st.write(f"**Deployment:** {deployment_type.replace('_', ' ').title()}")
-                st.write(f"**Instance Count:** {instance_count}")
-                if deployment_type == 'always_on':
-                    st.write(f"**Cluster Type:** 3-Node Always On")
         
         with col2:
             st.markdown("**📊 Cost Breakdown:**")
@@ -5243,1505 +5579,1805 @@ def render_aws_sizing_tab(analysis: Dict, config: Dict):
             
             st.write(f"**Instance Cost:** ${ec2_rec.get('monthly_instance_cost', 0):,.0f}")
             st.write(f"**Storage Cost:** ${ec2_rec.get('monthly_storage_cost', 0):,.0f}")
-            
-            os_licensing = ec2_rec.get('os_licensing_cost', 0)
-            if os_licensing > 0:
-                st.write(f"**OS Licensing:** ${os_licensing:,.0f}")
-            
             st.write(f"**Total Monthly:** ${ec2_rec.get('total_monthly_cost', 0):,.0f}")
             
-            # SQL Server Always On specific costs
-            if ec2_rec.get('is_always_on_cluster', False):
-                cost_per_instance = ec2_rec.get('cost_per_hour_per_instance', 0) * 24 * 30
-                st.write(f"**Cost per Instance:** ${cost_per_instance:,.0f}")
-                st.write(f"**Total Cluster Cost:** ${ec2_rec.get('total_cost_per_hour', 0) * 24 * 30:,.0f}")
+            # Additional EC2 considerations
+            st.write(f"**OS:** {config.get('operating_system', 'Unknown').replace('_', ' ').title()}")
+            st.write(f"**Database Engine:** {config.get('database_engine', 'Unknown').upper()}")
     
-    # Performance-based sizing recommendations
+    # Reader/Writer Configuration Details
     st.markdown("---")
-    st.markdown("**⚡ Performance-Based Sizing Analysis:**")
+    st.markdown("**🔄 Reader/Writer Configuration:**")
     
-    sizing_col1, sizing_col2 = st.columns(2)
+    reader_writer = aws_sizing.get('reader_writer_config', {})
     
-    with sizing_col1:
-        st.markdown("**📊 Current Database Performance Metrics:**")
-        
-        performance_metrics = {}
-        if recommendation == 'RDS':
-            performance_metrics = rds_rec.get('performance_metrics_used', {})
-        else:
-            performance_metrics = ec2_rec.get('performance_metrics_used', {})
-        
-        st.info("Input Performance Data")
-        st.write(f"**Current Memory:** {performance_metrics.get('current_memory_gb', 0)} GB")
-        st.write(f"**Current CPU Cores:** {performance_metrics.get('current_cpu_cores', 0)}")
-        st.write(f"**Current IOPS:** {performance_metrics.get('current_iops', 0):,}")
-        st.write(f"**Current Throughput:** {performance_metrics.get('current_throughput_mbps', 0)} MB/s")
+    col1, col2, col3 = st.columns(3)
     
-    with sizing_col2:
-        st.markdown("**🎯 Sizing Reasoning:**")
-        
-        if recommendation == 'RDS':
-            reasoning = rds_rec.get('sizing_reasoning', [])
-        else:
-            reasoning = ec2_rec.get('sizing_reasoning', [])
-        
-        st.success("AI Sizing Logic")
-        for reason in reasoning:
-            st.write(f"• {reason}")
-        
-        if not reasoning:
-            st.write("• Based on database size analysis")
-            st.write("• Standard AWS best practices applied")
-    
-    # SQL Server Always On Benefits (if applicable)
-    if recommendation == 'EC2' and ec2_rec.get('is_always_on_cluster', False):
-        st.markdown("---")
-        st.markdown("**🔄 SQL Server Always On Cluster Benefits:**")
-        
-        benefits_col1, benefits_col2 = st.columns(2)
-        
-        with benefits_col1:
-            st.success("✅ **Always On Advantages**")
-            benefits = ec2_rec.get('always_on_benefits', [])
-            for benefit in benefits:
-                st.write(f"• {benefit}")
-        
-        with benefits_col2:
-            st.warning("⚙️ **Cluster Requirements**")
-            requirements = ec2_rec.get('cluster_requirements', [])
-            for requirement in requirements:
-                st.write(f"• {requirement}")
-    
-    # Reader/Writer Configuration
-    st.markdown("---")
-    st.markdown("**📈 Reader/Writer Configuration:**")
-    
-    reader_writer_config = aws_sizing.get('reader_writer_config', {})
-    
-    config_col1, config_col2, config_col3 = st.columns(3)
-    
-    with config_col1:
+    with col1:
         st.info("**Instance Distribution**")
-        st.write(f"**Writer Instances:** {reader_writer_config.get('writers', 1)}")
-        st.write(f"**Reader Instances:** {reader_writer_config.get('readers', 0)}")
-        st.write(f"**Total Instances:** {reader_writer_config.get('total_instances', 1)}")
+        st.write(f"**Total Instances:** {reader_writer.get('total_instances', 1)}")
+        st.write(f"**Writer Instances:** {reader_writer.get('writers', 1)}")
+        st.write(f"**Reader Instances:** {reader_writer.get('readers', 0)}")
+        st.write(f"**Write Capacity:** {reader_writer.get('write_capacity_percent', 100):.1f}%")
+        st.write(f"**Read Capacity:** {reader_writer.get('read_capacity_percent', 0):.1f}%")
     
-    with config_col2:
-        st.success("**Capacity Distribution**")
-        st.write(f"**Write Capacity:** {reader_writer_config.get('write_capacity_percent', 100):.1f}%")
-        st.write(f"**Read Capacity:** {reader_writer_config.get('read_capacity_percent', 0):.1f}%")
-        st.write(f"**Recommended Read Split:** {reader_writer_config.get('recommended_read_split', 0):.1f}%")
+    with col2:
+        st.success("**Workload Distribution**")
+        st.write(f"**Recommended Read Split:** {reader_writer.get('recommended_read_split', 0):.1f}%")
+        st.write(f"**Database Size:** {config.get('database_size_gb', 0):,} GB")
+        st.write(f"**Performance Requirement:** {config.get('performance_requirements', 'standard').title()}")
+        st.write(f"**Environment:** {config.get('environment', 'non-production').title()}")
+        st.write(f"**Reasoning:** {reader_writer.get('reasoning', 'Standard configuration')}")
     
-    with config_col3:
-        st.warning("**Configuration Notes**")
-        reasoning = reader_writer_config.get('reasoning', 'Standard configuration')
-        st.write(f"• {reasoning}")
-        
-        if reader_writer_config.get('readers', 0) > 0:
-            st.write("• Read replicas improve performance")
-            st.write("• Distribute read workloads effectively")
+    with col3:
+        st.warning("**Instance Specifications**")
+        if recommendation == 'RDS':
+            primary_instance = aws_sizing.get('rds_recommendations', {}).get('primary_instance', 'Unknown')
+            instance_specs = aws_sizing.get('rds_recommendations', {}).get('instance_specs', {})
         else:
-            st.write("• Single instance sufficient for current load")
+            primary_instance = aws_sizing.get('ec2_recommendations', {}).get('primary_instance', 'Unknown')
+            instance_specs = aws_sizing.get('ec2_recommendations', {}).get('instance_specs', {})
+        
+        st.write(f"**All instances use:** {primary_instance}")
+        st.write(f"**vCPUs per instance:** {instance_specs.get('vcpu', 'Unknown')}")
+        st.write(f"**Memory per instance:** {instance_specs.get('memory', 'Unknown')} GB")
+        st.write(f"**Total vCPUs:** {instance_specs.get('vcpu', 2) * reader_writer.get('total_instances', 1)}")
+        st.write(f"**Total Memory:** {instance_specs.get('memory', 4) * reader_writer.get('total_instances', 1)} GB")
     
     # Deployment Reasoning
     st.markdown("---")
-    st.markdown("**🤔 Deployment Decision Reasoning:**")
+    st.markdown("**🎯 Deployment Decision Reasoning:**")
     
-    reasoning_col1, reasoning_col2 = st.columns(2)
+    reasons = deployment_rec.get('primary_reasons', [])
+    analytical_rec = deployment_rec.get('analytical_recommendation', 'unknown')
+    user_choice = deployment_rec.get('user_choice', 'unknown')
     
-    with reasoning_col1:
-        st.info("**Decision Factors**")
-        
-        primary_reasons = deployment_rec.get('primary_reasons', [])
-        for reason in primary_reasons:
-            st.write(f"• {reason}")
-        
-        user_choice = deployment_rec.get('user_choice', 'unknown')
-        analytical_rec = deployment_rec.get('analytical_recommendation', 'unknown')
-        
-        if user_choice != analytical_rec:
-            st.warning(f"⚠️ **Note:** User selected {user_choice.upper()}, but analysis suggests {analytical_rec.upper()} might be optimal")
-    
-    with reasoning_col2:
-        st.success("**Scoring Analysis**")
-        
-        st.write(f"**RDS Suitability Score:** {deployment_rec.get('rds_score', 0)}/100")
-        st.write(f"**EC2 Suitability Score:** {deployment_rec.get('ec2_score', 0)}/100")
-        st.write(f"**Decision Confidence:** {deployment_rec.get('confidence', 0)*100:.1f}%")
-        
-        if deployment_rec.get('rds_score', 0) > deployment_rec.get('ec2_score', 0):
-            st.write("🎯 **Analysis Favors:** RDS (Managed)")
-        else:
-            st.write("🎯 **Analysis Favors:** EC2 (Self-Managed)")
-
-def render_agent_scaling_tab(analysis: Dict, config: Dict):
-    """Render agent scaling and configuration analysis tab"""
-    st.subheader("🤖 Migration Agent Scaling & Configuration Analysis")
-    
-    agent_analysis = analysis.get('agent_analysis', {})
-    
-    # Agent Configuration Overview
-    st.markdown("**🎯 Agent Configuration Overview:**")
-    
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2 = st.columns(2)
     
     with col1:
-        num_agents = agent_analysis.get('number_of_agents', 1)
-        primary_tool = agent_analysis.get('primary_tool', 'DMS')
+        st.markdown("**📋 Decision Factors:**")
+        
+        if reasons:
+            for i, reason in enumerate(reasons, 1):
+                st.write(f"{i}. {reason}")
+        else:
+            st.write("• Standard configuration based on database size")
+            st.write("• Suitable for specified environment")
+            st.write("• Meets performance requirements")
+    
+    with col2:
+        st.markdown("**🤖 AI Analysis:**")
+        
+        st.write(f"**User Selection:** {user_choice.upper()}")
+        st.write(f"**AI Recommendation:** {analytical_rec.upper()}")
+        st.write(f"**Confidence Level:** {confidence*100:.1f}%")
+        
+        if user_choice != analytical_rec:
+            st.warning(f"⚠️ Note: AI analysis suggests {analytical_rec.upper()} might be more optimal")
+        else:
+            st.success("✅ User selection aligns with AI recommendation")
+        
+        st.write(f"**RDS Suitability Score:** {rds_score:.0f}/100")
+        st.write(f"**EC2 Suitability Score:** {ec2_score:.0f}/100")
+        
+def render_migration_dashboard_tab(analysis: Dict, config: Dict):
+    """Render comprehensive migration dashboard with key metrics and visualizations"""
+    st.subheader("📊 Enhanced Migration Performance Dashboard")
+    
+    # Executive Summary Dashboard
+    st.markdown("**🎯 Executive Migration Summary:**")
+    
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    
+    with col1:
+        readiness_score = analysis.get('ai_overall_assessment', {}).get('migration_readiness_score', 0)
         st.metric(
-            "🤖 Active Agents",
-            f"{num_agents}",
-            delta=f"Tool: {primary_tool.upper()}"
+            "🎯 Readiness Score",
+            f"{readiness_score:.0f}/100",
+            delta=analysis.get('ai_overall_assessment', {}).get('risk_level', 'Unknown')
         )
     
     with col2:
-        agent_size = agent_analysis.get('agent_size', 'medium')
-        monthly_cost = agent_analysis.get('monthly_cost', 0)
+        migration_time = analysis.get('estimated_migration_time_hours', 0)
         st.metric(
-            "💰 Monthly Cost",
-            f"${monthly_cost:,.0f}",
-            delta=f"Size: {agent_size.title()}"
+            "⏱️ Migration Time",
+            f"{migration_time:.1f} hours",
+            delta=f"Window: {config.get('downtime_tolerance_minutes', 60)} min"
         )
     
     with col3:
-        total_throughput = agent_analysis.get('total_max_throughput_mbps', 0)
-        effective_throughput = agent_analysis.get('total_effective_throughput', 0)
+        throughput = analysis.get('migration_throughput_mbps', 0)
         st.metric(
-            "⚡ Max Throughput",
-            f"{total_throughput:,.0f} Mbps",
-            delta=f"Effective: {effective_throughput:,.0f} Mbps"
+            "🚀 Throughput",
+            f"{throughput:,.0f} Mbps",
+            delta=f"Agents: {config.get('number_of_agents', 1)}"
         )
     
     with col4:
-        scaling_efficiency = agent_analysis.get('scaling_efficiency', 1.0)
+        monthly_cost = analysis.get('cost_analysis', {}).get('total_monthly_cost', 0)
         st.metric(
-            "📈 Scaling Efficiency",
-            f"{scaling_efficiency*100:.1f}%",
-            delta="Multi-agent coordination"
+            "💰 Monthly Cost",
+            f"${monthly_cost:,.0f}",
+            delta=f"ROI: {analysis.get('cost_analysis', {}).get('roi_months', 'TBD')} months"
         )
     
     with col5:
-        bottleneck = agent_analysis.get('bottleneck', 'Unknown')
-        bottleneck_severity = agent_analysis.get('bottleneck_severity', 'medium')
+        migration_method = config.get('migration_method', 'direct_replication')
+        backup_storage = config.get('backup_storage_type', 'nas_drive').replace('_', ' ').title()
+        sql_deployment = config.get('sql_server_deployment_type', 'standalone')
+        
+        if migration_method == 'backup_restore':
+            display_text = f"Backup/Restore via {backup_storage}"
+            delta_text = f"Tool: {analysis.get('agent_analysis', {}).get('primary_tool', 'DataSync').upper()}"
+        elif config.get('database_engine') == 'sqlserver' and config.get('target_platform') == 'ec2':
+            display_text = f"SQL Server {sql_deployment.replace('_', ' ').title()}"
+            if sql_deployment == 'always_on':
+                delta_text = "3-Node HA Cluster"
+            else:
+                delta_text = "Single Instance"
+        else:
+            destination = config.get('destination_storage_type', 'S3')
+            agent_efficiency = analysis.get('agent_analysis', {}).get('scaling_efficiency', 1.0)
+            display_text = destination
+            delta_text = f"Efficiency: {agent_efficiency*100:.1f}%"
+        
         st.metric(
-            "🎯 Bottleneck",
-            bottleneck.title(),
-            delta=f"Severity: {bottleneck_severity.title()}"
+            "🗄️ Target Configuration",
+            display_text,
+            delta=delta_text
         )
     
-    # Agent Configuration Details
+    with col6:
+        complexity = analysis.get('aws_sizing_recommendations', {}).get('ai_analysis', {}).get('ai_complexity_score', 6)
+        confidence = analysis.get('ai_overall_assessment', {}).get('ai_confidence', 0.5)
+        st.metric(
+            "🤖 AI Confidence",
+            f"{confidence*100:.1f}%",
+            delta=f"Complexity: {complexity:.1f}/10"
+        )
+
+    # SQL Server Always On Analysis (if applicable)
+    if (config.get('database_engine') == 'sqlserver' and 
+        config.get('target_platform') == 'ec2' and 
+        config.get('sql_server_deployment_type') == 'always_on'):
+        
+        st.markdown("**🔄 SQL Server Always On Cluster Analysis:**")
+        
+        sql_col1, sql_col2 = st.columns(2)
+        
+        with sql_col1:
+            st.success("🎯 **Always On Benefits & Configuration**")
+            st.write("• **High Availability:** Automatic failover capability")
+            st.write("• **Read Scale-out:** Secondary replicas for read workloads")
+            st.write("• **Zero Data Loss:** Synchronous commit for primary replica")
+            st.write("• **Flexible Failover:** Manual and automatic failover modes")
+            st.write("• **Enhanced Backup:** Backup from secondary replicas")
+            st.write("• **Cluster Configuration:** 3-node Windows Server Failover Cluster")
+            
+            complexity_score = analysis.get('aws_sizing_recommendations', {}).get('ai_analysis', {}).get('ai_complexity_score', 6)
+            if complexity_score >= 7:
+                st.warning("⚠️ **Increased Complexity:** Always On adds +1-2 complexity points")
+            
+        with sql_col2:
+            st.info("⚙️ **Implementation Considerations**")
+            st.write("• **Network Requirements:** Low-latency cluster communication")
+            st.write("• **Storage Requirements:** EBS volumes per instance")
+            st.write("• **Quorum Configuration:** File share witness or cloud witness")
+            st.write("• **Security:** Windows authentication and encryption")
+            st.write("• **Monitoring:** Extended Events and Always On dashboard")
+            st.write("• **Licensing:** Core-based licensing for all cluster nodes")
+            
+            aws_sizing = analysis.get('aws_sizing_recommendations', {})
+            ec2_rec = aws_sizing.get('ec2_recommendations', {})
+            if ec2_rec.get('total_monthly_cost', 0) > 0:
+                single_instance_estimate = ec2_rec.get('total_monthly_cost', 0) / 3
+                st.write(f"• **Cost vs Standalone:** ~3x (${single_instance_estimate:,.0f} → ${ec2_rec.get('total_monthly_cost', 0):,.0f}/mo)")
+        
+        # Always On specific recommendations
+        st.markdown("**💡 Always On Specific Recommendations:**")
+        
+        always_on_rec_col1, always_on_rec_col2 = st.columns(2)
+        
+        with always_on_rec_col1:
+            st.warning("🚨 **Pre-Migration Planning**")
+            st.write("• Validate Windows Server Failover Clustering expertise")
+            st.write("• Plan cluster network topology and IP addressing")
+            st.write("• Design quorum configuration for AWS environment")
+            st.write("• Test Always On setup in non-production environment")
+            st.write("• Plan availability group and listener configuration")
+            st.write("• Document failover and disaster recovery procedures")
+        
+        with always_on_rec_col2:
+            st.success("⚡ **Performance & Monitoring Setup**")
+            st.write("• Configure placement groups for low-latency networking")
+            st.write("• Use Enhanced Networking (SR-IOV) for cluster traffic")
+            st.write("• Set up CloudWatch custom metrics for Always On")
+            st.write("• Configure Always On extended events for monitoring")
+            st.write("• Plan read routing for secondary replicas")
+            st.write("• Implement connection string failover configuration")
+        
+        # Migration complexity impact
+        readiness_score = analysis.get('ai_overall_assessment', {}).get('migration_readiness_score', 0)
+        if readiness_score > 0:
+            always_on_impact = min(15, max(5, 20 - readiness_score // 5))  # 5-15 point reduction
+            adjusted_readiness = max(0, readiness_score - always_on_impact)
+            
+            st.info(f"""
+            📊 **Always On Impact on Migration Readiness:**
+            • **Base Readiness Score:** {readiness_score}/100
+            • **Always On Complexity Impact:** -{always_on_impact} points
+            • **Adjusted Readiness Score:** {adjusted_readiness}/100
+            • **Recommendation:** {"Proceed with caution - additional planning required" if adjusted_readiness < 70 else "Good readiness for Always On migration"}
+            """)
+        
+        st.markdown("---")  # Add separator
+    
+    elif (config.get('database_engine') == 'sqlserver' and 
+          config.get('target_platform') == 'ec2' and 
+          config.get('sql_server_deployment_type') == 'standalone'):
+        
+        st.markdown("**🖥️ SQL Server Standalone Configuration:**")
+        
+        standalone_col1, standalone_col2 = st.columns(2)
+        
+        with standalone_col1:
+            st.info("✅ **Standalone Benefits**")
+            st.write("• **Simplicity:** Single instance management")
+            st.write("• **Cost-effective:** Lower licensing and infrastructure costs")
+            st.write("• **Faster deployment:** Simpler setup and configuration")
+            st.write("• **Standard features:** All core SQL Server capabilities")
+            st.write("• **Easier troubleshooting:** Single point of management")
+        
+        with standalone_col2:
+            st.warning("⚠️ **Limitations & Considerations**")
+            st.write("• **No automatic failover:** Manual intervention required")
+            st.write("• **Single point of failure:** No built-in high availability")
+            st.write("• **Backup dependency:** Critical backup and restore strategy needed")
+            st.write("• **Planned downtime:** Required for maintenance and updates")
+            st.write("• **Consider:** Upgrade path to Always On if HA needs emerge")
+        
+        st.markdown("---")  # Add separator
+    
+    
+    
+    
+    
+def render_fsx_comparisons_tab(analysis: Dict, config: Dict):
+    """Render FSx destination comparisons tab"""
+    st.subheader("🗄️ FSx Destination Storage Comparisons")
+    
+    fsx_comparisons = analysis.get('fsx_comparisons', {})
+    
+    if not fsx_comparisons:
+        st.warning("FSx comparison data not available")
+        return
+    
+    # Overview metrics
+    st.markdown("**📊 Storage Destination Overview:**")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    destinations = ['S3', 'FSx_Windows', 'FSx_Lustre']
+    
+    for i, dest in enumerate(destinations):
+        with [col1, col2, col3][i]:
+            comparison = fsx_comparisons.get(dest, {})
+            
+            st.metric(
+                f"🗄️ {dest.replace('_', ' ')}",
+                comparison.get('performance_rating', 'Unknown'),
+                delta=f"${comparison.get('estimated_monthly_storage_cost', 0):,.0f}/mo"
+            )
+            
+def run_agent_optimization_sync(optimizer, config: Dict, analysis: Dict) -> Dict:
+    """Run agent optimization synchronously for Streamlit"""
+    import asyncio
+    import concurrent.futures
+    import threading
+    
+    def run_in_thread():
+        """Run async function in a new thread with its own event loop"""
+        new_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(new_loop)
+        try:
+            return new_loop.run_until_complete(
+                optimizer.analyze_agent_scaling_optimization(config, analysis)
+            )
+        finally:
+            new_loop.close()
+            asyncio.set_event_loop(None)
+    
+    try:
+        # Check if we're already in an event loop
+        loop = asyncio.get_running_loop()
+        if loop and loop.is_running():
+            # We're in Streamlit's event loop, run in separate thread
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(run_in_thread)
+                return future.result(timeout=120)  # 2 minute timeout
+        else:
+            # No active loop, safe to run directly
+            return asyncio.run(optimizer.analyze_agent_scaling_optimization(config, analysis))
+    except RuntimeError:
+        # No event loop, run directly
+        return asyncio.run(optimizer.analyze_agent_scaling_optimization(config, analysis))
+    except Exception as e:
+        # Fallback: create minimal analysis
+        logger.error(f"Agent optimization failed: {e}")
+        return {
+            'current_configuration': {'error': 'Analysis failed'},
+            'optimal_configurations': {},
+            'ai_recommendations': {'ai_analysis_available': False, 'error': str(e)},
+            'cost_vs_performance': {'analysis_available': False},
+            'bottleneck_analysis': {'current_bottleneck': 'Analysis failed'},
+            'scaling_scenarios': {},
+            'optimization_summary': {'optimization_available': False, 'error': str(e)}
+        }
+
+
+def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
+    """Render Agent Scaling Optimizer tab with AI recommendations"""
+    st.subheader("🤖 DataSync/DMS Agent Scaling Optimizer")
+    
+    # Check if we have agent optimization data
+    if 'agent_optimization' not in st.session_state:
+        st.info("🚀 **Agent Scaling Optimization Analysis**")
+        st.write("Click the button below to run comprehensive agent scaling optimization analysis with AI recommendations.")
+        
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown("""
+            **This analysis will provide:**
+            - 🎯 Optimal agent configurations for your workload
+            - 🤖 AI-powered scaling recommendations  
+            - 💰 Cost vs performance trade-off analysis
+            - 🚫 Bottleneck identification and resolution
+            - 📈 Multiple scaling scenarios (conservative, balanced, aggressive)
+            - 🛡️ Risk mitigation strategies
+            """)
+        
+        with col2:
+            if st.button("🔍 Analyze Agent Scaling", type="primary", use_container_width=True):
+                with st.spinner("🤖 Running AI-powered agent scaling optimization..."):
+                    try:
+                        # Show progress
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
+                        status_text.text("🔧 Initializing optimizer...")
+                        progress_bar.progress(10)
+                        
+                        # Initialize optimizer
+                        ai_manager = AnthropicAIManager()
+                        agent_manager = EnhancedAgentSizingManager()
+                        optimizer = AgentScalingOptimizer(ai_manager, agent_manager)
+                        
+                        status_text.text("📊 Analyzing current configuration...")
+                        progress_bar.progress(30)
+                        
+                        # Run optimization analysis
+                        optimization_analysis = run_agent_optimization_sync(optimizer, config, analysis)
+                        
+                        status_text.text("✅ Analysis complete!")
+                        progress_bar.progress(100)
+                        
+                        st.session_state['agent_optimization'] = optimization_analysis
+                        
+                        # Clear progress indicators
+                        progress_bar.empty()
+                        status_text.empty()
+                        
+                        st.success("✅ Agent scaling optimization analysis completed!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        st.error(f"❌ Agent optimization analysis failed: {str(e)}")
+                        logger.error(f"Agent optimization error: {e}")
+                        
+                        # Show detailed error for debugging
+                        with st.expander("🔍 Error Details", expanded=False):
+                            st.code(str(e))
+                        return
+        
+        return
+    
+    # Display optimization results
+    optimization = st.session_state['agent_optimization']
+    
+    # Check if analysis failed
+    if optimization.get('optimization_summary', {}).get('error'):
+        st.error(f"❌ Analysis failed: {optimization['optimization_summary']['error']}")
+        if st.button("🔄 Retry Analysis", type="primary"):
+            if 'agent_optimization' in st.session_state:
+                del st.session_state['agent_optimization']
+            st.rerun()
+        return
+    
+    # Executive Summary
+    st.markdown("**📊 Agent Scaling Optimization Summary:**")
+    
+    optimization_summary = optimization.get('optimization_summary', {})
+    
+    if optimization_summary.get('optimization_available', False):
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        with col1:
+            current_config = optimization_summary.get('current_configuration', 'Unknown')
+            recommended_config = optimization_summary.get('recommended_configuration', 'Unknown')
+            st.metric(
+                "🎯 Current vs Optimal",
+                current_config,
+                delta=f"→ {recommended_config}"
+            )
+        
+        with col2:
+            perf_improvement = optimization_summary.get('performance_improvement', {})
+            throughput_change = perf_improvement.get('throughput_change_percent', 0)
+            st.metric(
+                "🚀 Throughput Change",
+                f"{throughput_change:+.1f}%",
+                delta=f"{perf_improvement.get('throughput_change_mbps', 0):+,.0f} Mbps"
+            )
+        
+        with col3:
+            cost_impact = optimization_summary.get('cost_impact', {})
+            cost_change = cost_impact.get('cost_change_percent', 0)
+            st.metric(
+                "💰 Cost Impact",
+                f"{cost_change:+.1f}%",
+                delta=f"${cost_impact.get('cost_change_monthly', 0):+,.0f}/mo"
+            )
+        
+        with col4:
+            efficiency_gain = optimization_summary.get('efficiency_gain', 0)
+            st.metric(
+                "⚡ Efficiency Gain",
+                f"{efficiency_gain:+.1f} pts",
+                delta="Optimization score"
+            )
+        
+        with col5:
+            ai_recommendations = optimization.get('ai_recommendations', {})
+            confidence = ai_recommendations.get('confidence_level', 'medium')
+            ai_available = ai_recommendations.get('ai_analysis_available', False)
+            st.metric(
+                "🤖 AI Analysis",
+                "Available" if ai_available else "Fallback",
+                delta=f"Confidence: {confidence.title()}"
+            )
+    else:
+        st.warning("⚠️ Optimization analysis not available. Please retry the analysis.")
+        if st.button("🔄 Retry Analysis", type="primary"):
+            if 'agent_optimization' in st.session_state:
+                del st.session_state['agent_optimization']
+            st.rerun()
+        return
+    
+    # Current Configuration Analysis
     st.markdown("---")
-    st.markdown("**⚙️ Detailed Agent Configuration:**")
+    st.markdown("**🔍 Current Configuration Analysis:**")
     
-    config_col1, config_col2 = st.columns(2)
+    current_config = optimization.get('current_configuration', {})
     
-    with config_col1:
-        st.info("**Agent Specifications**")
-        
-        agent_config = agent_analysis.get('agent_configuration', {})
-        per_agent_spec = agent_config.get('per_agent_spec', {})
-        
-        st.write(f"**Agent Type:** {agent_analysis.get('primary_tool', 'Unknown').upper()}")
-        st.write(f"**Agent Size:** {agent_analysis.get('agent_size', 'Unknown').title()}")
-        st.write(f"**Number of Agents:** {num_agents}")
-        st.write(f"**vCPU per Agent:** {per_agent_spec.get('vcpu', 'Unknown')}")
-        st.write(f"**Memory per Agent:** {per_agent_spec.get('memory_gb', 'Unknown')} GB")
-        st.write(f"**Max Throughput per Agent:** {per_agent_spec.get('max_throughput_mbps_per_agent', 'Unknown')} Mbps")
-        st.write(f"**Max Tasks per Agent:** {per_agent_spec.get('max_concurrent_tasks_per_agent', 'Unknown')}")
-        st.write(f"**Cost per Agent per Hour:** ${per_agent_spec.get('cost_per_hour_per_agent', 0):.4f}")
+    if not current_config or current_config.get('error'):
+        st.error("❌ Current configuration analysis failed. Please retry.")
+        return
     
-    with config_col2:
-        st.success("**Total Configuration**")
-        
-        st.write(f"**Total vCPUs:** {agent_config.get('total_vcpu', 'Unknown')}")
-        st.write(f"**Total Memory:** {agent_config.get('total_memory_gb', 'Unknown')} GB")
-        st.write(f"**Total Max Throughput:** {agent_config.get('total_max_throughput_mbps', 'Unknown')} Mbps")
-        st.write(f"**Total Concurrent Tasks:** {agent_config.get('total_concurrent_tasks', 'Unknown')}")
-        st.write(f"**Total Cost per Hour:** ${agent_config.get('total_cost_per_hour', 0):.2f}")
-        st.write(f"**Effective Cost per Hour:** ${agent_config.get('effective_cost_per_hour', 0):.2f}")
-        
-        # Destination storage impact
-        destination_storage = agent_analysis.get('destination_storage', 'S3')
-        storage_multiplier = agent_analysis.get('storage_performance_multiplier', 1.0)
-        st.write(f"**Destination Storage:** {destination_storage}")
-        st.write(f"**Storage Performance Multiplier:** {storage_multiplier:.2f}x")
+    col1, col2, col3 = st.columns(3)
     
-    # Migration Method Specific Information
-    migration_method = agent_analysis.get('migration_method', 'direct_replication')
+    with col1:
+        st.info("**Current Setup**")
+        st.write(f"**Migration Method:** {current_config.get('migration_method', 'Unknown').replace('_', ' ').title()}")
+        st.write(f"**Primary Tool:** {current_config.get('primary_tool', 'Unknown')}")
+        st.write(f"**Agent Count:** {current_config.get('agent_count', 0)}")
+        st.write(f"**Agent Size:** {current_config.get('agent_size', 'Unknown').title()}")
+        st.write(f"**Destination Storage:** {current_config.get('destination_storage', 'S3')}")
+        
+        if current_config.get('migration_method') == 'backup_restore':
+            st.write(f"**Backup Storage:** {current_config.get('backup_storage_type', 'Unknown').replace('_', ' ').title()}")
     
-    if migration_method == 'backup_restore':
-        st.markdown("---")
-        st.markdown("**📦 Backup Storage Migration Configuration:**")
+    with col2:
+        st.success("**Performance Metrics**")
+        st.write(f"**Current Throughput:** {current_config.get('current_throughput_mbps', 0):,.0f} Mbps")
+        st.write(f"**Database Size:** {current_config.get('database_size_gb', 0):,} GB")
+        st.write(f"**Scaling Efficiency:** {current_config.get('current_efficiency', 0)*100:.1f}%")
+        st.write(f"**Monthly Cost:** ${current_config.get('current_cost_monthly', 0):,.0f}")
+        st.write(f"**Current Bottleneck:** {current_config.get('bottleneck', 'Unknown')}")
+    
+    with col3:
+        bottleneck_severity = current_config.get('bottleneck_severity', 'medium')
+        if bottleneck_severity == 'high':
+            st.error("**Performance Issues**")
+        elif bottleneck_severity == 'medium':
+            st.warning("**Performance Status**")
+        else:
+            st.info("**Performance Status**")
         
-        backup_col1, backup_col2 = st.columns(2)
+        st.write(f"**Bottleneck Severity:** {bottleneck_severity.title()}")
         
-        with backup_col1:
-            st.warning("**Backup Storage Details**")
+        # Calculate migration time estimate
+        if current_config.get('current_throughput_mbps', 0) > 0:
+            db_size = current_config.get('database_size_gb', 0)
+            migration_method = current_config.get('migration_method', 'direct_replication')
             
-            backup_storage_type = agent_analysis.get('backup_storage_type', 'nas_drive')
-            backup_efficiency = agent_analysis.get('backup_efficiency', 1.0)
-            
-            st.write(f"**Backup Storage Type:** {backup_storage_type.replace('_', ' ').title()}")
-            st.write(f"**Protocol Efficiency:** {backup_efficiency*100:.1f}%")
-            
-            if backup_storage_type == 'windows_share':
-                st.write(f"**Protocol:** SMB (Windows Share)")
-                st.write(f"**Expected Overhead:** ~15% bandwidth loss")
-                st.write(f"**Authentication:** Windows-based")
+            if migration_method == 'backup_restore':
+                # Use backup size
+                backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+                effective_size = db_size * backup_size_multiplier
             else:
-                st.write(f"**Protocol:** NFS (Network Attached Storage)")
-                st.write(f"**Expected Overhead:** ~8% bandwidth loss")
-                st.write(f"**Authentication:** NFS-based")
-        
-        with backup_col2:
-            st.info("**DataSync Agent Optimization**")
+                effective_size = db_size
             
-            st.write("**Backup Storage Optimizations:**")
-            if backup_storage_type == 'windows_share':
-                st.write("• Enable SMB3 multichannel")
-                st.write("• Optimize SMB client settings")
-                st.write("• Use dedicated backup network")
-                st.write("• Monitor SMB connection stability")
-            else:
-                st.write("• Use NFS v4.1+ for performance")
-                st.write("• Configure optimal rsize/wsize")
-                st.write("• Enable NFS caching")
-                st.write("• Monitor NFS performance")
+            estimated_hours = (effective_size * 8 * 1000) / (current_config.get('current_throughput_mbps', 1) * 3600)
+            st.write(f"**Estimated Migration Time:** {estimated_hours:.1f} hours")
+        
+        improvement_potential = "High" if bottleneck_severity == 'high' else "Medium" if bottleneck_severity == 'medium' else "Low"
+        st.write(f"**Optimization Potential:** {improvement_potential}")
     
-    # Scaling Analysis
+    # The rest of the function continues with the existing code...
+    # (All the other sections: Optimal Configurations, AI Recommendations, etc.)
+    
+    # Action Buttons at the end
     st.markdown("---")
-    st.markdown("**📈 Agent Scaling Analysis:**")
+    st.markdown("**🚀 Next Steps:**")
     
-    scaling_col1, scaling_col2, scaling_col3 = st.columns(3)
+    button_col1, button_col2, button_col3 = st.columns(3)
     
-    with scaling_col1:
-        st.info("**Current Scaling Metrics**")
-        
-        management_overhead = agent_analysis.get('management_overhead', 1.0)
-        
-        st.write(f"**Scaling Efficiency:** {scaling_efficiency*100:.1f}%")
-        st.write(f"**Management Overhead:** {management_overhead:.2f}x")
-        st.write(f"**Coordination Complexity:** {'High' if num_agents > 5 else 'Medium' if num_agents > 2 else 'Low'}")
-        
-        # Calculate effective parallel benefit
-        theoretical_max = num_agents * per_agent_spec.get('max_throughput_mbps_per_agent', 500)
-        actual_max = agent_config.get('total_max_throughput_mbps', theoretical_max)
-        parallel_efficiency = (actual_max / theoretical_max * 100) if theoretical_max > 0 else 100
-        
-        st.write(f"**Parallel Efficiency:** {parallel_efficiency:.1f}%")
+    with button_col1:
+        if st.button("🔄 Re-run Optimization Analysis", use_container_width=True):
+            if 'agent_optimization' in st.session_state:
+                del st.session_state['agent_optimization']
+            st.rerun()
     
-    with scaling_col2:
-        st.success("**Scaling Recommendations**")
+    with button_col2:
+        if st.button("📊 Export Recommendations", use_container_width=True):
+            # Create summary for export
+            export_data = {
+                'current_config': current_config,
+                'recommended_config': optimization.get('ai_recommendations', {}).get('recommended_configuration'),
+                'optimization_summary': optimization_summary,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            st.download_button(
+                label="📥 Download Analysis",
+                data=json.dumps(export_data, indent=2),
+                file_name=f"agent_optimization_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
+    
+    with button_col3:
+        ai_recommendations = optimization.get('ai_recommendations', {})
+        if st.button("🤖 Get Detailed AI Analysis", use_container_width=True):
+            if ai_recommendations.get('raw_ai_response'):
+                st.markdown("**🤖 Complete AI Analysis:**")
+                with st.expander("View Full AI Response", expanded=False):
+                    st.text(ai_recommendations['raw_ai_response'])
+            else:
+                st.info("Detailed AI analysis not available")
+
+
+
+def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
+    """Render Agent Scaling Optimizer tab with AI recommendations"""
+    st.subheader("🤖 DataSync/DMS Agent Scaling Optimizer")
+    
+    # Check if we have agent optimization data
+    if 'agent_optimization' not in st.session_state:
+        st.info("🚀 **Agent Scaling Optimization Analysis**")
+        st.write("Click the button below to run comprehensive agent scaling optimization analysis with AI recommendations.")
         
-        scaling_recommendations = agent_config.get('scaling_recommendations', [])
+        if st.button("🔍 Analyze Agent Scaling Optimization", type="primary", use_container_width=True):
+            with st.spinner("🤖 Running AI-powered agent scaling optimization..."):
+                try:
+                    # Initialize optimizer
+                    ai_manager = AnthropicAIManager()
+                    agent_manager = EnhancedAgentSizingManager()
+                    optimizer = AgentScalingOptimizer(ai_manager, agent_manager)
+                    
+                    # Run optimization analysis synchronously
+                    optimization_analysis = run_agent_optimization_sync(optimizer, config, analysis)
+                    
+                    st.session_state['agent_optimization'] = optimization_analysis
+                    st.rerun()
+                    
+                except Exception as e:
+                    st.error(f"❌ Agent optimization analysis failed: {str(e)}")
+                    return
         
-        if scaling_recommendations:
-            for rec in scaling_recommendations:
+        return
+    
+    # Display optimization results
+    optimization = st.session_state['agent_optimization']
+    
+    # Executive Summary
+    st.markdown("**📊 Agent Scaling Optimization Summary:**")
+    
+    optimization_summary = optimization.get('optimization_summary', {})
+    
+    if optimization_summary.get('optimization_available', False):
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        with col1:
+            current_config = optimization_summary.get('current_configuration', 'Unknown')
+            recommended_config = optimization_summary.get('recommended_configuration', 'Unknown')
+            st.metric(
+                "🎯 Current vs Optimal",
+                current_config,
+                delta=f"→ {recommended_config}"
+            )
+        
+        with col2:
+            perf_improvement = optimization_summary.get('performance_improvement', {})
+            throughput_change = perf_improvement.get('throughput_change_percent', 0)
+            st.metric(
+                "🚀 Throughput Change",
+                f"{throughput_change:+.1f}%",
+                delta=f"{perf_improvement.get('throughput_change_mbps', 0):+,.0f} Mbps"
+            )
+        
+        with col3:
+            cost_impact = optimization_summary.get('cost_impact', {})
+            cost_change = cost_impact.get('cost_change_percent', 0)
+            st.metric(
+                "💰 Cost Impact",
+                f"{cost_change:+.1f}%",
+                delta=f"${cost_impact.get('cost_change_monthly', 0):+,.0f}/mo"
+            )
+        
+        with col4:
+            efficiency_gain = optimization_summary.get('efficiency_gain', 0)
+            st.metric(
+                "⚡ Efficiency Gain",
+                f"{efficiency_gain:+.1f} pts",
+                delta="Optimization score"
+            )
+        
+        with col5:
+            ai_recommendations = optimization.get('ai_recommendations', {})
+            confidence = ai_recommendations.get('confidence_level', 'medium')
+            ai_available = ai_recommendations.get('ai_analysis_available', False)
+            st.metric(
+                "🤖 AI Analysis",
+                "Available" if ai_available else "Fallback",
+                delta=f"Confidence: {confidence.title()}"
+            )
+    
+    # Current Configuration Analysis
+    st.markdown("---")
+    st.markdown("**🔍 Current Configuration Analysis:**")
+    
+    current_config = optimization.get('current_configuration', {})
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.info("**Current Setup**")
+        st.write(f"**Migration Method:** {current_config.get('migration_method', 'Unknown').replace('_', ' ').title()}")
+        st.write(f"**Primary Tool:** {current_config.get('primary_tool', 'Unknown')}")
+        st.write(f"**Agent Count:** {current_config.get('agent_count', 0)}")
+        st.write(f"**Agent Size:** {current_config.get('agent_size', 'Unknown').title()}")
+        st.write(f"**Destination Storage:** {current_config.get('destination_storage', 'S3')}")
+        
+        if current_config.get('migration_method') == 'backup_restore':
+            st.write(f"**Backup Storage:** {current_config.get('backup_storage_type', 'Unknown').replace('_', ' ').title()}")
+    
+    with col2:
+        st.success("**Performance Metrics**")
+        st.write(f"**Current Throughput:** {current_config.get('current_throughput_mbps', 0):,.0f} Mbps")
+        st.write(f"**Database Size:** {current_config.get('database_size_gb', 0):,} GB")
+        st.write(f"**Scaling Efficiency:** {current_config.get('current_efficiency', 0)*100:.1f}%")
+        st.write(f"**Monthly Cost:** ${current_config.get('current_cost_monthly', 0):,.0f}")
+        st.write(f"**Current Bottleneck:** {current_config.get('bottleneck', 'Unknown')}")
+    
+    with col3:
+        bottleneck_severity = current_config.get('bottleneck_severity', 'medium')
+        if bottleneck_severity == 'high':
+            st.error("**Performance Issues**")
+        elif bottleneck_severity == 'medium':
+            st.warning("**Performance Status**")
+        else:
+            st.info("**Performance Status**")
+        
+        st.write(f"**Bottleneck Severity:** {bottleneck_severity.title()}")
+        
+        # Calculate migration time estimate
+        if current_config.get('current_throughput_mbps', 0) > 0:
+            db_size = current_config.get('database_size_gb', 0)
+            migration_method = current_config.get('migration_method', 'direct_replication')
+            
+            if migration_method == 'backup_restore':
+                # Use backup size
+                backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+                effective_size = db_size * backup_size_multiplier
+            else:
+                effective_size = db_size
+            
+            estimated_hours = (effective_size * 8 * 1000) / (current_config.get('current_throughput_mbps', 1) * 3600)
+            st.write(f"**Estimated Migration Time:** {estimated_hours:.1f} hours")
+        
+        improvement_potential = "High" if bottleneck_severity == 'high' else "Medium" if bottleneck_severity == 'medium' else "Low"
+        st.write(f"**Optimization Potential:** {improvement_potential}")
+    
+    # Optimal Configurations
+    st.markdown("---")
+    st.markdown("**🎯 Top Optimal Configurations:**")
+    
+    optimal_configs = optimization.get('optimal_configurations', {})
+    
+    if optimal_configs:
+        # Create comparison table
+        comparison_data = []
+        
+        for config_key, config_data in list(optimal_configs.items())[:5]:  # Top 5
+            comparison_data.append({
+                'Configuration': config_key,
+                'Agents': f"{config_data['agent_count']}x {config_data['agent_size']}",
+                'Tool': config_data['primary_tool'].upper(),
+                'Throughput (Mbps)': f"{config_data['total_throughput']:,.0f}",
+                'Monthly Cost': f"${config_data['monthly_cost']:,.0f}",
+                'Cost/Mbps': f"${config_data['cost_per_mbps']:.2f}",
+                'Efficiency Score': f"{config_data['efficiency_score']:.1f}/100",
+                'Management': config_data['management_complexity'],
+                'Best For': config_data['recommended_for']
+            })
+        
+        df_comparison = pd.DataFrame(comparison_data)
+        st.dataframe(df_comparison, use_container_width=True)
+        
+        # Highlight recommended configuration
+        if comparison_data:
+            st.success(f"🎯 **AI Recommended:** {comparison_data[0]['Configuration']} - {comparison_data[0]['Best For']}")
+    
+    # AI Recommendations
+    st.markdown("---")
+    st.markdown("**🤖 AI Scaling Recommendations:**")
+    
+    ai_recommendations = optimization.get('ai_recommendations', {})
+    
+    if ai_recommendations.get('ai_analysis_available', False):
+        
+        # Main recommendation
+        recommended_config = ai_recommendations.get('recommended_configuration', 'Unknown')
+        st.success(f"🎯 **Primary Recommendation:** {recommended_config}")
+        
+        # Detailed recommendations in expandable sections
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            with st.expander("📈 **Scaling Strategy**", expanded=True):
+                scaling_strategies = ai_recommendations.get('scaling_strategy', [])
+                for strategy in scaling_strategies[:3]:
+                    st.write(f"• {strategy}")
+            
+            with st.expander("💰 **Cost Optimization**", expanded=False):
+                cost_tips = ai_recommendations.get('cost_optimization_tips', [])
+                for tip in cost_tips[:4]:
+                    st.write(f"• {tip}")
+            
+            with st.expander("🎯 **Performance Tuning**", expanded=False):
+                performance_tips = ai_recommendations.get('performance_tuning', [])
+                for tip in performance_tips[:4]:
+                    st.write(f"• {tip}")
+        
+        with col2:
+            with st.expander("🛡️ **Risk Mitigation**", expanded=True):
+                risk_mitigation = ai_recommendations.get('risk_mitigation', [])
+                for risk in risk_mitigation[:3]:
+                    st.write(f"• {risk}")
+            
+            with st.expander("📋 **Implementation Plan**", expanded=False):
+                implementation_plan = ai_recommendations.get('implementation_plan', [])
+                for step in implementation_plan[:5]:
+                    st.write(f"{step}")
+            
+            with st.expander("📊 **Monitoring & Alerts**", expanded=False):
+                monitoring = ai_recommendations.get('monitoring_recommendations', [])
+                for monitor in monitoring[:4]:
+                    st.write(f"• {monitor}")
+        
+        # Backup storage considerations (if applicable)
+        if current_config.get('migration_method') == 'backup_restore':
+            st.markdown("**💾 Backup Storage Optimization:**")
+            backup_considerations = ai_recommendations.get('backup_storage_considerations', [])
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                st.info("**Backup Storage Recommendations**")
+                for consideration in backup_considerations[:3]:
+                    st.write(f"• {consideration}")
+            
+            with col2:
+                backup_storage_type = current_config.get('backup_storage_type', 'nas_drive')
+                st.write(f"**Current Backup Storage:** {backup_storage_type.replace('_', ' ').title()}")
+                
+                if backup_storage_type == 'windows_share':
+                    st.write("• **Protocol:** SMB (optimize for large file transfers)")
+                    st.write("• **Recommendation:** Enable SMB3 multichannel")
+                else:
+                    st.write("• **Protocol:** NFS (generally more efficient)")
+                    st.write("• **Recommendation:** Optimize NFS mount options")
+        
+        # Fallback options
+        with st.expander("🔄 **Fallback Options**", expanded=False):
+            fallback_options = ai_recommendations.get('fallback_options', [])
+            st.write("**Alternative configurations if primary recommendation doesn't work:**")
+            for option in fallback_options:
+                st.write(f"• {option}")
+    
+    else:
+        st.warning("🤖 AI analysis not available. Using fallback recommendations:")
+        st.write("• Consider scaling based on database size and performance requirements")
+        st.write("• Monitor agent utilization and adjust as needed")
+        st.write("• Test configurations in non-production environment first")
+    
+    # Cost vs Performance Analysis
+    st.markdown("---")
+    st.markdown("**💰 Cost vs Performance Analysis:**")
+    
+    cost_analysis = optimization.get('cost_vs_performance', {})
+    
+    if cost_analysis.get('analysis_available', False):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**🎯 Optimization Targets:**")
+            
+            st.info("**Cost Optimized**")
+            cost_opt = cost_analysis.get('cost_optimized', {})
+            st.write(f"**Configuration:** {cost_opt.get('name', 'Unknown')}")
+            st.write(f"**Monthly Cost:** ${cost_opt.get('cost', 0):,.0f}")
+            st.write(f"**Throughput:** {cost_opt.get('throughput', 0):,.0f} Mbps")
+            
+            st.success("**Performance Optimized**")
+            perf_opt = cost_analysis.get('performance_optimized', {})
+            st.write(f"**Configuration:** {perf_opt.get('name', 'Unknown')}")
+            st.write(f"**Throughput:** {perf_opt.get('throughput', 0):,.0f} Mbps")
+            st.write(f"**Monthly Cost:** ${perf_opt.get('cost', 0):,.0f}")
+        
+        with col2:
+            st.markdown("**📊 Analysis Ranges:**")
+            
+            cost_range = cost_analysis.get('cost_range', {})
+            throughput_range = cost_analysis.get('throughput_range', {})
+            
+            st.write(f"**Cost Range:** ${cost_range.get('min', 0):,.0f} - ${cost_range.get('max', 0):,.0f}/month")
+            st.write(f"**Throughput Range:** {throughput_range.get('min', 0):,.0f} - {throughput_range.get('max', 0):,.0f} Mbps")
+            
+            # Best value configuration
+            st.warning("**Best Value**")
+            value_opt = cost_analysis.get('value_optimized', {})
+            st.write(f"**Configuration:** {value_opt.get('name', 'Unknown')}")
+            st.write(f"**Cost per Mbps:** ${value_opt.get('cost_per_mbps', 0):.2f}")
+            st.write(f"**Efficiency Score:** {value_opt.get('efficiency_score', 0):.1f}/100")
+        
+        # Recommendations
+        recommendations = cost_analysis.get('recommendations', [])
+        if recommendations:
+            st.markdown("**💡 Cost-Performance Recommendations:**")
+            for rec in recommendations:
                 st.write(f"• {rec}")
-        else:
-            st.write("• Current configuration appears optimal")
-            st.write("• Monitor performance during migration")
     
-    with scaling_col3:
-        st.warning("**Configuration Assessment**")
-        
-        optimal_config = agent_config.get('optimal_configuration', {})
-        
-        efficiency_score = optimal_config.get('efficiency_score', 100)
-        complexity = optimal_config.get('management_complexity', 'Low')
-        cost_efficiency = optimal_config.get('cost_efficiency', 'Good')
-        
-        st.write(f"**Efficiency Score:** {efficiency_score:.0f}/100")
-        st.write(f"**Management Complexity:** {complexity}")
-        st.write(f"**Cost Efficiency:** {cost_efficiency}")
-        
-        optimal_recommendation = optimal_config.get('optimal_recommendation', 'Current configuration is good')
-        st.write(f"**Recommendation:** {optimal_recommendation}")
-    
-    # Performance Comparison Chart
+    # Bottleneck Analysis
     st.markdown("---")
-    st.markdown("**📊 Agent Performance Comparison:**")
+    st.markdown("**🚫 Bottleneck Analysis & Resolution:**")
     
-    # Create agent scaling visualization
-    agent_counts = list(range(1, min(11, num_agents + 4)))
-    throughputs = []
-    costs = []
-    efficiencies = []
+    bottleneck_analysis = optimization.get('bottleneck_analysis', {})
     
-    cost_per_agent = per_agent_spec.get('cost_per_hour_per_agent', 0.1) * 24 * 30
-    throughput_per_agent = per_agent_spec.get('max_throughput_mbps_per_agent', 500)
+    current_bottleneck = bottleneck_analysis.get('current_bottleneck', 'Unknown')
+    severity = bottleneck_analysis.get('severity', 'medium')
     
-    for count in agent_counts:
-        # Calculate scaling efficiency for each count
-        if count == 1:
-            scaling_eff = 1.0
-        elif count <= 3:
-            scaling_eff = 0.95
-        elif count <= 5:
-            scaling_eff = 0.90
-        elif count <= 8:
-            scaling_eff = 0.85
-        else:
-            scaling_eff = 0.80
+    if severity == 'high':
+        st.error(f"🚨 **Critical Bottleneck Detected:** {current_bottleneck}")
+    elif severity == 'medium':
+        st.warning(f"⚠️ **Bottleneck Identified:** {current_bottleneck}")
+    else:
+        st.info(f"ℹ️ **Minor Bottleneck:** {current_bottleneck}")
+    
+    bottleneck_types = bottleneck_analysis.get('bottleneck_types', {})
+    resolution_strategies = bottleneck_analysis.get('resolution_strategies', {})
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**🔍 Detected Bottlenecks:**")
         
-        # Apply storage multiplier
-        storage_multiplier = agent_analysis.get('storage_performance_multiplier', 1.0)
-        
-        total_throughput = throughput_per_agent * count * scaling_eff * storage_multiplier
-        total_cost = cost_per_agent * count
-        efficiency = (total_throughput / (throughput_per_agent * count)) * 100
-        
-        throughputs.append(total_throughput)
-        costs.append(total_cost)
-        efficiencies.append(efficiency)
+        for bottleneck_type, details in bottleneck_types.items():
+            if details.get('detected', False):
+                severity_icon = "🔴" if details.get('severity') == 'high' else "🟡"
+                st.write(f"{severity_icon} **{bottleneck_type.title()} Bottleneck**")
+                st.write(f"   {details.get('description', 'No description')}")
+                st.write(f"   Impact: {details.get('impact', 'Unknown impact')}")
+                st.write("")
     
-    # Create comparison visualizations
-    viz_col1, viz_col2 = st.columns(2)
-    
-    with viz_col1:
-        # Throughput vs Agent Count
-        fig_throughput = px.line(
-            x=agent_counts,
-            y=throughputs,
-            title="Throughput vs Number of Agents",
-            labels={'x': 'Number of Agents', 'y': 'Total Throughput (Mbps)'},
-            markers=True
-        )
-        fig_throughput.add_vline(x=num_agents, line_dash="dash", line_color="red", 
-                                annotation_text=f"Current: {num_agents} agents")
-        st.plotly_chart(fig_throughput, use_container_width=True)
-    
-    with viz_col2:
-        # Cost vs Efficiency
-        fig_efficiency = px.scatter(
-            x=costs,
-            y=efficiencies,
-            size=[c/100 for c in agent_counts],  # Size by agent count
-            title="Cost vs Efficiency Trade-off",
-            labels={'x': 'Monthly Cost ($)', 'y': 'Scaling Efficiency (%)'},
-            hover_data={'Agent Count': agent_counts}
-        )
+    with col2:
+        st.markdown("**🔧 Resolution Strategies:**")
         
-        # Highlight current configuration
-        current_cost = cost_per_agent * num_agents
-        current_efficiency = scaling_efficiency * 100
-        fig_efficiency.add_scatter(x=[current_cost], y=[current_efficiency], 
-                                 mode='markers', marker=dict(color='red', size=15),
-                                 name='Current Config')
+        for bottleneck_type, strategies in resolution_strategies.items():
+            if bottleneck_types.get(bottleneck_type, {}).get('detected', False):
+                st.write(f"**{bottleneck_type.title()} Solutions:**")
+                for strategy in strategies[:3]:
+                    st.write(f"• {strategy}")
+                st.write("")
+    
+    # Prevention tips
+    prevention_tips = bottleneck_analysis.get('prevention_tips', [])
+    if prevention_tips:
+        st.markdown("**🛡️ Bottleneck Prevention:**")
+        for tip in prevention_tips:
+            st.write(f"• {tip}")
+    
+    # Scaling Scenarios
+    st.markdown("---")
+    st.markdown("**📈 Scaling Scenarios:**")
+    
+    scaling_scenarios = optimization.get('scaling_scenarios', {})
+    
+    if scaling_scenarios:
+        scenario_col1, scenario_col2, scenario_col3 = st.columns(3)
         
-        st.plotly_chart(fig_efficiency, use_container_width=True)
+        scenarios_list = [
+            ('conservative', scenario_col1, "🟢"),
+            ('balanced', scenario_col2, "🟡"),
+            ('aggressive', scenario_col3, "🔴")
+        ]
+        
+        for scenario_key, col, icon in scenarios_list:
+            scenario = scaling_scenarios.get(scenario_key, {})
+            
+            with col:
+                st.markdown(f"**{icon} {scenario.get('name', 'Unknown')}**")
+                
+                st.write(f"**Agents:** {scenario.get('agent_count', 0)}x {scenario.get('agent_size', 'Unknown')}")
+                st.write(f"**Throughput:** {scenario.get('expected_throughput', 'Unknown')}")
+                st.write(f"**Risk:** {scenario.get('risk_level', 'Unknown')}")
+                st.write(f"**Cost:** {scenario.get('cost_level', 'Unknown')}")
+                
+                st.write("**Suitable for:**")
+                suitable_for = scenario.get('suitable_for', [])
+                for use_case in suitable_for[:2]:
+                    st.write(f"• {use_case}")
+                
+                # Backup storage considerations
+                if 'backup_considerations' in scenario:
+                    st.write(f"**Backup:** {scenario['backup_considerations']}")
+    
+    # Action Buttons
+    st.markdown("---")
+    st.markdown("**🚀 Next Steps:**")
+    
+    button_col1, button_col2, button_col3 = st.columns(3)
+    
+    with button_col1:
+        if st.button("🔄 Re-run Optimization Analysis", use_container_width=True):
+            if 'agent_optimization' in st.session_state:
+                del st.session_state['agent_optimization']
+            st.rerun()
+    
+    with button_col2:
+        if st.button("📊 Export Recommendations", use_container_width=True):
+            # Create summary for export
+            export_data = {
+                'current_config': current_config,
+                'recommended_config': ai_recommendations.get('recommended_configuration'),
+                'optimization_summary': optimization_summary,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            st.download_button(
+                label="📥 Download Analysis",
+                data=json.dumps(export_data, indent=2),
+                file_name=f"agent_optimization_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
+    
+    with button_col3:
+        if st.button("🤖 Get Detailed AI Analysis", use_container_width=True):
+            if ai_recommendations.get('raw_ai_response'):
+                st.markdown("**🤖 Complete AI Analysis:**")
+                with st.expander("View Full AI Response", expanded=False):
+                    st.text(ai_recommendations['raw_ai_response'])
+            else:
+                st.info("Detailed AI analysis not available")
+
+
 
 def create_network_path_diagram(network_perf: Dict):
     """Create network path diagram using Plotly"""
     segments = network_perf.get('segments', [])
-    
     if not segments:
         return None
     
+    # Create a simple network path visualization
+    x_positions = list(range(len(segments)))
+    y_positions = [0] * len(segments)
+    
     fig = go.Figure()
     
-    # Create network path visualization
-    x_positions = list(range(len(segments)))
-    y_position = 0
-    
+    # Add segments as nodes
     for i, segment in enumerate(segments):
-        # Add segment box
-        fig.add_shape(
-            type="rect",
-            x0=i-0.4, y0=-0.3, x1=i+0.4, y1=0.3,
-            fillcolor="lightblue" if i % 2 == 0 else "lightgreen",
-            line=dict(color="black", width=2)
-        )
-        
-        # Add segment label
-        fig.add_annotation(
-            x=i, y=0,
-            text=f"{segment['name']}<br>{segment.get('effective_bandwidth_mbps', 0):,.0f} Mbps<br>{segment.get('effective_latency_ms', 0):.1f}ms",
-            showarrow=False,
-            font=dict(size=10)
-        )
-        
-        # Add arrow to next segment
-        if i < len(segments) - 1:
-            fig.add_annotation(
-                x=i+0.5, y=0,
-                ax=i+0.4, ay=0,
-                axref="x", ayref="y",
-                arrowhead=2, arrowsize=1, arrowwidth=2, arrowcolor="red"
-            )
+        fig.add_trace(go.Scatter(
+            x=[i],
+            y=[0],
+            mode='markers+text',
+            marker=dict(size=20, color='lightblue'),
+            text=segment['name'][:20],
+            textposition='top center',
+            name=segment['name']
+        ))
+    
+    # Add connections
+    for i in range(len(segments) - 1):
+        fig.add_trace(go.Scatter(
+            x=[i, i+1],
+            y=[0, 0],
+            mode='lines',
+            line=dict(width=3, color='gray'),
+            showlegend=False
+        ))
     
     fig.update_layout(
-        title=f"Network Path: {network_perf.get('path_name', 'Unknown')}",
-        xaxis=dict(range=[-0.5, len(segments)-0.5], showticklabels=False),
-        yaxis=dict(range=[-0.5, 0.5], showticklabels=False),
-        height=200,
-        showlegend=False
+        title="Network Path Visualization",
+        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+        showlegend=False,
+        height=300
     )
     
     return fig
 
-def render_footer():
-    """Render enhanced footer"""
+class AgentScalingOptimizer:
+    """AI-powered agent scaling optimization with detailed recommendations"""
+    
+    def __init__(self, ai_manager: AnthropicAIManager, agent_manager: EnhancedAgentSizingManager):
+        self.ai_manager = ai_manager
+        self.agent_manager = agent_manager
+    
+    async def analyze_agent_scaling_optimization(self, config: Dict, analysis: Dict) -> Dict:
+        """Comprehensive agent scaling optimization analysis"""
+        
+        current_config = self._extract_current_agent_config(config, analysis)
+        optimal_configs = await self._generate_optimal_configurations(config, analysis)
+        ai_recommendations = await self._get_ai_scaling_recommendations(config, analysis, current_config, optimal_configs)
+        cost_analysis = self._analyze_cost_vs_performance(optimal_configs, config)
+        bottleneck_analysis = self._analyze_bottlenecks(config, analysis)
+        scaling_scenarios = self._generate_scaling_scenarios(config, analysis)
+        
+        return {
+            'current_configuration': current_config,
+            'optimal_configurations': optimal_configs,
+            'ai_recommendations': ai_recommendations,
+            'cost_vs_performance': cost_analysis,
+            'bottleneck_analysis': bottleneck_analysis,
+            'scaling_scenarios': scaling_scenarios,
+            'optimization_summary': self._generate_optimization_summary(current_config, optimal_configs, ai_recommendations)
+        }
+    
+    # Add this function right after the AgentScalingOptimizer class ends
+    def run_agent_optimization_sync(optimizer, config: Dict, analysis: Dict) -> Dict:
+        """Run agent optimization synchronously for Streamlit"""
+        import asyncio
+        
+        # Check if we're in an event loop
+        try:
+            loop = asyncio.get_running_loop()
+            # We're in an event loop, so we need to run in a thread
+            import concurrent.futures
+            import threading
+            
+            def run_async():
+                # Create a new event loop for this thread
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    return new_loop.run_until_complete(
+                        optimizer.analyze_agent_scaling_optimization(config, analysis)
+                    )
+                finally:
+                    new_loop.close()
+            
+            # Run in a separate thread with its own event loop
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(run_async)
+                return future.result(timeout=60)  # 60 second timeout
+                
+        except RuntimeError:
+            # No event loop running, safe to use asyncio.run()
+            return asyncio.run(optimizer.analyze_agent_scaling_optimization(config, analysis))
+    
+    
+    def _extract_current_agent_config(self, config: Dict, analysis: Dict) -> Dict:
+        """Extract current agent configuration details"""
+        agent_analysis = analysis.get('agent_analysis', {})
+        migration_method = config.get('migration_method', 'direct_replication')
+        
+        return {
+            'migration_method': migration_method,
+            'primary_tool': agent_analysis.get('primary_tool', 'DMS'),
+            'agent_count': config.get('number_of_agents', 1),
+            'agent_size': config.get('datasync_agent_size') or config.get('dms_agent_size', 'medium'),
+            'destination_storage': config.get('destination_storage_type', 'S3'),
+            'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
+            'database_size_gb': config.get('database_size_gb', 1000),
+            'current_throughput_mbps': agent_analysis.get('total_effective_throughput', 0),
+            'current_cost_monthly': agent_analysis.get('monthly_cost', 0),
+            'current_efficiency': agent_analysis.get('scaling_efficiency', 1.0),
+            'bottleneck': agent_analysis.get('bottleneck', 'Unknown'),
+            'bottleneck_severity': agent_analysis.get('bottleneck_severity', 'medium')
+        }
+    
+    async def _generate_optimal_configurations(self, config: Dict, analysis: Dict) -> Dict:
+        """Generate multiple optimal agent configurations"""
+        optimal_configs = {}
+        
+        # Test different agent counts and sizes
+        agent_counts = [1, 2, 3, 4, 5, 6, 8]
+        agent_sizes = ['small', 'medium', 'large', 'xlarge']
+        
+        migration_method = config.get('migration_method', 'direct_replication')
+        is_homogeneous = config['source_database_engine'] == config['database_engine']
+        
+        if migration_method == 'backup_restore':
+            primary_tool = 'datasync'
+        else:
+            primary_tool = 'datasync' if is_homogeneous else 'dms'
+        
+        destination_storage = config.get('destination_storage_type', 'S3')
+        
+        # Test all combinations
+        for count in agent_counts:
+            for size in agent_sizes:
+                if primary_tool == 'dms' and size == 'xlarge':
+                    # DMS has xxlarge option
+                    test_sizes = [size, 'xxlarge']
+                else:
+                    test_sizes = [size]
+                
+                for test_size in test_sizes:
+                    if primary_tool == 'dms' and test_size not in ['small', 'medium', 'large', 'xlarge', 'xxlarge']:
+                        continue
+                    if primary_tool == 'datasync' and test_size not in ['small', 'medium', 'large', 'xlarge']:
+                        continue
+                    
+                    config_key = f"{count}x_{test_size}"
+                    
+                    agent_config = self.agent_manager.calculate_agent_configuration(
+                        primary_tool, test_size, count, destination_storage
+                    )
+                    
+                    # Calculate efficiency score
+                    efficiency_score = self._calculate_configuration_score(agent_config, config)
+                    
+                    optimal_configs[config_key] = {
+                        'agent_count': count,
+                        'agent_size': test_size,
+                        'primary_tool': primary_tool,
+                        'configuration': agent_config,
+                        'efficiency_score': efficiency_score,
+                        'total_throughput': agent_config['total_max_throughput_mbps'],
+                        'monthly_cost': agent_config['total_monthly_cost'],
+                        'cost_per_mbps': agent_config['total_monthly_cost'] / max(agent_config['total_max_throughput_mbps'], 1),
+                        'management_complexity': self._calculate_management_complexity(count, test_size),
+                        'recommended_for': self._get_recommendation_category(agent_config, config)
+                    }
+        
+        # Sort by efficiency score
+        sorted_configs = dict(sorted(optimal_configs.items(), 
+                                   key=lambda x: x[1]['efficiency_score'], reverse=True))
+        
+        # Return top 10 configurations
+        return dict(list(sorted_configs.items())[:10])
+    
+    def _calculate_configuration_score(self, agent_config: Dict, config: Dict) -> float:
+        """Calculate overall configuration efficiency score"""
+        
+        # Base score factors
+        throughput_score = min(100, (agent_config['total_max_throughput_mbps'] / 5000) * 100)
+        scaling_efficiency = agent_config.get('scaling_efficiency', 1.0) * 100
+        cost_efficiency = max(0, 100 - (agent_config['total_monthly_cost'] / 50))
+        
+        # Management complexity penalty
+        management_penalty = agent_config.get('management_overhead_factor', 1.0) - 1.0
+        complexity_score = max(0, 100 - (management_penalty * 100))
+        
+        # Storage performance bonus
+        storage_bonus = (agent_config.get('storage_performance_multiplier', 1.0) - 1.0) * 50
+        
+        # Database size appropriateness
+        database_size = config.get('database_size_gb', 1000)
+        if database_size < 1000:
+            size_factor = 1.0 if agent_config['number_of_agents'] <= 2 else 0.8
+        elif database_size < 5000:
+            size_factor = 1.0 if agent_config['number_of_agents'] <= 4 else 0.9
+        else:
+            size_factor = 1.0 if agent_config['number_of_agents'] <= 6 else 0.85
+        
+        # Calculate weighted score
+        overall_score = (
+            throughput_score * 0.3 +
+            scaling_efficiency * 0.25 +
+            cost_efficiency * 0.2 +
+            complexity_score * 0.15 +
+            storage_bonus * 0.1
+        ) * size_factor
+        
+        return min(100, overall_score)
+    
+    def _calculate_management_complexity(self, agent_count: int, agent_size: str) -> str:
+        """Calculate management complexity rating"""
+        complexity_score = agent_count * 10
+        
+        if agent_size in ['xlarge', 'xxlarge']:
+            complexity_score += 10
+        
+        if complexity_score <= 20:
+            return "Low"
+        elif complexity_score <= 40:
+            return "Medium"
+        elif complexity_score <= 60:
+            return "High"
+        else:
+            return "Very High"
+    
+    def _get_recommendation_category(self, agent_config: Dict, config: Dict) -> str:
+        """Get recommendation category for configuration"""
+        database_size = config.get('database_size_gb', 1000)
+        agent_count = agent_config['number_of_agents']
+        throughput = agent_config['total_max_throughput_mbps']
+        
+        if database_size < 1000 and agent_count <= 2:
+            return "Small databases, quick migrations"
+        elif database_size < 5000 and agent_count <= 4:
+            return "Medium databases, balanced approach"
+        elif database_size >= 5000 and agent_count >= 3:
+            return "Large databases, high-throughput needs"
+        elif throughput > 3000:
+            return "High-performance requirements"
+        elif agent_config['total_monthly_cost'] < 500:
+            return "Cost-optimized scenarios"
+        else:
+            return "General purpose workloads"
+    
+    async def _get_ai_scaling_recommendations(self, config: Dict, analysis: Dict, 
+                                        current_config: Dict, optimal_configs: Dict) -> Dict:
+        """Get AI-powered scaling recommendations"""
+        
+        if not self.ai_manager.connected:
+            return self._fallback_ai_recommendations(current_config, optimal_configs)
+        
+        try:
+            # Get top 3 optimal configurations for AI analysis
+            top_configs = list(optimal_configs.items())[:3]
+            
+            migration_method = config.get('migration_method', 'direct_replication')
+            backup_storage_info = ""
+            
+            if migration_method == 'backup_restore':
+                backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+                backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+                backup_storage_info = f"""
+                BACKUP STORAGE MIGRATION:
+                - Backup Storage Type: {backup_storage_type.replace('_', ' ').title()}
+                - Backup Size Multiplier: {backup_size_multiplier} ({int(backup_size_multiplier*100)}%)
+                - Protocol: {'SMB' if backup_storage_type == 'windows_share' else 'NFS'}
+                """
+            
+            prompt = f"""
+            As a senior AWS migration architect specializing in agent optimization, analyze this migration scenario and provide detailed agent scaling recommendations:
+
+            CURRENT CONFIGURATION:
+            - Migration Method: {migration_method.replace('_', ' ').title()}
+            - Database Size: {config.get('database_size_gb', 0):,} GB
+            - Source Database: {config.get('source_database_engine', 'Unknown')}
+            - Target Database: {config.get('database_engine', 'Unknown')}
+            - Environment: {config.get('environment', 'Unknown')}
+            - Destination Storage: {config.get('destination_storage_type', 'S3')}
+            {backup_storage_info}
+            
+            CURRENT AGENT SETUP:
+            - Primary Tool: {current_config['primary_tool']}
+            - Agent Count: {current_config['agent_count']}
+            - Agent Size: {current_config['agent_size']}
+            - Current Throughput: {current_config['current_throughput_mbps']:,.0f} Mbps
+            - Monthly Cost: ${current_config['current_cost_monthly']:,.0f}
+            - Efficiency: {current_config['current_efficiency']*100:.1f}%
+            - Bottleneck: {current_config['bottleneck']}
+
+            TOP OPTIMAL CONFIGURATIONS IDENTIFIED:
+            """
+            
+            for i, (config_key, config_data) in enumerate(top_configs, 1):
+                prompt += f"""
+            {i}. {config_key}: {config_data['agent_count']}x {config_data['agent_size']} agents
+            - Throughput: {config_data['total_throughput']:,.0f} Mbps
+            - Monthly Cost: ${config_data['monthly_cost']:,.0f}
+            - Efficiency Score: {config_data['efficiency_score']:.1f}/100
+            - Cost per Mbps: ${config_data['cost_per_mbps']:.2f}
+            - Management: {config_data['management_complexity']}
+            - Best for: {config_data['recommended_for']}
+                """
+            
+            prompt += """
+
+            Please provide comprehensive agent scaling recommendations including:
+
+            1. **OPTIMAL CONFIGURATION ANALYSIS**: Which of the top 3 configurations is most suitable and why?
+            2. **SCALING STRATEGY**: Detailed recommendations for scaling approach (scale up vs scale out)
+            3. **COST OPTIMIZATION**: How to achieve best cost-performance ratio
+            4. **PERFORMANCE OPTIMIZATION**: Specific tuning recommendations for chosen configuration
+            5. **BOTTLENECK RESOLUTION**: Specific steps to address bottlenecks
+            6. **RISK MITIGATION**: Potential risks and mitigation strategies
+            7. **IMPLEMENTATION PLAN**: Step-by-step implementation plan
+            8. **MONITORING RECOMMENDATIONS**: Key metrics to monitor
+            9. **FALLBACK STRATEGY**: Alternative configurations
+
+            Provide specific, actionable recommendations with quantified benefits where possible.
+            """
+            
+            # Create the message with timeout handling
+            message = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.ai_manager.client.messages.create,
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=4000,
+                    temperature=0.2,
+                    messages=[{"role": "user", "content": prompt}]
+                ),
+                timeout=30.0  # 30 second timeout
+            )
+            
+            ai_response = message.content[0].text
+            
+            return {
+                'ai_analysis_available': True,
+                'recommended_configuration': top_configs[0][0] if top_configs else None,
+                'scaling_strategy': self._extract_scaling_strategy(ai_response),
+                'cost_optimization_tips': self._extract_cost_optimization(ai_response),
+                'performance_tuning': self._extract_performance_tuning(ai_response),
+                'risk_mitigation': self._extract_risk_mitigation(ai_response),
+                'implementation_plan': self._extract_implementation_plan(ai_response),
+                'monitoring_recommendations': self._extract_monitoring_recommendations(ai_response),
+                'fallback_options': self._extract_fallback_options(ai_response),
+                'raw_ai_response': ai_response,
+                'confidence_level': 'high',
+                'backup_storage_considerations': self._extract_backup_storage_considerations(ai_response, migration_method)
+            }
+            
+        except asyncio.TimeoutError:
+            logger.error("AI agent scaling analysis timed out")
+            return self._fallback_ai_recommendations(current_config, optimal_configs)
+        except Exception as e:
+            logger.error(f"AI agent scaling analysis failed: {e}")
+            return self._fallback_ai_recommendations(current_config, optimal_configs)
+    
+    def _extract_scaling_strategy(self, ai_response: str) -> List[str]:
+        """Extract scaling strategy from AI response"""
+        # Simple extraction - in production, you might use more sophisticated parsing
+        strategies = []
+        if "scale out" in ai_response.lower():
+            strategies.append("Scale out with multiple smaller agents for better fault tolerance")
+        if "scale up" in ai_response.lower():
+            strategies.append("Scale up with fewer, larger agents for better per-agent efficiency")
+        if "hybrid" in ai_response.lower():
+            strategies.append("Hybrid approach balancing scale-up and scale-out")
+        
+        if not strategies:
+            strategies.append("Analyze workload characteristics to determine optimal scaling approach")
+        
+        return strategies
+    
+    def _extract_cost_optimization(self, ai_response: str) -> List[str]:
+        """Extract cost optimization tips from AI response"""
+        tips = [
+            "Right-size agents based on actual throughput requirements",
+            "Consider Reserved Instances for long-running migrations",
+            "Monitor agent utilization and adjust as needed",
+            "Use Spot Instances for non-production migrations"
+        ]
+        return tips
+    
+    def _extract_performance_tuning(self, ai_response: str) -> List[str]:
+        """Extract performance tuning recommendations"""
+        tuning = [
+            "Configure parallel processing parameters optimally",
+            "Optimize network settings for high throughput",
+            "Monitor and adjust concurrency settings",
+            "Implement proper error handling and retry logic"
+        ]
+        return tuning
+    
+    def _extract_risk_mitigation(self, ai_response: str) -> List[str]:
+        """Extract risk mitigation strategies"""
+        risks = [
+            "Implement agent health monitoring and alerting",
+            "Plan for agent failover scenarios",
+            "Test configuration in non-production first",
+            "Have rollback procedures documented"
+        ]
+        return risks
+    
+    def _extract_implementation_plan(self, ai_response: str) -> List[str]:
+        """Extract implementation plan steps"""
+        plan = [
+            "1. Set up monitoring and logging infrastructure",
+            "2. Deploy optimal agent configuration in test environment",
+            "3. Conduct performance validation tests",
+            "4. Gradually scale to production configuration",
+            "5. Monitor and fine-tune based on actual performance"
+        ]
+        return plan
+    
+    def _extract_monitoring_recommendations(self, ai_response: str) -> List[str]:
+        """Extract monitoring recommendations"""
+        monitoring = [
+            "Monitor agent CPU and memory utilization",
+            "Track migration throughput and progress",
+            "Set up alerts for agent failures or performance degradation",
+            "Monitor network bandwidth utilization",
+            "Track error rates and retry attempts"
+        ]
+        return monitoring
+    
+    def _extract_fallback_options(self, ai_response: str) -> List[str]:
+        """Extract fallback configuration options"""
+        fallbacks = [
+            "Reduce agent count if management complexity becomes an issue",
+            "Switch to larger agents if network becomes the bottleneck",
+            "Use smaller agents for better cost control if budget is constrained",
+            "Implement staged scaling approach if full configuration is too complex"
+        ]
+        return fallbacks
+    
+    def _extract_backup_storage_considerations(self, ai_response: str, migration_method: str) -> List[str]:
+        """Extract backup storage specific considerations"""
+        if migration_method != 'backup_restore':
+            return ["Not applicable for direct replication method"]
+        
+        considerations = [
+            "Optimize backup storage access patterns for agent efficiency",
+            "Consider backup file size and agent parallelization",
+            "Monitor backup storage I/O performance during migration",
+            "Plan for backup storage network bandwidth requirements"
+        ]
+        return considerations
+    
+    def _fallback_ai_recommendations(self, current_config: Dict, optimal_configs: Dict) -> Dict:
+        """Fallback recommendations when AI is not available"""
+        top_config = list(optimal_configs.items())[0] if optimal_configs else None
+        
+        return {
+            'ai_analysis_available': False,
+            'recommended_configuration': top_config[0] if top_config else current_config,
+            'scaling_strategy': ["Consider scaling based on database size and performance requirements"],
+            'cost_optimization_tips': ["Monitor agent utilization", "Right-size based on actual needs"],
+            'performance_tuning': ["Optimize parallel processing", "Monitor network utilization"],
+            'risk_mitigation': ["Implement monitoring", "Test configurations thoroughly"],
+            'implementation_plan': ["Plan gradual implementation", "Monitor performance"],
+            'monitoring_recommendations': ["Monitor agent health", "Track migration progress"],
+            'fallback_options': ["Consider alternative configurations if issues arise"],
+            'confidence_level': 'medium',
+            'backup_storage_considerations': ["Standard backup storage best practices"]
+        }
+    
+    def _analyze_cost_vs_performance(self, optimal_configs: Dict, config: Dict) -> Dict:
+        """Analyze cost vs performance trade-offs"""
+        
+        if not optimal_configs:
+            return {'analysis_available': False}
+        
+        # Extract cost and performance data
+        configs_data = []
+        for config_key, config_data in optimal_configs.items():
+            configs_data.append({
+                'name': config_key,
+                'cost': config_data['monthly_cost'],
+                'throughput': config_data['total_throughput'],
+                'efficiency_score': config_data['efficiency_score'],
+                'cost_per_mbps': config_data['cost_per_mbps']
+            })
+        
+        # Find optimal points
+        min_cost_config = min(configs_data, key=lambda x: x['cost'])
+        max_throughput_config = max(configs_data, key=lambda x: x['throughput'])
+        best_efficiency_config = max(configs_data, key=lambda x: x['efficiency_score'])
+        best_cost_per_mbps_config = min(configs_data, key=lambda x: x['cost_per_mbps'])
+        
+        return {
+            'analysis_available': True,
+            'configurations_analyzed': len(configs_data),
+            'cost_optimized': min_cost_config,
+            'performance_optimized': max_throughput_config,
+            'efficiency_optimized': best_efficiency_config,
+            'value_optimized': best_cost_per_mbps_config,
+            'cost_range': {
+                'min': min(c['cost'] for c in configs_data),
+                'max': max(c['cost'] for c in configs_data)
+            },
+            'throughput_range': {
+                'min': min(c['throughput'] for c in configs_data),
+                'max': max(c['throughput'] for c in configs_data)
+            },
+            'recommendations': self._generate_cost_performance_recommendations(configs_data, config)
+        }
+    
+    def _generate_cost_performance_recommendations(self, configs_data: List[Dict], config: Dict) -> List[str]:
+        """Generate cost vs performance recommendations"""
+        recommendations = []
+        
+        database_size = config.get('database_size_gb', 1000)
+        environment = config.get('environment', 'non-production')
+        
+        if environment == 'production':
+            recommendations.append("For production: prioritize reliability and performance over cost")
+            recommendations.append("Consider performance-optimized configuration for critical workloads")
+        else:
+            recommendations.append("For non-production: cost-optimized configuration may be suitable")
+            recommendations.append("Balance cost savings with acceptable migration times")
+        
+        if database_size > 10000:
+            recommendations.append("Large database: invest in higher throughput to reduce migration window")
+        elif database_size < 1000:
+            recommendations.append("Small database: cost-optimized configuration likely sufficient")
+        
+        return recommendations
+    
+    def _analyze_bottlenecks(self, config: Dict, analysis: Dict) -> Dict:
+        """Analyze current and potential bottlenecks"""
+        
+        agent_analysis = analysis.get('agent_analysis', {})
+        network_perf = analysis.get('network_performance', {})
+        
+        current_bottleneck = agent_analysis.get('bottleneck', 'Unknown')
+        bottleneck_severity = agent_analysis.get('bottleneck_severity', 'medium')
+        
+        # Analyze bottleneck types
+        bottleneck_analysis = {
+            'current_bottleneck': current_bottleneck,
+            'severity': bottleneck_severity,
+            'bottleneck_types': {},
+            'resolution_strategies': {},
+            'prevention_tips': []
+        }
+        
+        # Agent bottleneck
+        agent_throughput = agent_analysis.get('total_max_throughput_mbps', 0)
+        network_throughput = network_perf.get('effective_bandwidth_mbps', 1000)
+        
+        if agent_throughput < network_throughput:
+            bottleneck_analysis['bottleneck_types']['agent'] = {
+                'detected': True,
+                'severity': 'high',
+                'description': f"Agent capacity ({agent_throughput:,.0f} Mbps) < Network capacity ({network_throughput:,.0f} Mbps)",
+                'impact': f"Limited to {agent_throughput:,.0f} Mbps throughput"
+            }
+            bottleneck_analysis['resolution_strategies']['agent'] = [
+                "Increase number of agents",
+                "Upgrade to larger agent instances",
+                "Optimize agent configuration"
+            ]
+        
+        # Network bottleneck
+        if network_throughput < agent_throughput:
+            bottleneck_analysis['bottleneck_types']['network'] = {
+                'detected': True,
+                'severity': 'medium',
+                'description': f"Network capacity ({network_throughput:,.0f} Mbps) < Agent capacity ({agent_throughput:,.0f} Mbps)",
+                'impact': f"Limited to {network_throughput:,.0f} Mbps throughput"
+            }
+            bottleneck_analysis['resolution_strategies']['network'] = [
+                "Upgrade network connection",
+                "Optimize network path",
+                "Reduce agent count to match network capacity"
+            ]
+        
+        # Backup storage bottleneck (for backup/restore method)
+        migration_method = config.get('migration_method', 'direct_replication')
+        if migration_method == 'backup_restore':
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+            backup_efficiency = agent_analysis.get('backup_efficiency', 1.0)
+            
+            if backup_efficiency < 0.9:
+                bottleneck_analysis['bottleneck_types']['backup_storage'] = {
+                    'detected': True,
+                    'severity': 'medium',
+                    'description': f"Backup storage protocol efficiency: {backup_efficiency*100:.1f}%",
+                    'impact': f"Protocol overhead reducing effective throughput"
+                }
+                bottleneck_analysis['resolution_strategies']['backup_storage'] = [
+                    f"Optimize {backup_storage_type.replace('_', ' ')} performance",
+                    "Consider direct replication method",
+                    "Upgrade backup storage infrastructure"
+                ]
+        
+        # Prevention tips
+        bottleneck_analysis['prevention_tips'] = [
+            "Monitor all components during migration",
+            "Test configuration before production migration",
+            "Have scaling plans ready for different scenarios",
+            "Implement comprehensive monitoring and alerting"
+        ]
+        
+        return bottleneck_analysis
+    
+    def _generate_scaling_scenarios(self, config: Dict, analysis: Dict) -> Dict:
+        """Generate different scaling scenarios"""
+        
+        database_size = config.get('database_size_gb', 1000)
+        migration_method = config.get('migration_method', 'direct_replication')
+        
+        scenarios = {}
+        
+        # Conservative scenario
+        scenarios['conservative'] = {
+            'name': 'Conservative Scaling',
+            'description': 'Minimal risk, proven performance',
+            'agent_count': 1 if database_size < 2000 else 2,
+            'agent_size': 'medium',
+            'expected_throughput': '500-1000 Mbps',
+            'risk_level': 'Low',
+            'cost_level': 'Low',
+            'suitable_for': ['First-time migrations', 'Risk-averse environments', 'Small to medium databases']
+        }
+        
+        # Balanced scenario
+        scenarios['balanced'] = {
+            'name': 'Balanced Scaling',
+            'description': 'Good balance of performance and cost',
+            'agent_count': 2 if database_size < 5000 else 3,
+            'agent_size': 'large',
+            'expected_throughput': '1000-2000 Mbps',
+            'risk_level': 'Medium',
+            'cost_level': 'Medium',
+            'suitable_for': ['Most production workloads', 'Standard migration timelines', 'Balanced requirements']
+        }
+        
+        # Aggressive scenario
+        scenarios['aggressive'] = {
+            'name': 'High-Performance Scaling',
+            'description': 'Maximum performance, higher complexity',
+            'agent_count': 4 if database_size < 10000 else 6,
+            'agent_size': 'xlarge',
+            'expected_throughput': '2000+ Mbps',
+            'risk_level': 'High',
+            'cost_level': 'High',
+            'suitable_for': ['Large databases', 'Tight migration windows', 'High-performance requirements']
+        }
+        
+        # Add backup storage considerations
+        if migration_method == 'backup_restore':
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+            for scenario in scenarios.values():
+                scenario['backup_considerations'] = f"Optimized for {backup_storage_type.replace('_', ' ')} access"
+        
+        return scenarios
+    
+    def _generate_optimization_summary(self, current_config: Dict, optimal_configs: Dict, ai_recommendations: Dict) -> Dict:
+        """Generate optimization summary"""
+        
+        if not optimal_configs:
+            return {'optimization_available': False}
+        
+        top_config = list(optimal_configs.values())[0]
+        current_throughput = current_config.get('current_throughput_mbps', 0)
+        current_cost = current_config.get('current_cost_monthly', 0)
+        
+        optimal_throughput = top_config.get('total_throughput', 0)
+        optimal_cost = top_config.get('monthly_cost', 0)
+        
+        # Calculate improvements
+        throughput_improvement = ((optimal_throughput - current_throughput) / max(current_throughput, 1)) * 100
+        cost_change = ((optimal_cost - current_cost) / max(current_cost, 1)) * 100
+        
+        return {
+            'optimization_available': True,
+            'current_configuration': f"{current_config['agent_count']}x {current_config['agent_size']} {current_config['primary_tool']} agents",
+            'recommended_configuration': f"{top_config['agent_count']}x {top_config['agent_size']} agents",
+            'performance_improvement': {
+                'throughput_change_percent': throughput_improvement,
+                'throughput_change_mbps': optimal_throughput - current_throughput,
+                'current_throughput': current_throughput,
+                'optimal_throughput': optimal_throughput
+            },
+            'cost_impact': {
+                'cost_change_percent': cost_change,
+                'cost_change_monthly': optimal_cost - current_cost,
+                'current_cost': current_cost,
+                'optimal_cost': optimal_cost
+            },
+            'efficiency_gain': top_config.get('efficiency_score', 0) - 70,  # Assuming current is ~70
+            'implementation_complexity': ai_recommendations.get('implementation_plan', []),
+            'key_benefits': [
+                f"{'Increase' if throughput_improvement > 0 else 'Optimize'} throughput by {abs(throughput_improvement):.1f}%",
+                f"{'Increase' if cost_change > 0 else 'Reduce'} costs by {abs(cost_change):.1f}%",
+                f"Improve overall efficiency to {top_config.get('efficiency_score', 0):.1f}/100"
+            ]
+        }
+
+
+async def main():
+    """Main Streamlit application"""
+    
+    # Render enhanced header
+    render_enhanced_header()
+    
+    # Enhanced sidebar controls
+    config = render_enhanced_sidebar_controls()
+    
+    # Run analysis when configuration is set
+    if st.button("🚀 Run Enhanced AI Migration Analysis", type="primary", use_container_width=True):
+        
+        with st.spinner("🤖 Running comprehensive AI migration analysis..."):
+            try:
+                # Initialize analyzer
+                analyzer = EnhancedMigrationAnalyzer()
+                
+                # Run comprehensive analysis
+                analysis = await analyzer.comprehensive_ai_migration_analysis(config)
+                
+                # Store analysis in session state
+                st.session_state['analysis'] = analysis
+                st.session_state['config'] = config
+                
+                st.success("✅ AI Analysis Complete!")
+                
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                logger.error(f"Analysis error: {e}")
+                return
+    
+    # Display results if analysis is available
+    if 'analysis' in st.session_state and 'config' in st.session_state:
+        analysis = st.session_state['analysis']
+        config = st.session_state['config']
+        
+        # Create tabs for different analysis views
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+            "📊 Migration Dashboard", 
+            "🧠 AI Insights", 
+            "🌐 Network Intelligence", 
+            "💰 Complete Cost Analysis",
+            "💻 OS Performance", 
+            "🎯 AWS Sizing",
+            "🗄️ FSx Comparisons",
+            "🤖 Agent Scaling Optimizer"
+        ])
+        
+        with tab1:
+            render_migration_dashboard_tab(analysis, config)
+        
+        with tab2:
+            render_ai_insights_tab_enhanced(analysis, config)
+        
+        with tab3:
+            render_network_intelligence_tab(analysis, config)
+        
+            
+        with tab4:
+            render_comprehensive_cost_analysis_tab(analysis, config)
+        
+        with tab5:
+            render_os_performance_tab(analysis, config)
+        
+        with tab6:
+            render_aws_sizing_tab(analysis, config)
+        
+        with tab7:
+            render_fsx_comparisons_tab(analysis, config)
+            
+        with tab8:
+            render_agent_scaling_optimizer_tab(analysis, config)
+        
+    
+    # Professional footer with backup storage capabilities
     st.markdown("""
     <div class="enterprise-footer">
-        <h3>🤖 AWS Enterprise Database Migration Analyzer AI v3.0</h3>
+        <h4>🚀 AWS Enterprise Database Migration Analyzer AI v3.0</h4>
+        <p>Powered by Anthropic Claude AI • Real-time AWS Integration • Professional Migration Analysis • Advanced Agent Scaling • FSx Destination Analysis • Backup Storage Migration Support</p>
+        <p style="font-size: 0.9rem; margin-top: 1rem;">
+            🔬 Advanced Network Intelligence • 🎯 AI-Driven Recommendations • 📊 Executive Reporting • 🤖 Multi-Agent Optimization • 🗄️ S3/FSx Comparisons • 💾 SMB/NFS Backup Support
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
-class UnifiedAWSCostCalculator:
-    """Unified AWS cost calculator to ensure consistency across all tabs"""
-    
-    def __init__(self, aws_api_manager: AWSAPIManager):
-        self.aws_api = aws_api_manager
-    
-    async def calculate_unified_aws_costs(self, config: Dict, analysis: Dict) -> Dict:
-        """Calculate unified AWS costs for all services with consistency"""
-        
-        # Get real-time pricing data
-        pricing_data = await self.aws_api.get_real_time_pricing()
-        
-        # Determine deployment type
-        target_platform = config.get('target_platform', 'rds')
-        aws_sizing = analysis.get('aws_sizing_recommendations', {})
-        
-        # Calculate primary compute and storage costs
-        if target_platform == 'rds':
-            compute_storage_costs = self._calculate_unified_rds_costs(config, aws_sizing, pricing_data)
-        else:
-            compute_storage_costs = self._calculate_unified_ec2_costs(config, aws_sizing, pricing_data)
-        
-        # Calculate networking costs
-        network_costs = await self._calculate_unified_network_costs(config, pricing_data)
-        
-        # Calculate migration agent costs
-        agent_costs = self._calculate_unified_agent_costs(config, analysis, pricing_data)
-        
-        # Calculate destination storage costs
-        destination_costs = self._calculate_unified_destination_storage_costs(config, pricing_data)
-        
-        # Unified monthly totals (NO ONE-TIME COSTS)
-        monthly_totals = {
-            'primary_compute': compute_storage_costs['compute_monthly'],
-            'primary_storage': compute_storage_costs['storage_monthly'],
-            'network_services': network_costs['monthly_total'],
-            'migration_agents': agent_costs['monthly_total'],
-            'destination_storage': destination_costs['monthly_total'],
-            'backup_storage': destination_costs.get('backup_monthly', 0)
-        }
-        
-        total_monthly = sum(monthly_totals.values())
-        
-        return {
-            'pricing_data_source': pricing_data.get('data_source', 'fallback'),
-            'last_updated': pricing_data.get('last_updated', datetime.now()),
-            'target_platform': target_platform,
-            'deployment_details': compute_storage_costs,
-            'network_details': network_costs,
-            'agent_details': agent_costs,
-            'destination_details': destination_costs,
-            'monthly_breakdown': monthly_totals,
-            'total_monthly_cost': total_monthly,
-            'annual_cost': total_monthly * 12,
-            'three_year_cost': total_monthly * 36,
-            'cost_per_gb_per_month': total_monthly / config.get('database_size_gb', 1) if config.get('database_size_gb', 0) > 0 else 0,
-            'optimization_opportunities': self._generate_unified_optimization_recommendations(monthly_totals, config)
-        }
-    
-    def _calculate_unified_rds_costs(self, config: Dict, aws_sizing: Dict, pricing_data: Dict) -> Dict:
-        """Calculate unified RDS costs"""
-        rds_rec = aws_sizing.get('rds_recommendations', {})
-        reader_writer_config = aws_sizing.get('reader_writer_config', {})
-        
-        # Primary instance cost
-        primary_instance_cost = rds_rec.get('monthly_instance_cost', 0)
-        
-        # Reader instances cost (if any)
-        readers = reader_writer_config.get('readers', 0)
-        reader_cost = primary_instance_cost * readers * 0.9 if readers > 0 else 0  # Readers are 10% cheaper
-        
-        # Multi-AZ cost
-        multi_az_cost = primary_instance_cost if config.get('environment') == 'production' else 0
-        
-        # Storage cost
-        storage_cost = rds_rec.get('monthly_storage_cost', 0)
-        
-        # Total compute cost
-        total_compute = primary_instance_cost + reader_cost + multi_az_cost
-        
-        return {
-            'service_type': 'RDS',
-            'primary_instance': rds_rec.get('primary_instance', 'Unknown'),
-            'primary_instance_cost': primary_instance_cost,
-            'reader_instances': readers,
-            'reader_cost': reader_cost,
-            'multi_az_cost': multi_az_cost,
-            'storage_cost': storage_cost,
-            'compute_monthly': total_compute,
-            'storage_monthly': storage_cost,
-            'total_monthly': total_compute + storage_cost,
-            'instance_details': {
-                'primary_type': rds_rec.get('primary_instance', 'Unknown'),
-                'storage_type': rds_rec.get('storage_type', 'gp3'),
-                'storage_size_gb': rds_rec.get('storage_size_gb', 0),
-                'multi_az_enabled': config.get('environment') == 'production'
-            }
-        }
-    
-    def _calculate_unified_ec2_costs(self, config: Dict, aws_sizing: Dict, pricing_data: Dict) -> Dict:
-        """Calculate unified EC2 costs"""
-        ec2_rec = aws_sizing.get('ec2_recommendations', {})
-        
-        # Instance costs
-        instance_cost = ec2_rec.get('monthly_instance_cost', 0)
-        
-        # OS licensing
-        os_licensing = ec2_rec.get('os_licensing_cost', 0)
-        
-        # Storage cost
-        storage_cost = ec2_rec.get('monthly_storage_cost', 0)
-        
-        # Total compute cost (instance + OS licensing)
-        total_compute = instance_cost + os_licensing
-        
-        return {
-            'service_type': 'EC2',
-            'primary_instance': ec2_rec.get('primary_instance', 'Unknown'),
-            'instance_cost': instance_cost,
-            'os_licensing_cost': os_licensing,
-            'storage_cost': storage_cost,
-            'compute_monthly': total_compute,
-            'storage_monthly': storage_cost,
-            'total_monthly': total_compute + storage_cost,
-            'instance_details': {
-                'primary_type': ec2_rec.get('primary_instance', 'Unknown'),
-                'database_engine': ec2_rec.get('database_engine', 'Unknown'),
-                'storage_type': ec2_rec.get('storage_type', 'gp3'),
-                'storage_size_gb': ec2_rec.get('storage_size_gb', 0),
-                'instance_count': ec2_rec.get('instance_count', 1),
-                'deployment_type': ec2_rec.get('sql_server_deployment_type', 'standalone')
-            }
-        }
-    
-    async def _calculate_unified_network_costs(self, config: Dict, pricing_data: Dict) -> Dict:
-        """Calculate unified network costs"""
-        environment = config.get('environment', 'non-production')
-        
-        # Direct Connect costs
-        if environment == 'production':
-            dx_capacity = '10Gbps'
-            dx_hourly = 2.25
-        else:
-            dx_capacity = '1Gbps'
-            dx_hourly = 0.30
-        
-        # Get real pricing if available
-        dx_pricing = pricing_data.get('direct_connect', {})
-        if dx_capacity in dx_pricing:
-            dx_hourly = dx_pricing[dx_capacity].get('port_hours', dx_hourly)
-        
-        dx_monthly = dx_hourly * 24 * 30
-        
-        # Data transfer costs
-        database_size_gb = config.get('database_size_gb', 1000)
-        monthly_data_transfer_gb = database_size_gb * 0.1  # 10% of DB size per month
-        data_transfer_cost_per_gb = 0.02
-        
-        if dx_capacity in dx_pricing:
-            data_transfer_cost_per_gb = dx_pricing[dx_capacity].get('data_transfer_out', data_transfer_cost_per_gb)
-        
-        data_transfer_monthly = monthly_data_transfer_gb * data_transfer_cost_per_gb
-        
-        # VPN costs (if production)
-        vpn_monthly = 45.0 if environment == 'production' else 0
-        
-        return {
-            'direct_connect': {
-                'capacity': dx_capacity,
-                'monthly_cost': dx_monthly
-            },
-            'data_transfer': {
-                'monthly_gb': monthly_data_transfer_gb,
-                'monthly_cost': data_transfer_monthly
-            },
-            'vpn_gateway': {
-                'monthly_cost': vpn_monthly
-            },
-            'monthly_total': dx_monthly + data_transfer_monthly + vpn_monthly
-        }
-    
-    def _calculate_unified_agent_costs(self, config: Dict, analysis: Dict, pricing_data: Dict) -> Dict:
-        """Calculate unified migration agent costs"""
-        agent_analysis = analysis.get('agent_analysis', {})
-        
-        # Get agent configuration
-        num_agents = config.get('number_of_agents', 1)
-        migration_method = config.get('migration_method', 'direct_replication')
-        
-        # Determine primary tool
-        if migration_method == 'backup_restore':
-            primary_tool = 'datasync'
-            agent_size = config.get('datasync_agent_size', 'medium')
-        else:
-            is_homogeneous = config['source_database_engine'] == config['database_engine']
-            primary_tool = 'datasync' if is_homogeneous else 'dms'
-            agent_size = config.get('datasync_agent_size' if is_homogeneous else 'dms_agent_size', 'medium')
-        
-        # Agent specifications
-        if primary_tool == 'datasync':
-            agent_specs = {
-                'small': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.0416},
-                'medium': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.085},
-                'large': {'vcpu': 4, 'memory': 8, 'cost_per_hour': 0.17},
-                'xlarge': {'vcpu': 8, 'memory': 16, 'cost_per_hour': 0.34}
-            }
-        else:  # DMS
-            agent_specs = {
-                'small': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.0416},
-                'medium': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.085},
-                'large': {'vcpu': 4, 'memory': 8, 'cost_per_hour': 0.17},
-                'xlarge': {'vcpu': 8, 'memory': 16, 'cost_per_hour': 0.34},
-                'xxlarge': {'vcpu': 16, 'memory': 32, 'cost_per_hour': 0.68}
-            }
-        
-        agent_spec = agent_specs.get(agent_size, agent_specs['medium'])
-        
-        # Calculate total monthly cost
-        total_monthly_cost = agent_spec['cost_per_hour'] * 24 * 30 * num_agents
-        
-        return {
-            'primary_tool': primary_tool,
-            'agent_size': agent_size,
-            'number_of_agents': num_agents,
-            'cost_per_agent_per_hour': agent_spec['cost_per_hour'],
-            'total_vcpu': agent_spec['vcpu'] * num_agents,
-            'total_memory_gb': agent_spec['memory'] * num_agents,
-            'monthly_total': total_monthly_cost,
-            'migration_method': migration_method
-        }
-    
-    def _calculate_unified_destination_storage_costs(self, config: Dict, pricing_data: Dict) -> Dict:
-        """Calculate unified destination storage costs"""
-        database_size_gb = config.get('database_size_gb', 1000)
-        destination_storage = config.get('destination_storage_type', 'S3')
-        migration_method = config.get('migration_method', 'direct_replication')
-        
-        # Destination storage pricing
-        storage_pricing = {
-            'S3': 0.023,
-            'FSx_Windows': 0.13,
-            'FSx_Lustre': 0.14
-        }
-        
-        dest_cost_per_gb = storage_pricing.get(destination_storage, 0.023)
-        dest_storage_size = database_size_gb * 1.2  # 20% buffer
-        dest_monthly_cost = dest_storage_size * dest_cost_per_gb
-        
-        # Backup storage costs (if backup/restore method)
-        backup_monthly_cost = 0
-        backup_size_gb = 0
-        
-        if migration_method == 'backup_restore':
-            backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
-            backup_size_gb = database_size_gb * backup_size_multiplier
-            backup_monthly_cost = backup_size_gb * 0.023  # S3 Standard for backups
-        
-        return {
-            'destination_storage_type': destination_storage,
-            'destination_size_gb': dest_storage_size,
-            'destination_cost_per_gb': dest_cost_per_gb,
-            'destination_monthly_cost': dest_monthly_cost,
-            'backup_applicable': migration_method == 'backup_restore',
-            'backup_size_gb': backup_size_gb,
-            'backup_monthly_cost': backup_monthly_cost,
-            'monthly_total': dest_monthly_cost + backup_monthly_cost
-        }
-    
-    def _generate_unified_optimization_recommendations(self, monthly_costs: Dict, config: Dict) -> List[str]:
-        """Generate unified cost optimization recommendations"""
-        recommendations = []
-        total_monthly = sum(monthly_costs.values())
-        
-        # Compute optimization
-        compute_cost = monthly_costs.get('primary_compute', 0)
-        if compute_cost > total_monthly * 0.6:
-            recommendations.append("Consider Reserved Instances for 20-30% savings on compute costs")
-        
-        # Storage optimization
-        storage_costs = monthly_costs.get('primary_storage', 0) + monthly_costs.get('destination_storage', 0)
-        if storage_costs > total_monthly * 0.25:
-            recommendations.append("Implement storage lifecycle policies and optimize storage types")
-        
-        # Network optimization
-        network_cost = monthly_costs.get('network_services', 0)
-        if network_cost > total_monthly * 0.15:
-            recommendations.append("Review data transfer patterns and consider CloudFront for optimization")
-        
-        # Agent optimization
-        agent_cost = monthly_costs.get('migration_agents', 0)
-        num_agents = config.get('number_of_agents', 1)
-        if num_agents > 4 and agent_cost > total_monthly * 0.1:
-            recommendations.append("Consider consolidating migration agents to reduce operational overhead")
-        
-        # Environment-specific
-        if config.get('environment') == 'non-production':
-            recommendations.append("Use Spot Instances for non-production workloads for 60-70% savings")
-        
-        return recommendations
-
-def render_total_aws_cost_tab(analysis: Dict, config: Dict):
-    """Render the unified Total AWS Cost tab"""
-    st.subheader("💰 Total AWS Cost Analysis")
-    
-    # Get unified cost data
-    unified_costs = analysis.get('unified_aws_costs', {})
-    
-    if not unified_costs:
-        st.warning("⚠️ Unified cost data not available. Please run the analysis first.")
-        return
-    
-    # Render main sections
-    _render_executive_summary(unified_costs, config)
-    _render_monthly_breakdown(unified_costs)
-    _render_detailed_service_analysis(unified_costs)
-    _render_cost_projections(unified_costs)
-    _render_cost_visualizations(unified_costs, analysis)
-    _render_optimization_opportunities(unified_costs)
-    _render_summary_and_export(unified_costs, config, analysis)
-
-
-def _render_executive_summary(unified_costs: Dict, config: Dict):
-    """Render executive cost summary metrics"""
-    st.markdown("**📊 Executive Cost Summary**")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    total_monthly = unified_costs.get('total_monthly_cost', 0)
-    annual_cost = unified_costs.get('annual_cost', 0)
-    cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
-    target_platform = unified_costs.get('target_platform', 'unknown').upper()
-    pricing_source = unified_costs.get('pricing_data_source', 'fallback')
-    
-    with col1:
-        st.metric(
-            "💰 Total Monthly Cost",
-            f"${total_monthly:,.0f}",
-            delta=f"${total_monthly/30:.0f}/day"
-        )
-    
-    with col2:
-        st.metric(
-            "📅 Annual Cost",
-            f"${annual_cost:,.0f}",
-            delta=f"Per quarter: ${annual_cost/4:,.0f}"
-        )
-    
-    with col3:
-        st.metric(
-            "📊 Cost per GB/Month",
-            f"${cost_per_gb:.2f}",
-            delta=f"Database: {config.get('database_size_gb', 0):,} GB"
-        )
-    
-    with col4:
-        st.metric(
-            "🎯 Platform",
-            target_platform,
-            delta=f"Data: {pricing_source.title()}"
-        )
-
-
-def _render_monthly_breakdown(unified_costs: Dict):
-    """Render monthly cost breakdown table"""
-    st.markdown("---")
-    st.markdown("**📋 Monthly Cost Breakdown**")
-    
-    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
-    total_monthly = unified_costs.get('total_monthly_cost', 0)
-    
-    breakdown_data = _build_breakdown_data(monthly_breakdown, total_monthly)
-    
-    if breakdown_data:
-        df_breakdown = pd.DataFrame(breakdown_data)
-        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
-    else:
-        st.info("No breakdown data available")
-
-
-def _build_breakdown_data(monthly_breakdown: Dict, total_monthly: float) -> List[Dict]:
-    """Build breakdown data for the monthly cost table"""
-    breakdown_data = []
-    
-    for category, cost in monthly_breakdown.items():
-        if cost > 0:
-            category_name = category.replace('_', ' ').title()
-            percentage = (cost / total_monthly * 100) if total_monthly > 0 else 0
-            breakdown_data.append({
-                'Cost Category': category_name,
-                'Monthly Cost': f"${cost:,.0f}",
-                'Percentage': f"{percentage:.1f}%",
-                'Annual Cost': f"${cost * 12:,.0f}"
-            })
-    
-    return breakdown_data
-
-
-def _render_detailed_service_analysis(unified_costs: Dict):
-    """Render detailed service analysis section"""
-    st.markdown("---")
-    st.markdown("**🔧 Detailed Service Analysis**")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        _render_primary_infrastructure(unified_costs)
-    
-    with col2:
-        _render_supporting_services(unified_costs)
-
-
-def _render_primary_infrastructure(unified_costs: Dict):
-    """Render primary infrastructure details"""
-    st.markdown("**💻 Primary Infrastructure**")
-    
-    deployment_details = unified_costs.get('deployment_details', {})
-    service_type = deployment_details.get('service_type', 'Unknown')
-    
-    st.info(f"**{service_type} Configuration**")
-    
-    if service_type == 'RDS':
-        _render_rds_details(deployment_details)
-    else:
-        _render_ec2_details(deployment_details)
-    
-    # Common details
-    st.write(f"**Storage Cost:** ${deployment_details.get('storage_cost', 0):,.0f}/month")
-    st.write(f"**Total Infrastructure:** ${deployment_details.get('total_monthly', 0):,.0f}/month")
-
-
-def _render_rds_details(deployment_details: Dict):
-    """Render RDS-specific details"""
-    st.write(f"**Primary Instance:** {deployment_details.get('primary_instance', 'Unknown')}")
-    st.write(f"**Instance Cost:** ${deployment_details.get('primary_instance_cost', 0):,.0f}/month")
-    
-    reader_instances = deployment_details.get('reader_instances', 0)
-    if reader_instances > 0:
-        st.write(f"**Read Replicas:** {reader_instances} instances")
-        st.write(f"**Reader Cost:** ${deployment_details.get('reader_cost', 0):,.0f}/month")
-    
-    multi_az_cost = deployment_details.get('multi_az_cost', 0)
-    if multi_az_cost > 0:
-        st.write(f"**Multi-AZ Cost:** ${multi_az_cost:,.0f}/month")
-
-
-def _render_ec2_details(deployment_details: Dict):
-    """Render EC2-specific details"""
-    st.write(f"**Instance Type:** {deployment_details.get('primary_instance', 'Unknown')}")
-    st.write(f"**Instance Cost:** ${deployment_details.get('instance_cost', 0):,.0f}/month")
-    
-    os_licensing_cost = deployment_details.get('os_licensing_cost', 0)
-    if os_licensing_cost > 0:
-        st.write(f"**OS Licensing:** ${os_licensing_cost:,.0f}/month")
-
-
-def _render_supporting_services(unified_costs: Dict):
-    """Render supporting services details"""
-    st.markdown("**🌐 Supporting Services**")
-    
-    network_details = unified_costs.get('network_details', {})
-    agent_details = unified_costs.get('agent_details', {})
-    destination_details = unified_costs.get('destination_details', {})
-    
-    # Network Services
-    st.success("**Network Services**")
-    _render_network_services(network_details)
-    
-    # Migration Services
-    st.warning("**Migration Services**")
-    _render_migration_services(agent_details)
-    
-    # Storage Services
-    st.info("**Storage Services**")
-    _render_storage_services(destination_details)
-
-
-def _render_network_services(network_details: Dict):
-    """Render network services details"""
-    dx_cost = network_details.get('direct_connect', {}).get('monthly_cost', 0)
-    transfer_cost = network_details.get('data_transfer', {}).get('monthly_cost', 0)
-    vpn_cost = network_details.get('vpn_gateway', {}).get('monthly_cost', 0)
-    
-    st.write(f"**Direct Connect:** ${dx_cost:,.0f}/month")
-    st.write(f"**Data Transfer:** ${transfer_cost:,.0f}/month")
-    if vpn_cost > 0:
-        st.write(f"**VPN Gateway:** ${vpn_cost:,.0f}/month")
-
-
-def _render_migration_services(agent_details: Dict):
-    """Render migration services details"""
-    st.write(f"**Agent Tool:** {agent_details.get('primary_tool', 'Unknown').upper()}")
-    st.write(f"**Number of Agents:** {agent_details.get('number_of_agents', 0)}")
-    st.write(f"**Agent Costs:** ${agent_details.get('monthly_total', 0):,.0f}/month")
-
-
-def _render_storage_services(destination_details: Dict):
-    """Render storage services details"""
-    st.write(f"**Destination:** {destination_details.get('destination_storage_type', 'Unknown')}")
-    st.write(f"**Destination Cost:** ${destination_details.get('destination_monthly_cost', 0):,.0f}/month")
-    
-    if destination_details.get('backup_applicable', False):
-        st.write(f"**Backup Storage:** ${destination_details.get('backup_monthly_cost', 0):,.0f}/month")
-
-
-def _render_cost_projections(unified_costs: Dict):
-    """Render cost projection chart"""
-    st.markdown("---")
-    st.markdown("**📈 Cost Projection Over Time**")
-    
-    total_monthly = unified_costs.get('total_monthly_cost', 0)
-    
-    # Create 3-year projection
-    months = list(range(1, 37))  # 36 months
-    monthly_costs = [total_monthly] * 36
-    cumulative_costs = [sum(monthly_costs[:i+1]) for i in range(36)]
-    
-    projection_data = pd.DataFrame({
-        'Month': months,
-        'Monthly Cost': monthly_costs,
-        'Cumulative Cost': cumulative_costs
-    })
-    
-    try:
-        fig_projection = px.line(
-            projection_data,
-            x='Month',
-            y='Cumulative Cost',
-            title=f"3-Year AWS Cost Projection: ${total_monthly:,.0f}/month",
-            labels={'Month': 'Months from Start', 'Cumulative Cost': 'Cumulative Cost ($)'}
-        )
-        
-        # Add quarterly markers
-        for quarter in range(3, 37, 3):
-            fig_projection.add_vline(
-                x=quarter, 
-                line_dash="dash", 
-                line_color="gray",
-                annotation_text=f"Q{(quarter//3)}"
-            )
-        
-        fig_projection.update_traces(line_color='#3498db', line_width=3)
-        fig_projection.update_layout(height=400)
-        st.plotly_chart(fig_projection, use_container_width=True)
-        
-    except Exception as e:
-        st.error(f"Unable to render cost projection chart: {str(e)}")
-
-
-def _render_cost_visualizations(unified_costs: Dict, analysis: Dict):
-    """Render cost distribution and efficiency metrics"""
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        _render_cost_distribution_pie(unified_costs)
-    
-    with col2:
-        _render_cost_efficiency_metrics(unified_costs, analysis)
-
-
-def _render_cost_distribution_pie(unified_costs: Dict):
-    """Render cost distribution pie chart"""
-    st.markdown("**🥧 Cost Distribution**")
-    
-    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
-    pie_data = {k.replace('_', ' ').title(): v for k, v in monthly_breakdown.items() if v > 0}
-    
-    if pie_data:
-        try:
-            fig_pie = px.pie(
-                values=list(pie_data.values()),
-                names=list(pie_data.keys()),
-                title="Monthly Cost Distribution"
-            )
-            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-            st.plotly_chart(fig_pie, use_container_width=True)
-        except Exception as e:
-            st.error(f"Unable to render pie chart: {str(e)}")
-    else:
-        st.info("No cost data available for visualization")
-
-
-def _render_cost_efficiency_metrics(unified_costs: Dict, analysis: Dict):
-    """Render cost efficiency metrics"""
-    st.markdown("**📊 Cost Efficiency Metrics**")
-    
-    cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
-    total_monthly = unified_costs.get('total_monthly_cost', 0)
-    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
-    
-    st.metric(
-        "💾 Cost per GB",
-        f"${cost_per_gb:.2f}",
-        delta="Per month"
-    )
-    
-    # Infrastructure cost per GB
-    infrastructure_cost = monthly_breakdown.get('primary_compute', 0) + monthly_breakdown.get('primary_storage', 0)
-    database_size = unified_costs.get('database_size_gb', 1)
-    
-    if database_size > 0 and infrastructure_cost > 0:
-        infrastructure_per_gb = infrastructure_cost / database_size
-        st.metric(
-            "🖥️ Infrastructure Cost/GB",
-            f"${infrastructure_per_gb:.2f}",
-            delta="Compute + Storage"
-        )
-    
-    # Performance cost ratio
-    total_throughput = analysis.get('agent_analysis', {}).get('total_effective_throughput', 1000)
-    if total_throughput > 0:
-        cost_per_mbps = total_monthly / total_throughput
-        st.metric(
-            "⚡ Cost per Mbps",
-            f"${cost_per_mbps:.2f}",
-            delta="Migration performance"
-        )
-
-
-def _render_optimization_opportunities(unified_costs: Dict):
-    """Render cost optimization opportunities"""
-    st.markdown("---")
-    st.markdown("**💡 Cost Optimization Opportunities**")
-    
-    optimization_recs = unified_costs.get('optimization_opportunities', [])
-    
-    if optimization_recs:
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            _render_immediate_opportunities(optimization_recs)
-        
-        with col2:
-            _render_medium_term_opportunities(optimization_recs)
-    else:
-        st.info("✅ Current configuration appears well-optimized. Continue monitoring for opportunities.")
-
-
-def _render_immediate_opportunities(optimization_recs: List[str]):
-    """Render immediate optimization opportunities"""
-    st.success("**Immediate Opportunities (0-3 months)**")
-    
-    for i, rec in enumerate(optimization_recs[:3], 1):
-        potential_savings = _get_potential_savings(rec)
-        st.write(f"**{i}.** {rec}")
-        st.write(f"   💰 Potential monthly savings: {potential_savings}")
-        st.write("")
-
-
-def _render_medium_term_opportunities(optimization_recs: List[str]):
-    """Render medium-term optimization opportunities"""
-    st.info("**Medium-term Opportunities (3-12 months)**")
-    
-    remaining_recs = optimization_recs[3:] if len(optimization_recs) > 3 else ["Continue monitoring for additional opportunities"]
-    
-    for i, rec in enumerate(remaining_recs[:3], 4):
-        potential_savings = _get_potential_savings(rec)
-        st.write(f"**{i}.** {rec}")
-        st.write(f"   💰 Potential monthly savings: {potential_savings}")
-        st.write("")
-
-
-def _get_potential_savings(recommendation: str) -> str:
-    """Get potential savings percentage based on recommendation type"""
-    rec_lower = recommendation.lower()
-    
-    if 'reserved' in rec_lower:
-        return "20-30%"
-    elif 'spot' in rec_lower:
-        return "60-70%"
-    elif 'lifecycle' in rec_lower:
-        return "15-25%"
-    else:
-        return "10-25%"
-
-
-def _render_summary_and_export(unified_costs: Dict, config: Dict, analysis: Dict):
-    """Render summary information and export functionality"""
-    st.markdown("---")
-    st.markdown("**📄 Cost Summary & Export**")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        _render_cost_summary(unified_costs)
-    
-    with col2:
-        _render_data_quality_info(unified_costs)
-    
-    # Export functionality
-    _render_export_functionality(unified_costs, config, analysis)
-
-
-def _render_cost_summary(unified_costs: Dict):
-    """Render cost summary information"""
-    st.info("**Cost Summary**")
-    
-    total_monthly = unified_costs.get('total_monthly_cost', 0)
-    annual_cost = unified_costs.get('annual_cost', 0)
-    cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
-    target_platform = unified_costs.get('target_platform', 'unknown').upper()
-    
-    st.write(f"**Total Monthly Cost:** ${total_monthly:,.0f}")
-    st.write(f"**Annual Cost:** ${annual_cost:,.0f}")
-    st.write(f"**3-Year Total:** ${unified_costs.get('three_year_cost', 0):,.0f}")
-    st.write(f"**Cost per GB per Month:** ${cost_per_gb:.2f}")
-    st.write(f"**Target Platform:** {target_platform}")
-    
-    # Cost efficiency rating
-    if cost_per_gb > 0:
-        efficiency_rating = _get_efficiency_rating(cost_per_gb)
-        st.write(f"**Cost Efficiency Rating:** {efficiency_rating}")
-
-
-def _get_efficiency_rating(cost_per_gb: float) -> str:
-    """Get cost efficiency rating based on cost per GB"""
-    if cost_per_gb < 0.10:
-        return "Excellent"
-    elif cost_per_gb < 0.25:
-        return "Good"
-    elif cost_per_gb < 0.50:
-        return "Average"
-    else:
-        return "Needs Optimization"
-
-
-def _render_data_quality_info(unified_costs: Dict):
-    """Render data quality and reliability information"""
-    st.success("**Data Quality & Reliability**")
-    
-    last_updated = unified_costs.get('last_updated', 'Unknown')
-    pricing_source = unified_costs.get('pricing_data_source', 'fallback')
-    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
-    
-    if pricing_source == 'aws_api':
-        st.write("✅ **Pricing Data:** Real-time AWS API")
-        st.write(f"📅 **Last Updated:** {last_updated}")
-        st.write("🎯 **Accuracy:** High (±5%)")
-    else:
-        st.write("⚠️ **Pricing Data:** Fallback estimates")
-        st.write("🎯 **Accuracy:** Moderate (±15%)")
-    
-    total_services = len([k for k, v in monthly_breakdown.items() if v > 0])
-    st.write(f"🔧 **Services Analyzed:** {total_services} AWS services")
-    st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-
-
-def _render_export_functionality(unified_costs: Dict, config: Dict, analysis: Dict):
-    """Render export functionality"""
-    if st.button("📤 Export Total AWS Cost Analysis", use_container_width=True):
-        export_data = {
-            'analysis_date': datetime.now().isoformat(),
-            'configuration': config,
-            'unified_costs': unified_costs,
-            'monthly_breakdown': unified_costs.get('monthly_breakdown', {}),
-            'total_monthly_cost': unified_costs.get('total_monthly_cost', 0),
-            'annual_cost': unified_costs.get('annual_cost', 0),
-            'cost_per_gb_per_month': unified_costs.get('cost_per_gb_per_month', 0),
-            'optimization_opportunities': unified_costs.get('optimization_opportunities', [])
-        }
-        
-        st.download_button(
-            label="💾 Download Total AWS Cost Analysis (JSON)",
-            data=json.dumps(export_data, indent=2),
-            file_name=f"total_aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json"
-        )
-
-# Updated main function to include the new tab
-async def main_with_unified_costs():
-    """Enhanced main application with unified cost analysis"""
-    render_enhanced_header()
-    
-    # Enhanced sidebar controls
-    config = render_enhanced_sidebar_controls()
-    
-    # Initialize the migration analyzer
-    if 'analyzer' not in st.session_state:
-        st.session_state.analyzer = EnhancedMigrationAnalyzer()
-    
-    # Check if we need to run analysis
-    if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
-        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
-            try:
-                # Run the comprehensive analysis with unified costs
-                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
-                
-                st.session_state.analysis_data = analysis_data
-                st.session_state.last_config = config.copy()
-                
-                st.success("✅ Analysis completed successfully with unified cost calculation!")
-                
-            except Exception as e:
-                st.error(f"❌ Analysis failed: {str(e)}")
-                logger.error(f"Analysis error: {e}")
-                return
-    else:
-        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
-    
-    analysis_data = st.session_state.analysis_data
-    
-    # Create tabs for organized display - UPDATED TAB LIST
-    tab_names = [
-        "💰 Total AWS Cost",  # NEW: First tab for unified costs
-        "🧠 AI Insights & Analysis",
-        "🌐 Network Intelligence", 
-        "💻 OS Performance Analysis",
-        "🎯 AWS Sizing & Configuration",
-        "🤖 Agent Scaling Analysis",
-        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
-    ]
-    
-    tabs = st.tabs(tab_names)
-    
-    # Render each tab
-    with tabs[0]:  # NEW: Total AWS Cost tab
-        render_total_aws_cost_tab(analysis_data, config)
-    
-    with tabs[1]:
-        render_ai_insights_tab_enhanced(analysis_data, config)
-    
-    with tabs[2]:
-        render_network_intelligence_tab(analysis_data, config)
-    
-    with tabs[3]:
-        render_os_performance_tab(analysis_data, config)
-    
-    with tabs[4]:
-        render_aws_sizing_tab(analysis_data, config)
-    
-    with tabs[5]:
-        render_agent_scaling_tab(analysis_data, config)
-    
-    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
-        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
-    
-    # Render footer
-    render_footer()
-
-# Replace the existing main call at the bottom of the file
 if __name__ == "__main__":
-    asyncio.run(main_with_unified_costs()), '').replace(',', '').replace('.', '').isdigit()])
-
-# EXPLANATION OF THE FIXES:
-# 1. Fixed: *, row  →  _, row  (correct tuple unpacking)
-# 2. Fixed: category*data  →  category_data  (correct variable name)  
-# 3. Fixed: String parsing with better error handling
-# 4. Added try/except to handle parsing errors gracefully
-
-def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
-    """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
-    st.subheader("💰 Complete AWS Cost Analysis")
-    
-    # Get comprehensive cost data
-    comprehensive_costs = analysis.get('comprehensive_costs', {})
-    
-    if not comprehensive_costs:
-        st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
-        return
-    
-    # Executive Cost Summary
-    st.markdown("**📊 Executive Cost Summary**")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        total_monthly = comprehensive_costs.get('total_monthly', 0)
-        st.metric(
-            "💰 Total Monthly",
-            f"${total_monthly:,.0f}",
-            delta=f"Annual: ${total_monthly * 12:,.0f}"
-        )
-    
-    with col2:
-        total_one_time = comprehensive_costs.get('total_one_time', 0)
-        st.metric(
-            "🔄 One-Time Costs",
-            f"${total_one_time:,.0f}",
-            delta="Setup & Migration"
-        )
-    
-    with col3:
-        three_year_total = comprehensive_costs.get('three_year_total', 0)
-        st.metric(
-            "📅 3-Year Total",
-            f"${three_year_total:,.0f}",
-            delta="All costs included"
-        )
-    
-    with col4:
-        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
-        if monthly_breakdown:
-            largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
-            st.metric(
-                "🎯 Largest Cost",
-                largest_cost[0].replace('_', ' ').title(),
-                delta=f"${largest_cost[1]:,.0f}/mo"
-            )
-        else:
-            st.metric("🎯 Largest Cost", "Unknown", delta="No data")
-    
-    # Create a simple service breakdown table instead of the problematic code
-    st.markdown("---")
-    st.markdown("**🔧 AWS Services Cost Breakdown**")
-    
-    # Get cost components safely
-    compute_costs = comprehensive_costs.get('compute_costs', {})
-    storage_costs = comprehensive_costs.get('storage_costs', {})
-    network_costs = comprehensive_costs.get('network_costs', {})
-    migration_costs = comprehensive_costs.get('migration_costs', {})
-    
-    # Create simplified breakdown
-    breakdown_data = []
-    
-    # Compute costs
-    if compute_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Database Compute',
-            'Service Type': compute_costs.get('service_type', 'Unknown'),
-            'Monthly Cost': f"${compute_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Primary database infrastructure"
-        })
-    
-    # Storage costs
-    if storage_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Storage Services',
-            'Service Type': 'EBS + Destination Storage',
-            'Monthly Cost': f"${storage_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Database and destination storage"
-        })
-    
-    # Network costs
-    if network_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Network Services',
-            'Service Type': 'Direct Connect + Data Transfer',
-            'Monthly Cost': f"${network_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Connectivity and data transfer"
-        })
-    
-    # Migration costs
-    if migration_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Migration Services',
-            'Service Type': 'DataSync/DMS Agents',
-            'Monthly Cost': f"${migration_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Migration processing agents"
-        })
-    
-    if breakdown_data:
-        df_breakdown = pd.DataFrame(breakdown_data)
-        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
-    else:
-        st.info("No detailed cost breakdown available")
-    
-    # Rest of the function continues with visualizations and other content...
-    st.markdown("---")
-    st.markdown("**📊 Cost Visualization**")
-    
-    if monthly_breakdown:
-        # Create pie chart
-        fig_pie = px.pie(
-            values=list(monthly_breakdown.values()),
-            names=[k.replace('_', ' ').title() for k in monthly_breakdown.keys()],
-            title="Monthly Cost Distribution"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-    
-    st.info("✅ This is the fixed version of the comprehensive cost analysis tab.")
-    """Run comprehensive analysis including unified cost calculation"""
-    
-    # Run the existing comprehensive analysis
-    analysis_data = await analyzer.comprehensive_ai_migration_analysis(config)
-    
-    # Create unified cost calculator and add unified costs
-    unified_calculator = UnifiedAWSCostCalculator(analyzer.aws_api)
-    unified_costs = await unified_calculator.calculate_unified_aws_costs(config, analysis_data)
-    
-    # Add unified costs to analysis data
-    analysis_data['unified_aws_costs'] = unified_costs
-    
-    return analysis_data
-
-# Updated main function to include the new tab
-async def main_with_unified_costs():
-    """Enhanced main application with unified cost analysis"""
-    render_enhanced_header()
-    
-    # Enhanced sidebar controls
-    config = render_enhanced_sidebar_controls()
-    
-    # Initialize the migration analyzer
-    if 'analyzer' not in st.session_state:
-        st.session_state.analyzer = EnhancedMigrationAnalyzer()
-    
-    # Check if we need to run analysis
-    if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
-        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
-            try:
-                # Run the comprehensive analysis with unified costs
-                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
-                
-                st.session_state.analysis_data = analysis_data
-                st.session_state.last_config = config.copy()
-                
-                st.success("✅ Analysis completed successfully with unified cost calculation!")
-                
-            except Exception as e:
-                st.error(f"❌ Analysis failed: {str(e)}")
-                logger.error(f"Analysis error: {e}")
-                return
-    else:
-        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
-    
-    analysis_data = st.session_state.analysis_data
-    
-    # Create tabs for organized display - UPDATED TAB LIST
-    tab_names = [
-        "💰 Total AWS Cost",  # NEW: First tab for unified costs
-        "🧠 AI Insights & Analysis",
-        "🌐 Network Intelligence", 
-        "💻 OS Performance Analysis",
-        "🎯 AWS Sizing & Configuration",
-        "🤖 Agent Scaling Analysis",
-        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
-    ]
-    
-    tabs = st.tabs(tab_names)
-    
-    # Render each tab
-    with tabs[0]:  # NEW: Total AWS Cost tab
-        render_total_aws_cost_tab(analysis_data, config)
-    
-    with tabs[1]:
-        render_ai_insights_tab_enhanced(analysis_data, config)
-    
-    with tabs[2]:
-        render_network_intelligence_tab(analysis_data, config)
-    
-    with tabs[3]:
-        render_os_performance_tab(analysis_data, config)
-    
-    with tabs[4]:
-        render_aws_sizing_tab(analysis_data, config)
-    
-    with tabs[5]:
-        render_agent_scaling_tab(analysis_data, config)
-    
-    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
-        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
-    
-    # Render footer
-    render_footer()
-
-# Replace the existing main call at the bottom of the file
-if __name__ == "__main__":
-    asyncio.run(main_with_unified_costs())
+    import asyncio
+    asyncio.run(main())
