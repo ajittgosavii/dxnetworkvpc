@@ -791,20 +791,20 @@ class AWSAPIManager:
     async def _get_ec2_pricing(self, region: str) -> Dict:
         """Get EC2 instance pricing"""
         instance_types = ['t3.medium', 't3.large', 't3.xlarge', 'c5.large', 'c5.xlarge',
-        'c5.2xlarge', 'r6i.large', 'r6i.xlarge', 'r6i.2xlarge']
+                        'c5.2xlarge', 'r6i.large', 'r6i.xlarge', 'r6i.2xlarge']
 
         pricing_data = {}
         for instance_type in instance_types:
             try:
                 response = self.pricing_client.get_products(
-                ServiceCode='AmazonEC2',
-                Filters=[
-                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
-                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': self._region_to_location(region)},
-                {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'},
-                {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'}
-                ],
-                MaxResults=1
+                    ServiceCode='AmazonEC2',
+                    Filters=[
+                        {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                        {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': self._region_to_location(region)},
+                        {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'},
+                        {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'}
+                    ],
+                    MaxResults=1
                 )
 
                 if response['PriceList']:
@@ -819,15 +819,15 @@ class AWSAPIManager:
 
                             attributes = price_data.get('product', {}).get('attributes', {})
                             pricing_data[instance_type] = {
-                            'vcpu': int(attributes.get('vcpu', 2)),
-                            'memory': self._extract_memory_gb(attributes.get('memory', '4 GiB')),
-                            'cost_per_hour': price_per_hour
+                                'vcpu': int(attributes.get('vcpu', 2)),
+                                'memory': self._extract_memory_gb(attributes.get('memory', '4 GiB')),
+                                'cost_per_hour': price_per_hour
                             }
-                    except Exception as e:
-                            logger.warning(f"Failed to get pricing for {instance_type}: {e}")
-                            pricing_data[instance_type] = self._get_fallback_instance_pricing(instance_type)
+            except Exception as e:  # ✅ Correctly indented - same level as try:
+                logger.warning(f"Failed to get pricing for {instance_type}: {e}")
+                pricing_data[instance_type] = self._get_fallback_instance_pricing(instance_type)
 
-                return pricing_data
+        return pricing_data  # ✅ Moved outside the for loop
 
     async def _get_rds_pricing(self, region: str) -> Dict:
         """Get RDS instance pricing"""
