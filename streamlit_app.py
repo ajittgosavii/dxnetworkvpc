@@ -6148,16 +6148,6 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
             mime="application/json"
         )
 
-# DIRECT FIX: Replace the problematic line 4657 in your original streamlit_app.py with this:
-
-# BROKEN LINE (line 4657):
-# category_total = sum([float(row['Monthly Cost'].replace(', '').replace(',', '')) for *, row in category*data.iterrows()])
-
-# FIXED LINE - Replace line 4657 with this:
-def fix_line_4657():
-    """
-    Replace line 4657 in your streamlit_app.py with this corrected version:
-    """
     # CORRECT CODE:
     category_total = 0
     for _, row in category_data.iterrows():
