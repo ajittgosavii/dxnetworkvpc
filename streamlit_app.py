@@ -6148,9 +6148,6 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
             mime="application/json"
         )
 
-
-
-
 # Updated main analysis function to include unified costs
 async def run_comprehensive_analysis_with_unified_costs(analyzer, config):
     """Run comprehensive analysis including unified cost calculation"""
