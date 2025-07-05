@@ -2824,28 +2824,26 @@ class EnhancedMigrationAnalyzer:
         # AWS sizing
         aws_sizing = await self._ai_enhanced_aws_sizing(config)
         
-        # Use unified cost calculation - REPLACE the existing cost calculation with this:
-    unified_costs = await self.cost_calculator.calculate_unified_migration_costs(config, {
-        'aws_sizing_recommendations': aws_sizing,
-        'agent_analysis': agent_analysis,
-        'network_performance': network_perf,
-        'onprem_performance': onprem_performance
-    })
-    
-    # Create both cost structures for compatibility
+        # Use unified cost calculation (SINGLE SOURCE OF TRUTH)
+        unified_costs = await self.cost_calculator.calculate_unified_migration_costs(config, {
+            'aws_sizing_recommendations': aws_sizing,
+            'agent_analysis': agent_analysis,
+            'network_performance': network_perf,
+            'onprem_performance': onprem_performance
+        })
+        
+        # Create both cost structures for compatibility
         cost_analysis = unified_costs.copy()
         cost_analysis['total_monthly_cost'] = unified_costs['total_monthly']  # Add compatible field names
         cost_analysis['aws_compute_cost'] = unified_costs['detailed_breakdown']['aws_compute']
         cost_analysis['aws_storage_cost'] = unified_costs['detailed_breakdown']['aws_storage']
         cost_analysis['agent_cost'] = unified_costs['detailed_breakdown']['migration_agents']
+        cost_analysis['network_cost'] = unified_costs['detailed_breakdown']['network']
+        cost_analysis['destination_storage_cost'] = unified_costs['detailed_breakdown']['additional_storage']
+        cost_analysis['one_time_migration_cost'] = unified_costs['total_one_time']
         
         comprehensive_costs = unified_costs.copy()
         comprehensive_costs['data_source'] = 'unified'
-        
-        # Cost analysis
-        cost_analysis = await self._calculate_ai_enhanced_costs_with_agents(
-            config, aws_sizing, agent_analysis, network_perf
-        )
         
         # FSx comparisons
         fsx_comparisons = await self._generate_fsx_destination_comparisons(config)
@@ -2855,32 +2853,22 @@ class EnhancedMigrationAnalyzer:
             config, onprem_performance, aws_sizing, migration_time_hours, agent_analysis
         )
         
-        # Comprehensive cost analysis
-        comprehensive_costs = await self.cost_calculator.calculate_comprehensive_migration_costs(
-            config, {
-                'onprem_performance': onprem_performance,
-                'network_performance': network_perf,
-                'agent_analysis': agent_analysis,
-                'aws_sizing_recommendations': aws_sizing
-            }
-        )
+        return {
+            'api_status': api_status,
+            'onprem_performance': onprem_performance,
+            'network_performance': network_perf,
+            'migration_type': migration_type,
+            'primary_tool': primary_tool,
+            'agent_analysis': agent_analysis,
+            'migration_throughput_mbps': migration_throughput,
+            'estimated_migration_time_hours': migration_time_hours,
+            'aws_sizing_recommendations': aws_sizing,
+            'cost_analysis': cost_analysis,  # Use unified costs
+            'comprehensive_costs': comprehensive_costs,  # Use unified costs
+            'fsx_comparisons': fsx_comparisons,
+            'ai_overall_assessment': ai_overall_assessment
+        }
         
-         return {
-        'api_status': api_status,
-        'onprem_performance': onprem_performance,
-        'network_performance': network_perf,
-        'migration_type': migration_type,
-        'primary_tool': primary_tool,
-        'agent_analysis': agent_analysis,
-        'migration_throughput_mbps': migration_throughput,
-        'estimated_migration_time_hours': migration_time_hours,
-        'aws_sizing_recommendations': aws_sizing,
-        'cost_analysis': cost_analysis,  # Use unified costs
-        'comprehensive_costs': comprehensive_costs,  # Use unified costs
-        'fsx_comparisons': fsx_comparisons,
-        'ai_overall_assessment': ai_overall_assessment
-    }
-    
     def _get_network_path_key(self, config: Dict) -> str:
         """Get network path key based on migration method and backup storage"""
         os_lower = config.get('operating_system', '').lower()
