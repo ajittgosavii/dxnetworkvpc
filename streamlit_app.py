@@ -5999,13 +5999,29 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
         st.warning("⚠️ Unified cost data not available. Please run the analysis first.")
         return
     
-    # Executive Summary
+    # Render main sections
+    _render_executive_summary(unified_costs, config)
+    _render_monthly_breakdown(unified_costs)
+    _render_detailed_service_analysis(unified_costs)
+    _render_cost_projections(unified_costs)
+    _render_cost_visualizations(unified_costs, analysis)
+    _render_optimization_opportunities(unified_costs)
+    _render_summary_and_export(unified_costs, config, analysis)
+
+
+def _render_executive_summary(unified_costs: Dict, config: Dict):
+    """Render executive cost summary metrics"""
     st.markdown("**📊 Executive Cost Summary**")
     
     col1, col2, col3, col4 = st.columns(4)
     
+    total_monthly = unified_costs.get('total_monthly_cost', 0)
+    annual_cost = unified_costs.get('annual_cost', 0)
+    cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
+    target_platform = unified_costs.get('target_platform', 'unknown').upper()
+    pricing_source = unified_costs.get('pricing_data_source', 'fallback')
+    
     with col1:
-        total_monthly = unified_costs.get('total_monthly_cost', 0)
         st.metric(
             "💰 Total Monthly Cost",
             f"${total_monthly:,.0f}",
@@ -6013,7 +6029,6 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
         )
     
     with col2:
-        annual_cost = unified_costs.get('annual_cost', 0)
         st.metric(
             "📅 Annual Cost",
             f"${annual_cost:,.0f}",
@@ -6021,7 +6036,6 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
         )
     
     with col3:
-        cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
         st.metric(
             "📊 Cost per GB/Month",
             f"${cost_per_gb:.2f}",
@@ -6029,22 +6043,34 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
         )
     
     with col4:
-        target_platform = unified_costs.get('target_platform', 'unknown').upper()
-        pricing_source = unified_costs.get('pricing_data_source', 'fallback')
         st.metric(
             "🎯 Platform",
             target_platform,
             delta=f"Data: {pricing_source.title()}"
         )
-    
-    # Monthly Cost Breakdown
+
+
+def _render_monthly_breakdown(unified_costs: Dict):
+    """Render monthly cost breakdown table"""
     st.markdown("---")
     st.markdown("**📋 Monthly Cost Breakdown**")
     
     monthly_breakdown = unified_costs.get('monthly_breakdown', {})
+    total_monthly = unified_costs.get('total_monthly_cost', 0)
     
-    # Create detailed breakdown table
+    breakdown_data = _build_breakdown_data(monthly_breakdown, total_monthly)
+    
+    if breakdown_data:
+        df_breakdown = pd.DataFrame(breakdown_data)
+        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
+    else:
+        st.info("No breakdown data available")
+
+
+def _build_breakdown_data(monthly_breakdown: Dict, total_monthly: float) -> List[Dict]:
+    """Build breakdown data for the monthly cost table"""
     breakdown_data = []
+    
     for category, cost in monthly_breakdown.items():
         if cost > 0:
             category_name = category.replace('_', ' ').title()
@@ -6056,76 +6082,122 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
                 'Annual Cost': f"${cost * 12:,.0f}"
             })
     
-    if breakdown_data:
-        df_breakdown = pd.DataFrame(breakdown_data)
-        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
-    
-    # Service Details
+    return breakdown_data
+
+
+def _render_detailed_service_analysis(unified_costs: Dict):
+    """Render detailed service analysis section"""
     st.markdown("---")
     st.markdown("**🔧 Detailed Service Analysis**")
     
-    detail_col1, detail_col2 = st.columns(2)
+    col1, col2 = st.columns(2)
     
-    with detail_col1:
-        st.markdown("**💻 Primary Infrastructure**")
-        
-        deployment_details = unified_costs.get('deployment_details', {})
-        
-        st.info(f"**{deployment_details.get('service_type', 'Unknown')} Configuration**")
-        
-        if deployment_details.get('service_type') == 'RDS':
-            st.write(f"**Primary Instance:** {deployment_details.get('primary_instance', 'Unknown')}")
-            st.write(f"**Instance Cost:** ${deployment_details.get('primary_instance_cost', 0):,.0f}/month")
-            
-            if deployment_details.get('reader_instances', 0) > 0:
-                st.write(f"**Read Replicas:** {deployment_details.get('reader_instances', 0)} instances")
-                st.write(f"**Reader Cost:** ${deployment_details.get('reader_cost', 0):,.0f}/month")
-            
-            if deployment_details.get('multi_az_cost', 0) > 0:
-                st.write(f"**Multi-AZ Cost:** ${deployment_details.get('multi_az_cost', 0):,.0f}/month")
-        
-        else:  # EC2
-            st.write(f"**Instance Type:** {deployment_details.get('primary_instance', 'Unknown')}")
-            st.write(f"**Instance Cost:** ${deployment_details.get('instance_cost', 0):,.0f}/month")
-            
-            if deployment_details.get('os_licensing_cost', 0) > 0:
-                st.write(f"**OS Licensing:** ${deployment_details.get('os_licensing_cost', 0):,.0f}/month")
-        
-        st.write(f"**Storage Cost:** ${deployment_details.get('storage_cost', 0):,.0f}/month")
-        st.write(f"**Total Infrastructure:** ${deployment_details.get('total_monthly', 0):,.0f}/month")
+    with col1:
+        _render_primary_infrastructure(unified_costs)
     
-    with detail_col2:
-        st.markdown("**🌐 Supporting Services**")
-        
-        network_details = unified_costs.get('network_details', {})
-        agent_details = unified_costs.get('agent_details', {})
-        destination_details = unified_costs.get('destination_details', {})
-        
-        st.success("**Network Services**")
-        dx_cost = network_details.get('direct_connect', {}).get('monthly_cost', 0)
-        transfer_cost = network_details.get('data_transfer', {}).get('monthly_cost', 0)
-        vpn_cost = network_details.get('vpn_gateway', {}).get('monthly_cost', 0)
-        
-        st.write(f"**Direct Connect:** ${dx_cost:,.0f}/month")
-        st.write(f"**Data Transfer:** ${transfer_cost:,.0f}/month")
-        if vpn_cost > 0:
-            st.write(f"**VPN Gateway:** ${vpn_cost:,.0f}/month")
-        
-        st.warning("**Migration Services**")
-        st.write(f"**Agent Tool:** {agent_details.get('primary_tool', 'Unknown').upper()}")
-        st.write(f"**Number of Agents:** {agent_details.get('number_of_agents', 0)}")
-        st.write(f"**Agent Costs:** ${agent_details.get('monthly_total', 0):,.0f}/month")
-        
-        st.info("**Storage Services**")
-        st.write(f"**Destination:** {destination_details.get('destination_storage_type', 'Unknown')}")
-        st.write(f"**Destination Cost:** ${destination_details.get('destination_monthly_cost', 0):,.0f}/month")
-        
-        if destination_details.get('backup_applicable', False):
-            st.write(f"**Backup Storage:** ${destination_details.get('backup_monthly_cost', 0):,.0f}/month")
+    with col2:
+        _render_supporting_services(unified_costs)
+
+
+def _render_primary_infrastructure(unified_costs: Dict):
+    """Render primary infrastructure details"""
+    st.markdown("**💻 Primary Infrastructure**")
     
-    # Cost Projection Chart
+    deployment_details = unified_costs.get('deployment_details', {})
+    service_type = deployment_details.get('service_type', 'Unknown')
+    
+    st.info(f"**{service_type} Configuration**")
+    
+    if service_type == 'RDS':
+        _render_rds_details(deployment_details)
+    else:
+        _render_ec2_details(deployment_details)
+    
+    # Common details
+    st.write(f"**Storage Cost:** ${deployment_details.get('storage_cost', 0):,.0f}/month")
+    st.write(f"**Total Infrastructure:** ${deployment_details.get('total_monthly', 0):,.0f}/month")
+
+
+def _render_rds_details(deployment_details: Dict):
+    """Render RDS-specific details"""
+    st.write(f"**Primary Instance:** {deployment_details.get('primary_instance', 'Unknown')}")
+    st.write(f"**Instance Cost:** ${deployment_details.get('primary_instance_cost', 0):,.0f}/month")
+    
+    reader_instances = deployment_details.get('reader_instances', 0)
+    if reader_instances > 0:
+        st.write(f"**Read Replicas:** {reader_instances} instances")
+        st.write(f"**Reader Cost:** ${deployment_details.get('reader_cost', 0):,.0f}/month")
+    
+    multi_az_cost = deployment_details.get('multi_az_cost', 0)
+    if multi_az_cost > 0:
+        st.write(f"**Multi-AZ Cost:** ${multi_az_cost:,.0f}/month")
+
+
+def _render_ec2_details(deployment_details: Dict):
+    """Render EC2-specific details"""
+    st.write(f"**Instance Type:** {deployment_details.get('primary_instance', 'Unknown')}")
+    st.write(f"**Instance Cost:** ${deployment_details.get('instance_cost', 0):,.0f}/month")
+    
+    os_licensing_cost = deployment_details.get('os_licensing_cost', 0)
+    if os_licensing_cost > 0:
+        st.write(f"**OS Licensing:** ${os_licensing_cost:,.0f}/month")
+
+
+def _render_supporting_services(unified_costs: Dict):
+    """Render supporting services details"""
+    st.markdown("**🌐 Supporting Services**")
+    
+    network_details = unified_costs.get('network_details', {})
+    agent_details = unified_costs.get('agent_details', {})
+    destination_details = unified_costs.get('destination_details', {})
+    
+    # Network Services
+    st.success("**Network Services**")
+    _render_network_services(network_details)
+    
+    # Migration Services
+    st.warning("**Migration Services**")
+    _render_migration_services(agent_details)
+    
+    # Storage Services
+    st.info("**Storage Services**")
+    _render_storage_services(destination_details)
+
+
+def _render_network_services(network_details: Dict):
+    """Render network services details"""
+    dx_cost = network_details.get('direct_connect', {}).get('monthly_cost', 0)
+    transfer_cost = network_details.get('data_transfer', {}).get('monthly_cost', 0)
+    vpn_cost = network_details.get('vpn_gateway', {}).get('monthly_cost', 0)
+    
+    st.write(f"**Direct Connect:** ${dx_cost:,.0f}/month")
+    st.write(f"**Data Transfer:** ${transfer_cost:,.0f}/month")
+    if vpn_cost > 0:
+        st.write(f"**VPN Gateway:** ${vpn_cost:,.0f}/month")
+
+
+def _render_migration_services(agent_details: Dict):
+    """Render migration services details"""
+    st.write(f"**Agent Tool:** {agent_details.get('primary_tool', 'Unknown').upper()}")
+    st.write(f"**Number of Agents:** {agent_details.get('number_of_agents', 0)}")
+    st.write(f"**Agent Costs:** ${agent_details.get('monthly_total', 0):,.0f}/month")
+
+
+def _render_storage_services(destination_details: Dict):
+    """Render storage services details"""
+    st.write(f"**Destination:** {destination_details.get('destination_storage_type', 'Unknown')}")
+    st.write(f"**Destination Cost:** ${destination_details.get('destination_monthly_cost', 0):,.0f}/month")
+    
+    if destination_details.get('backup_applicable', False):
+        st.write(f"**Backup Storage:** ${destination_details.get('backup_monthly_cost', 0):,.0f}/month")
+
+
+def _render_cost_projections(unified_costs: Dict):
+    """Render cost projection chart"""
     st.markdown("---")
     st.markdown("**📈 Cost Projection Over Time**")
+    
+    total_monthly = unified_costs.get('total_monthly_cost', 0)
     
     # Create 3-year projection
     months = list(range(1, 37))  # 36 months
@@ -6138,37 +6210,52 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
         'Cumulative Cost': cumulative_costs
     })
     
-    fig_projection = px.line(
-        projection_data,
-        x='Month',
-        y='Cumulative Cost',
-        title=f"3-Year AWS Cost Projection: ${total_monthly:,.0f}/month",
-        labels={'Month': 'Months from Start', 'Cumulative Cost': 'Cumulative Cost ($)'}
-    )
-    
-    # Add quarterly markers
-    for quarter in range(3, 37, 3):
-        fig_projection.add_vline(
-            x=quarter, 
-            line_dash="dash", 
-            line_color="gray",
-            annotation_text=f"Q{(quarter//3)}"
+    try:
+        fig_projection = px.line(
+            projection_data,
+            x='Month',
+            y='Cumulative Cost',
+            title=f"3-Year AWS Cost Projection: ${total_monthly:,.0f}/month",
+            labels={'Month': 'Months from Start', 'Cumulative Cost': 'Cumulative Cost ($)'}
         )
-    
-    fig_projection.update_traces(line_color='#3498db', line_width=3)
-    fig_projection.update_layout(height=400)
-    st.plotly_chart(fig_projection, use_container_width=True)
-    
-    # Cost Distribution Pie Chart
-    viz_col1, viz_col2 = st.columns(2)
-    
-    with viz_col1:
-        st.markdown("**🥧 Cost Distribution**")
         
-        # Filter out zero costs for pie chart
-        pie_data = {k.replace('_', ' ').title(): v for k, v in monthly_breakdown.items() if v > 0}
+        # Add quarterly markers
+        for quarter in range(3, 37, 3):
+            fig_projection.add_vline(
+                x=quarter, 
+                line_dash="dash", 
+                line_color="gray",
+                annotation_text=f"Q{(quarter//3)}"
+            )
         
-        if pie_data:
+        fig_projection.update_traces(line_color='#3498db', line_width=3)
+        fig_projection.update_layout(height=400)
+        st.plotly_chart(fig_projection, use_container_width=True)
+        
+    except Exception as e:
+        st.error(f"Unable to render cost projection chart: {str(e)}")
+
+
+def _render_cost_visualizations(unified_costs: Dict, analysis: Dict):
+    """Render cost distribution and efficiency metrics"""
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        _render_cost_distribution_pie(unified_costs)
+    
+    with col2:
+        _render_cost_efficiency_metrics(unified_costs, analysis)
+
+
+def _render_cost_distribution_pie(unified_costs: Dict):
+    """Render cost distribution pie chart"""
+    st.markdown("**🥧 Cost Distribution**")
+    
+    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
+    pie_data = {k.replace('_', ' ').title(): v for k, v in monthly_breakdown.items() if v > 0}
+    
+    if pie_data:
+        try:
             fig_pie = px.pie(
                 values=list(pie_data.values()),
                 names=list(pie_data.keys()),
@@ -6176,124 +6263,189 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
             )
             fig_pie.update_traces(textposition='inside', textinfo='percent+label')
             st.plotly_chart(fig_pie, use_container_width=True)
-        else:
-            st.info("No cost data available for visualization")
+        except Exception as e:
+            st.error(f"Unable to render pie chart: {str(e)}")
+    else:
+        st.info("No cost data available for visualization")
+
+
+def _render_cost_efficiency_metrics(unified_costs: Dict, analysis: Dict):
+    """Render cost efficiency metrics"""
+    st.markdown("**📊 Cost Efficiency Metrics**")
     
-    with viz_col2:
-        st.markdown("**📊 Cost Efficiency Metrics**")
-        
+    cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
+    total_monthly = unified_costs.get('total_monthly_cost', 0)
+    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
+    
+    st.metric(
+        "💾 Cost per GB",
+        f"${cost_per_gb:.2f}",
+        delta="Per month"
+    )
+    
+    # Infrastructure cost per GB
+    infrastructure_cost = monthly_breakdown.get('primary_compute', 0) + monthly_breakdown.get('primary_storage', 0)
+    database_size = unified_costs.get('database_size_gb', 1)
+    
+    if database_size > 0 and infrastructure_cost > 0:
+        infrastructure_per_gb = infrastructure_cost / database_size
         st.metric(
-            "💾 Cost per GB",
-            f"${cost_per_gb:.2f}",
-            delta="Per month"
+            "🖥️ Infrastructure Cost/GB",
+            f"${infrastructure_per_gb:.2f}",
+            delta="Compute + Storage"
         )
-        
-        # Calculate cost efficiency metrics
-        database_size = config.get('database_size_gb', 1)
-        if database_size > 0:
-            infrastructure_cost = monthly_breakdown.get('primary_compute', 0) + monthly_breakdown.get('primary_storage', 0)
-            infrastructure_per_gb = infrastructure_cost / database_size
-            
-            st.metric(
-                "🖥️ Infrastructure Cost/GB",
-                f"${infrastructure_per_gb:.2f}",
-                delta="Compute + Storage"
-            )
-        
-        # Performance cost ratio
-        total_throughput = analysis.get('agent_analysis', {}).get('total_effective_throughput', 1000)
-        cost_per_mbps = total_monthly / total_throughput if total_throughput > 0 else 0
-        
+    
+    # Performance cost ratio
+    total_throughput = analysis.get('agent_analysis', {}).get('total_effective_throughput', 1000)
+    if total_throughput > 0:
+        cost_per_mbps = total_monthly / total_throughput
         st.metric(
             "⚡ Cost per Mbps",
             f"${cost_per_mbps:.2f}",
             delta="Migration performance"
         )
-    
-    # Optimization Opportunities
+
+
+def _render_optimization_opportunities(unified_costs: Dict):
+    """Render cost optimization opportunities"""
     st.markdown("---")
     st.markdown("**💡 Cost Optimization Opportunities**")
     
     optimization_recs = unified_costs.get('optimization_opportunities', [])
     
     if optimization_recs:
-        opt_col1, opt_col2 = st.columns(2)
+        col1, col2 = st.columns(2)
         
-        with opt_col1:
-            st.success("**Immediate Opportunities (0-3 months)**")
-            for i, rec in enumerate(optimization_recs[:3], 1):
-                potential_savings = "20-30%" if 'Reserved' in rec else "60-70%" if 'Spot' in rec else "10-25%"
-                st.write(f"**{i}.** {rec}")
-                st.write(f"   💰 Potential monthly savings: {potential_savings}")
-                st.write("")
+        with col1:
+            _render_immediate_opportunities(optimization_recs)
         
-        with opt_col2:
-            st.info("**Medium-term Opportunities (3-12 months)**")
-            remaining_recs = optimization_recs[3:] if len(optimization_recs) > 3 else ["Continue monitoring for additional opportunities"]
-            for i, rec in enumerate(remaining_recs[:3], 4):
-                potential_savings = "15-25%" if 'lifecycle' in rec.lower() else "5-15%"
-                st.write(f"**{i}.** {rec}")
-                st.write(f"   💰 Potential monthly savings: {potential_savings}")
-                st.write("")
+        with col2:
+            _render_medium_term_opportunities(optimization_recs)
     else:
         st.info("✅ Current configuration appears well-optimized. Continue monitoring for opportunities.")
+
+
+def _render_immediate_opportunities(optimization_recs: List[str]):
+    """Render immediate optimization opportunities"""
+    st.success("**Immediate Opportunities (0-3 months)**")
     
-    # Summary and Export
+    for i, rec in enumerate(optimization_recs[:3], 1):
+        potential_savings = _get_potential_savings(rec)
+        st.write(f"**{i}.** {rec}")
+        st.write(f"   💰 Potential monthly savings: {potential_savings}")
+        st.write("")
+
+
+def _render_medium_term_opportunities(optimization_recs: List[str]):
+    """Render medium-term optimization opportunities"""
+    st.info("**Medium-term Opportunities (3-12 months)**")
+    
+    remaining_recs = optimization_recs[3:] if len(optimization_recs) > 3 else ["Continue monitoring for additional opportunities"]
+    
+    for i, rec in enumerate(remaining_recs[:3], 4):
+        potential_savings = _get_potential_savings(rec)
+        st.write(f"**{i}.** {rec}")
+        st.write(f"   💰 Potential monthly savings: {potential_savings}")
+        st.write("")
+
+
+def _get_potential_savings(recommendation: str) -> str:
+    """Get potential savings percentage based on recommendation type"""
+    rec_lower = recommendation.lower()
+    
+    if 'reserved' in rec_lower:
+        return "20-30%"
+    elif 'spot' in rec_lower:
+        return "60-70%"
+    elif 'lifecycle' in rec_lower:
+        return "15-25%"
+    else:
+        return "10-25%"
+
+
+def _render_summary_and_export(unified_costs: Dict, config: Dict, analysis: Dict):
+    """Render summary information and export functionality"""
     st.markdown("---")
     st.markdown("**📄 Cost Summary & Export**")
     
-    summary_col1, summary_col2 = st.columns(2)
+    col1, col2 = st.columns(2)
     
-    with summary_col1:
-        st.info("**Cost Summary**")
-        st.write(f"**Total Monthly Cost:** ${total_monthly:,.0f}")
-        st.write(f"**Annual Cost:** ${annual_cost:,.0f}")
-        st.write(f"**3-Year Total:** ${unified_costs.get('three_year_cost', 0):,.0f}")
-        st.write(f"**Cost per GB per Month:** ${cost_per_gb:.2f}")
-        st.write(f"**Target Platform:** {target_platform}")
-        
-        # Calculate cost efficiency vs industry benchmarks
-        if cost_per_gb > 0:
-            if cost_per_gb < 0.10:
-                efficiency_rating = "Excellent"
-            elif cost_per_gb < 0.25:
-                efficiency_rating = "Good"
-            elif cost_per_gb < 0.50:
-                efficiency_rating = "Average"
-            else:
-                efficiency_rating = "Needs Optimization"
-            
-            st.write(f"**Cost Efficiency Rating:** {efficiency_rating}")
+    with col1:
+        _render_cost_summary(unified_costs)
     
-    with summary_col2:
-        st.success("**Data Quality & Reliability**")
-        
-        last_updated = unified_costs.get('last_updated', 'Unknown')
-        pricing_source = unified_costs.get('pricing_data_source', 'fallback')
-        
-        if pricing_source == 'aws_api':
-            st.write("✅ **Pricing Data:** Real-time AWS API")
-            st.write(f"📅 **Last Updated:** {last_updated}")
-            st.write("🎯 **Accuracy:** High (±5%)")
-        else:
-            st.write("⚠️ **Pricing Data:** Fallback estimates")
-            st.write("🎯 **Accuracy:** Moderate (±15%)")
-        
-        total_services = len([k for k, v in monthly_breakdown.items() if v > 0])
-        st.write(f"🔧 **Services Analyzed:** {total_services} AWS services")
-        st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    with col2:
+        _render_data_quality_info(unified_costs)
     
     # Export functionality
+    _render_export_functionality(unified_costs, config, analysis)
+
+
+def _render_cost_summary(unified_costs: Dict):
+    """Render cost summary information"""
+    st.info("**Cost Summary**")
+    
+    total_monthly = unified_costs.get('total_monthly_cost', 0)
+    annual_cost = unified_costs.get('annual_cost', 0)
+    cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
+    target_platform = unified_costs.get('target_platform', 'unknown').upper()
+    
+    st.write(f"**Total Monthly Cost:** ${total_monthly:,.0f}")
+    st.write(f"**Annual Cost:** ${annual_cost:,.0f}")
+    st.write(f"**3-Year Total:** ${unified_costs.get('three_year_cost', 0):,.0f}")
+    st.write(f"**Cost per GB per Month:** ${cost_per_gb:.2f}")
+    st.write(f"**Target Platform:** {target_platform}")
+    
+    # Cost efficiency rating
+    if cost_per_gb > 0:
+        efficiency_rating = _get_efficiency_rating(cost_per_gb)
+        st.write(f"**Cost Efficiency Rating:** {efficiency_rating}")
+
+
+def _get_efficiency_rating(cost_per_gb: float) -> str:
+    """Get cost efficiency rating based on cost per GB"""
+    if cost_per_gb < 0.10:
+        return "Excellent"
+    elif cost_per_gb < 0.25:
+        return "Good"
+    elif cost_per_gb < 0.50:
+        return "Average"
+    else:
+        return "Needs Optimization"
+
+
+def _render_data_quality_info(unified_costs: Dict):
+    """Render data quality and reliability information"""
+    st.success("**Data Quality & Reliability**")
+    
+    last_updated = unified_costs.get('last_updated', 'Unknown')
+    pricing_source = unified_costs.get('pricing_data_source', 'fallback')
+    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
+    
+    if pricing_source == 'aws_api':
+        st.write("✅ **Pricing Data:** Real-time AWS API")
+        st.write(f"📅 **Last Updated:** {last_updated}")
+        st.write("🎯 **Accuracy:** High (±5%)")
+    else:
+        st.write("⚠️ **Pricing Data:** Fallback estimates")
+        st.write("🎯 **Accuracy:** Moderate (±15%)")
+    
+    total_services = len([k for k, v in monthly_breakdown.items() if v > 0])
+    st.write(f"🔧 **Services Analyzed:** {total_services} AWS services")
+    st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+
+def _render_export_functionality(unified_costs: Dict, config: Dict, analysis: Dict):
+    """Render export functionality"""
     if st.button("📤 Export Total AWS Cost Analysis", use_container_width=True):
         export_data = {
             'analysis_date': datetime.now().isoformat(),
             'configuration': config,
             'unified_costs': unified_costs,
-            'monthly_breakdown': monthly_breakdown,
-            'total_monthly_cost': total_monthly,
-            'annual_cost': annual_cost,
-            'cost_per_gb_per_month': cost_per_gb,
-            'optimization_opportunities': optimization_recs
+            'monthly_breakdown': unified_costs.get('monthly_breakdown', {}),
+            'total_monthly_cost': unified_costs.get('total_monthly_cost', 0),
+            'annual_cost': unified_costs.get('annual_cost', 0),
+            'cost_per_gb_per_month': unified_costs.get('cost_per_gb_per_month', 0),
+            'optimization_opportunities': unified_costs.get('optimization_opportunities', [])
         }
         
         st.download_button(
@@ -6302,11 +6454,6 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
             file_name=f"total_aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
             mime="application/json"
         )
-
-    # CORRECT CODE:
-    category_total = 0
-    for _, row in category_data.iterrows():
-        cost_str = row['Monthly Cost'].replace('
 
 
 # Updated main function to include the new tab
