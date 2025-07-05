@@ -2825,33 +2825,37 @@ class EnhancedMigrationAnalyzer:
         migration_method = config.get('migration_method', 'direct_replication')
         backup_storage_type = config.get('backup_storage_type', 'nas_drive')
 
-# For backup/restore method, use backup storage paths
+        # For backup/restore method, use backup storage paths
         if migration_method == 'backup_restore':
             if environment in ['non_production', 'nonprod']:
                 if backup_storage_type == 'windows_share':
                     return "nonprod_sj_windows_share_s3"
-                else:  # nas_drive:
+                else:  # nas_drive
                     return "nonprod_sj_nas_drive_s3"
-                elif environment == 'production':
-                    if backup_storage_type == 'windows_share':
-                        return "prod_sa_windows_share_s3"
-                    else:  # nas_drive:
-                return "prod_sa_nas_drive_s3"
+            elif environment == 'production':
+                if backup_storage_type == 'windows_share':
+                    return "prod_sa_windows_share_s3"
+                else:  # nas_drive
+                    return "prod_sa_nas_drive_s3"
+        
+        # For direct replication, use original paths
+        else:
+            if environment in ['non_production', 'nonprod']:
+                if destination_storage == 's3':
+                    return f"nonprod_sj_{os_type}_nas_s3"
+                elif destination_storage == 'fsx_windows':
+                    return f"nonprod_sj_{os_type}_nas_fsx_windows"
+                elif destination_storage == 'fsx_lustre':
+                    return f"nonprod_sj_{os_type}_nas_fsx_lustre"
+            elif environment == 'production':
+                if destination_storage == 's3':
+                    return f"prod_sa_{os_type}_nas_s3"
+                elif destination_storage == 'fsx_windows':
+                    return f"prod_sa_{os_type}_nas_fsx_windows"
+                elif destination_storage == 'fsx_lustre':
+                    return f"prod_sa_{os_type}_nas_fsx_lustre"
 
-# For direct replication, use original paths
-                    else:
-                if environment in ['non_production', 'nonprod']:
-                    if destination_storage == 's3':
-                        return f"nonprod_sj_{os_type}_nas_s3"
-                    elif destination_storage == 'fsx_windows':
-                        return f"nonprod_sj_{os_type}_nas_fsx_windows"
-                    elif destination_storage == 'fsx_lustre':
-                        return f"nonprod_sj_{os_type}_nas_fsx_lustre"
-                    elif environment == 'production':
-                        if destination_storage == 's3':
-                            return f"prod_sa_{os_type}_nas_s3"
-
-# Default fallback for direct replication
+        # Default fallback for direct replication
         return f"nonprod_sj_{os_type}_nas_s3"
 
     async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
