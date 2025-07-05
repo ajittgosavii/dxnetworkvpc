@@ -7795,9 +7795,7 @@ async def main():
         with tab8:
             render_agent_scaling_optimizer_tab(analysis, config)
             
-        with tab9:
-            render_agent_placement_guide()
-        
+             
     
     # Professional footer with backup storage capabilities
     st.markdown("""
