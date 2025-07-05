@@ -1203,7 +1203,6 @@ class ComprehensiveAWSCostCalculator:
                 }
             }
 
-            else:  # EC2:
             # EC2 instance costs
             if database_size_gb < 1000:
                 instance_type = 't3.large'
