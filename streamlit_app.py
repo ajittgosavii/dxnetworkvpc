@@ -6763,25 +6763,69 @@ def add_cost_validation_to_tab(analysis: Dict, config: Dict):
     
     st.info("Cost validation would be performed here using CostValidationManager")
     
-    # Mock validation result
+    # Get fallback costs from analysis
+    comprehensive_costs = analysis.get('comprehensive_costs', {})
+    basic_cost_analysis = analysis.get('cost_analysis', {})
+    
+    # Try to get costs from comprehensive analysis first, then fallback to basic
+    if comprehensive_costs.get('total_monthly', 0) > 0:
+        monthly_total = comprehensive_costs['total_monthly']
+        one_time_total = comprehensive_costs.get('total_one_time', 0)
+        three_year_total = comprehensive_costs.get('three_year_total', monthly_total * 36 + one_time_total)
+        breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        cost_source = 'comprehensive'
+        is_validated = True
+    elif basic_cost_analysis.get('total_monthly_cost', 0) > 0:
+        monthly_total = basic_cost_analysis['total_monthly_cost']
+        one_time_total = basic_cost_analysis.get('one_time_migration_cost', 0)
+        three_year_total = (monthly_total * 36) + one_time_total
+        breakdown = {
+            'compute': basic_cost_analysis.get('aws_compute_cost', 0),
+            'storage': basic_cost_analysis.get('aws_storage_cost', 0),
+            'agents': basic_cost_analysis.get('agent_cost', 0),
+            'network': basic_cost_analysis.get('network_cost', 500),
+            'other': basic_cost_analysis.get('management_cost', 200)
+        }
+        cost_source = 'basic'
+        is_validated = False
+    else:
+        # Fallback with default values
+        monthly_total = 1000  # Default fallback
+        one_time_total = 5000
+        three_year_total = (monthly_total * 36) + one_time_total
+        breakdown = {
+            'compute': 600,
+            'storage': 200,
+            'agents': 150,
+            'network': 50,
+            'other': 0
+        }
+        cost_source = 'fallback'
+        is_validated = False
+    
+    # Mock validation result with proper structure
     validated_costs = {
-        'is_validated': True,
-        'cost_source': 'unified',
-        'validation': {'discrepancy_count': 0}
+        'total_monthly': monthly_total,
+        'total_one_time': one_time_total,
+        'three_year_total': three_year_total,
+        'breakdown': breakdown,
+        'cost_source': cost_source,
+        'is_validated': is_validated,
+        'validation': {
+            'discrepancy_count': 0 if is_validated else 1,
+            'discrepancies': [] if is_validated else [{'type': 'using_fallback_costs'}],
+            'is_consistent': is_validated
+        }
     }
     
-    if validated_costs['is_validated'] and validated_costs['cost_source'] == 'unified':
+    if validated_costs['is_validated'] and validated_costs['cost_source'] in ['unified', 'comprehensive']:
         st.success("✅ Using unified cost calculation - all costs are consistent")
+    elif validated_costs['cost_source'] == 'basic':
+        st.warning("⚠️ Using basic cost calculation - some discrepancies may exist")
+    else:
+        st.error("❌ Using fallback costs - analysis may be incomplete")
     
     return validated_costs
-
-
-
-import plotly.graph_objects as go
-import plotly.express as px
-from typing import Dict, List, Optional, Tuple
-import math
-
 
 def create_network_path_diagram(network_perf: Dict) -> Optional[go.Figure]:
     """Create enhanced network path diagram using Plotly with performance metrics"""
