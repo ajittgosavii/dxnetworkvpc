@@ -823,11 +823,11 @@ class AWSAPIManager:
                             'memory': self._extract_memory_gb(attributes.get('memory', '4 GiB')),
                             'cost_per_hour': price_per_hour
                             }
-                        except Exception as e:
+                    except Exception as e:
                             logger.warning(f"Failed to get pricing for {instance_type}: {e}")
                             pricing_data[instance_type] = self._get_fallback_instance_pricing(instance_type)
 
-        return pricing_data
+                return pricing_data
 
     async def _get_rds_pricing(self, region: str) -> Dict:
         """Get RDS instance pricing"""
