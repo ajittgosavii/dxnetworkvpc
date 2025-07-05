@@ -6455,6 +6455,17 @@ def _render_export_functionality(unified_costs: Dict, config: Dict, analysis: Di
             mime="application/json"
         )
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import asyncio
+from typing import Dict, Any
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
+
+
 def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
     """
     Render comprehensive AWS cost analysis tab with improved organization and error handling.
@@ -6676,7 +6687,186 @@ def _render_cost_visualizations(comprehensive_costs: Dict):
         """)
 
 
-# Additional helper function for configuration change detection
+def render_total_aws_cost_tab(analysis: Dict, config: Dict):
+    """Render the unified AWS cost overview tab."""
+    st.subheader("💰 Total AWS Cost Overview")
+    
+    unified_costs = analysis.get('unified_aws_costs', {})
+    
+    if not unified_costs:
+        st.warning("⚠️ Unified cost data not available. Please run the analysis first.")
+        return
+    
+    # Main cost metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        total_cost = unified_costs.get('total_cost', 0)
+        st.metric("🎯 Total AWS Investment", f"${total_cost:,.0f}")
+    
+    with col2:
+        monthly_recurring = unified_costs.get('monthly_recurring', 0)
+        st.metric("📅 Monthly Recurring", f"${monthly_recurring:,.0f}")
+    
+    with col3:
+        one_time_setup = unified_costs.get('one_time_setup', 0)
+        st.metric("🔧 Setup Costs", f"${one_time_setup:,.0f}")
+    
+    # Cost breakdown summary
+    st.markdown("### 📊 Cost Summary")
+    cost_summary = unified_costs.get('cost_summary', {})
+    
+    if cost_summary:
+        summary_df = pd.DataFrame([
+            {"Category": k.replace('_', ' ').title(), "Cost": f"${v:,.0f}"}
+            for k, v in cost_summary.items()
+        ])
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
+
+def render_enhanced_header():
+    """Render the application header."""
+    st.set_page_config(
+        page_title="AWS Migration Cost Analyzer",
+        page_icon="☁️",
+        layout="wide"
+    )
+    
+    st.title("☁️ AWS Migration Cost Analyzer")
+    st.markdown("**Comprehensive AI-powered analysis for AWS migration planning**")
+
+
+def render_enhanced_sidebar_controls() -> Dict:
+    """Render enhanced sidebar controls and return configuration."""
+    st.sidebar.header("⚙️ Configuration")
+    
+    config = {}
+    
+    # Database configuration
+    st.sidebar.subheader("🗄️ Database Settings")
+    config['database_size'] = st.sidebar.selectbox(
+        "Database Size",
+        ["Small (< 100GB)", "Medium (100GB - 1TB)", "Large (1TB - 10TB)", "Enterprise (> 10TB)"]
+    )
+    
+    config['database_type'] = st.sidebar.selectbox(
+        "Database Type",
+        ["MySQL", "PostgreSQL", "SQL Server", "Oracle", "MongoDB"]
+    )
+    
+    # Network configuration
+    st.sidebar.subheader("🌐 Network Settings")
+    config['network_bandwidth'] = st.sidebar.selectbox(
+        "Required Bandwidth",
+        ["1 Gbps", "10 Gbps", "25 Gbps", "100 Gbps"]
+    )
+    
+    config['aws_region'] = st.sidebar.selectbox(
+        "AWS Region",
+        ["us-east-1", "us-west-2", "eu-west-1", "ap-southeast-1"]
+    )
+    
+    # Migration settings
+    st.sidebar.subheader("🔄 Migration Settings")
+    config['migration_timeline'] = st.sidebar.selectbox(
+        "Migration Timeline",
+        ["< 3 months", "3-6 months", "6-12 months", "> 12 months"]
+    )
+    
+    config['downtime_tolerance'] = st.sidebar.selectbox(
+        "Downtime Tolerance",
+        ["Zero downtime", "< 1 hour", "< 4 hours", "< 24 hours"]
+    )
+    
+    return config
+
+
+def render_placeholder_tab(tab_name: str):
+    """Render placeholder content for tabs not yet implemented."""
+    st.subheader(f"{tab_name}")
+    st.info(f"This tab ({tab_name}) is currently under development. Please check back soon!")
+    
+    # Add some sample content
+    st.markdown("### 📋 Coming Soon")
+    st.markdown(f"""
+    The {tab_name} will include:
+    - Detailed analysis and insights
+    - Interactive visualizations
+    - Actionable recommendations
+    - Cost optimization suggestions
+    """)
+
+
+def render_footer():
+    """Render application footer."""
+    st.markdown("---")
+    st.markdown(
+        "**AWS Migration Cost Analyzer** | Built with Streamlit | "
+        "© 2025 AI-Powered Migration Analysis"
+    )
+
+
+async def run_comprehensive_analysis_with_unified_costs(analyzer, config: Dict) -> Dict:
+    """
+    Run comprehensive analysis including unified cost calculation.
+    
+    Args:
+        analyzer: The migration analyzer instance
+        config: Configuration dictionary
+        
+    Returns:
+        Dict: Complete analysis data with unified costs
+    """
+    # Simulate comprehensive analysis - replace with actual implementation
+    analysis_data = {
+        'comprehensive_costs': {
+            'total_monthly': 12500,
+            'total_one_time': 25000,
+            'three_year_total': 475000,
+            'monthly_breakdown': {
+                'compute_costs': 7500,
+                'storage_costs': 2000,
+                'network_costs': 2500,
+                'migration_costs': 500
+            },
+            'compute_costs': {
+                'monthly_total': 7500,
+                'service_type': 'RDS + EC2',
+                'details': 'Database compute infrastructure'
+            },
+            'storage_costs': {
+                'monthly_total': 2000,
+                'storage_type': 'EBS + S3',
+                'details': 'Primary and backup storage'
+            },
+            'network_costs': {
+                'monthly_total': 2500,
+                'network_type': 'Direct Connect',
+                'details': 'High-speed connectivity'
+            },
+            'migration_costs': {
+                'monthly_total': 500,
+                'migration_type': 'DMS + DataSync',
+                'details': 'Migration tools and agents'
+            }
+        },
+        'unified_aws_costs': {
+            'total_cost': 475000,
+            'monthly_recurring': 12500,
+            'one_time_setup': 25000,
+            'cost_summary': {
+                'compute': 270000,
+                'storage': 72000,
+                'network': 90000,
+                'migration': 18000,
+                'setup': 25000
+            }
+        }
+    }
+    
+    return analysis_data
+
+
 def config_has_changed(current_config: Dict, previous_config: Dict) -> bool:
     """
     Check if configuration has changed to determine if re-analysis is needed.
@@ -6699,3 +6889,91 @@ def config_has_changed(current_config: Dict, previous_config: Dict) -> bool:
             return True
     
     return False
+
+
+async def main_with_unified_costs():
+    """Enhanced main application with unified cost analysis."""
+    render_enhanced_header()
+    
+    # Enhanced sidebar controls
+    config = render_enhanced_sidebar_controls()
+    
+    # Initialize session state
+    if 'analysis_data' not in st.session_state:
+        st.session_state.analysis_data = None
+    
+    if 'last_config' not in st.session_state:
+        st.session_state.last_config = None
+    
+    # Check if we need to run analysis
+    if (st.session_state.analysis_data is None or 
+        config_has_changed(config, st.session_state.last_config)):
+        
+        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
+            try:
+                # Simulate analyzer - replace with actual analyzer initialization
+                analyzer = None  # Replace with: EnhancedMigrationAnalyzer()
+                
+                # Run the comprehensive analysis with unified costs
+                analysis_data = await run_comprehensive_analysis_with_unified_costs(analyzer, config)
+                
+                st.session_state.analysis_data = analysis_data
+                st.session_state.last_config = config.copy()
+                
+                st.success("✅ Analysis completed successfully with unified cost calculation!")
+                
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                logger.error(f"Analysis error: {e}")
+                return
+    else:
+        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
+    
+    analysis_data = st.session_state.analysis_data
+    
+    if analysis_data is None:
+        st.warning("⚠️ No analysis data available. Please run the analysis first.")
+        return
+    
+    # Create tabs for organized display
+    tab_names = [
+        "💰 Total AWS Cost",
+        "🧠 AI Insights & Analysis",
+        "🌐 Network Intelligence", 
+        "💻 OS Performance Analysis",
+        "🎯 AWS Sizing & Configuration",
+        "🤖 Agent Scaling Analysis",
+        "📊 Detailed Cost Breakdown"
+    ]
+    
+    tabs = st.tabs(tab_names)
+    
+    # Render each tab
+    with tabs[0]:  # Total AWS Cost tab
+        render_total_aws_cost_tab(analysis_data, config)
+    
+    with tabs[1]:  # AI Insights
+        render_placeholder_tab("AI Insights & Analysis")
+    
+    with tabs[2]:  # Network Intelligence
+        render_placeholder_tab("Network Intelligence")
+    
+    with tabs[3]:  # OS Performance
+        render_placeholder_tab("OS Performance Analysis")
+    
+    with tabs[4]:  # AWS Sizing
+        render_placeholder_tab("AWS Sizing & Configuration")
+    
+    with tabs[5]:  # Agent Scaling
+        render_placeholder_tab("Agent Scaling Analysis")
+    
+    with tabs[6]:  # Detailed breakdown (using improved version)
+        render_comprehensive_cost_analysis_tab(analysis_data, config)
+    
+    # Render footer
+    render_footer()
+
+
+# Main application entry point
+if __name__ == "__main__":
+    asyncio.run(main_with_unified_costs())
