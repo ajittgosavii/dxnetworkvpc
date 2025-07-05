@@ -4644,22 +4644,27 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
             'Category': 'Migration Services'
         })
     
-    # Display the comprehensive service breakdown table
-    if service_breakdown_data:
-        st.markdown("**📋 Complete AWS Services Breakdown:**")
-        df_services = pd.DataFrame(service_breakdown_data)
+if service_breakdown_data:
+    st.markdown("**📋 Complete AWS Services Breakdown:**")
+    df_services = pd.DataFrame(service_breakdown_data)
+    
+    # Group by category and show
+    categories = df_services['Category'].unique()
+    
+    for category in categories:
+        category_data = df_services[df_services['Category'] == category]
         
-        # Group by category and show
-        categories = df_services['Category'].unique()
+        # FIXED: Added missing closing parenthesis and better string cleaning
+        category_total = sum([
+            float(str(row['Monthly Cost']).replace('$', '').replace(',', '').strip()) 
+            for _, row in category_data.iterrows() 
+            if str(row['Monthly Cost']).replace('$', '').replace(',', '').strip().replace('.', '').isdigit()
+        ])  # <-- This closing parenthesis was missing!
         
-        for category in categories:
-            category_data = df_services[df_services['Category'] == category]
-            category_total = sum([float(row['Monthly Cost'].replace(', '').replace(',', '')) for _, row in category_data.iterrows()])
-            
-            with st.expander(f"🔧 {category} - ${category_total:,.0f}/month", expanded=True):
-                # Remove category column for display since it's in the header
-                display_data = category_data.drop('Category', axis=1)
-                st.dataframe(display_data, use_container_width=True, hide_index=True)
+        with st.expander(f"🔧 {category} - ${category_total:,.0f}/month", expanded=True):
+            # Remove category column for display since it's in the header
+            display_data = category_data.drop('Category', axis=1)
+            st.dataframe(display_data, use_container_width=True, hide_index=True)
     
     # One-Time Costs Summary
     st.markdown("---")
