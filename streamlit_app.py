@@ -7752,16 +7752,16 @@ async def main():
         config = st.session_state['config']
         
        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
-            "📊 Migration Dashboard", 
-            "🧠 AI Insights", 
-            "🌐 Network Intelligence", 
-            "💰 Complete Cost Analysis",
-            "💻 OS Performance", 
-            "🎯 AWS Sizing",
-            "🗄️ FSx Comparisons",
-            "🤖 Agent Scaling Optimizer",
-            "📍 Agent Placement"
-        ])
+        "📊 Migration Dashboard", 
+        "🧠 AI Insights", 
+        "🌐 Network Intelligence", 
+        "💰 Complete Cost Analysis",
+        "💻 OS Performance", 
+        "🎯 AWS Sizing",
+        "🗄️ FSx Comparisons",
+        "🤖 Agent Scaling Optimizer",
+        "📍 Agent Placement"
+    ])
                 
         with tab1:
             render_migration_dashboard_tab(analysis, config)
