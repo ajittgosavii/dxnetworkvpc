@@ -2713,69 +2713,69 @@ class EnhancedMigrationAnalyzer:
         self.cost_calculator = ComprehensiveAWSCostCalculator(self.aws_api)
 
         self.nic_types = {
-        'gigabit_copper': {'max_speed': 1000, 'efficiency': 0.85},
-        'gigabit_fiber': {'max_speed': 1000, 'efficiency': 0.90},
-        '10g_copper': {'max_speed': 10000, 'efficiency': 0.88},
-        '10g_fiber': {'max_speed': 10000, 'efficiency': 0.92},
-        '25g_fiber': {'max_speed': 25000, 'efficiency': 0.94},
-        '40g_fiber': {'max_speed': 40000, 'efficiency': 0.95}
+            'gigabit_copper': {'max_speed': 1000, 'efficiency': 0.85},
+            'gigabit_fiber': {'max_speed': 1000, 'efficiency': 0.90},
+            '10g_copper': {'max_speed': 10000, 'efficiency': 0.88},
+            '10g_fiber': {'max_speed': 10000, 'efficiency': 0.92},
+            '25g_fiber': {'max_speed': 25000, 'efficiency': 0.94},
+            '40g_fiber': {'max_speed': 40000, 'efficiency': 0.95}
         }
 
     async def comprehensive_ai_migration_analysis(self, config: Dict) -> Dict:
         """Comprehensive AI-powered migration analysis"""
 
-# API status tracking
+        # API status tracking
         api_status = APIStatus(
-        anthropic_connected=self.ai_manager.connected,
-        aws_pricing_connected=self.aws_api.connected,
-        last_update=datetime.now()
+            anthropic_connected=self.ai_manager.connected,
+            aws_pricing_connected=self.aws_api.connected,
+            last_update=datetime.now()
         )
 
-# On-premises performance analysis
+        # On-premises performance analysis
         onprem_performance = self.onprem_analyzer.calculate_ai_enhanced_performance(config, self.os_manager)
 
-# Network path analysis
+        # Network path analysis
         network_path_key = self._get_network_path_key(config)
         network_perf = self.network_manager.calculate_ai_enhanced_path_performance(network_path_key)
 
-# Migration type and tools
+        # Migration type and tools
         migration_method = config.get('migration_method', 'direct_replication')
 
         if migration_method == 'backup_restore':
-# For backup/restore, always use DataSync regardless of database engine
+            # For backup/restore, always use DataSync regardless of database engine
             migration_type = 'backup_restore'
             primary_tool = 'datasync'
         else:
-# For direct replication, use existing logic
+            # For direct replication, use existing logic
             is_homogeneous = config['source_database_engine'] == config['database_engine']
             migration_type = 'homogeneous' if is_homogeneous else 'heterogeneous'
             primary_tool = 'datasync' if is_homogeneous else 'dms'
 
-# Agent analysis
+        # Agent analysis
         agent_analysis = await self._analyze_ai_migration_agents_with_scaling(config, primary_tool, network_perf)
 
-# Migration throughput
+        # Migration throughput
         agent_throughput = agent_analysis['total_effective_throughput']
         network_throughput = network_perf['effective_bandwidth_mbps']
         migration_throughput = min(agent_throughput, network_throughput)
 
-# Migration time
+        # Migration time
         migration_time_hours = await self._calculate_ai_migration_time_with_agents(
-        config, migration_throughput, onprem_performance, agent_analysis
+            config, migration_throughput, onprem_performance, agent_analysis
         )
 
-# AWS sizing
+        # AWS sizing
         aws_sizing = await self._ai_enhanced_aws_sizing(config)
 
-# Use unified cost calculation (SINGLE SOURCE OF TRUTH)
+        # Use unified cost calculation (SINGLE SOURCE OF TRUTH)
         unified_costs = await self.cost_calculator.calculate_unified_migration_costs(config, {
-        'aws_sizing_recommendations': aws_sizing,
-        'agent_analysis': agent_analysis,
-        'network_performance': network_perf,
-        'onprem_performance': onprem_performance
+            'aws_sizing_recommendations': aws_sizing,
+            'agent_analysis': agent_analysis,
+            'network_performance': network_perf,
+            'onprem_performance': onprem_performance
         })
 
-# Create both cost structures for compatibility
+        # Create both cost structures for compatibility
         cost_analysis = unified_costs.copy()
         cost_analysis['total_monthly_cost'] = unified_costs['total_monthly']  # Add compatible field names
         cost_analysis['aws_compute_cost'] = unified_costs['detailed_breakdown']['aws_compute']
@@ -2788,28 +2788,28 @@ class EnhancedMigrationAnalyzer:
         comprehensive_costs = unified_costs.copy()
         comprehensive_costs['data_source'] = 'unified'
 
-# FSx comparisons
+        # FSx comparisons
         fsx_comparisons = await self._generate_fsx_destination_comparisons(config)
 
-# AI overall assessment
+        # AI overall assessment
         ai_overall_assessment = await self._generate_ai_overall_assessment_with_agents(
-        config, onprem_performance, aws_sizing, migration_time_hours, agent_analysis
+            config, onprem_performance, aws_sizing, migration_time_hours, agent_analysis
         )
 
         return {
-        'api_status': api_status,
-        'onprem_performance': onprem_performance,
-        'network_performance': network_perf,
-        'migration_type': migration_type,
-        'primary_tool': primary_tool,
-        'agent_analysis': agent_analysis,
-        'migration_throughput_mbps': migration_throughput,
-        'estimated_migration_time_hours': migration_time_hours,
-        'aws_sizing_recommendations': aws_sizing,
-        'cost_analysis': cost_analysis,  # Use unified costs
-        'comprehensive_costs': comprehensive_costs,  # Use unified costs
-        'fsx_comparisons': fsx_comparisons,
-        'ai_overall_assessment': ai_overall_assessment
+            'api_status': api_status,
+            'onprem_performance': onprem_performance,
+            'network_performance': network_perf,
+            'migration_type': migration_type,
+            'primary_tool': primary_tool,
+            'agent_analysis': agent_analysis,
+            'migration_throughput_mbps': migration_throughput,
+            'estimated_migration_time_hours': migration_time_hours,
+            'aws_sizing_recommendations': aws_sizing,
+            'cost_analysis': cost_analysis,  # Use unified costs
+            'comprehensive_costs': comprehensive_costs,  # Use unified costs
+            'fsx_comparisons': fsx_comparisons,
+            'ai_overall_assessment': ai_overall_assessment
         }
 
     def _get_network_path_key(self, config: Dict) -> str:
@@ -2929,7 +2929,7 @@ class EnhancedMigrationAnalyzer:
         }
 
     async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float,
-                                                onprem_performance: Dict, agent_analysis: Dict) -> float:
+                                                      onprem_performance: Dict, agent_analysis: Dict) -> float:
         """AI-enhanced migration time calculation with backup storage considerations"""
 
         database_size_gb = config['database_size_gb']
@@ -2995,36 +2995,35 @@ class EnhancedMigrationAnalyzer:
 
         return total_time
 
+    async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
+        """AI-enhanced AWS sizing"""
 
-async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
-    """AI-enhanced AWS sizing"""
+        # Get real-time pricing
+        pricing_data = await self.aws_api.get_real_time_pricing()
 
-    # Get real-time pricing
-    pricing_data = await self.aws_api.get_real_time_pricing()
+        # RDS sizing
+        rds_sizing = self._calculate_rds_sizing(config, pricing_data)
 
-    # RDS sizing
-    rds_sizing = self._calculate_rds_sizing(config, pricing_data)
+        # EC2 sizing
+        ec2_sizing = self._calculate_ec2_sizing(config, pricing_data)
 
-    # EC2 sizing
-    ec2_sizing = self._calculate_ec2_sizing(config, pricing_data)
+        # Reader/writer configuration
+        reader_writer_config = self._calculate_reader_writer_config(config)
 
-    # Reader/writer configuration
-    reader_writer_config = self._calculate_reader_writer_config(config)
+        # Deployment recommendation
+        deployment_recommendation = self._recommend_deployment_type(config, rds_sizing, ec2_sizing)
 
-    # Deployment recommendation
-    deployment_recommendation = self._recommend_deployment_type(config, rds_sizing, ec2_sizing)
+        # AI analysis
+        ai_analysis = await self.ai_manager.analyze_migration_workload(config, {})
 
-    # AI analysis
-    ai_analysis = await self.ai_manager.analyze_migration_workload(config, {})
-
-    return {
-        'rds_recommendations': rds_sizing,
-        'ec2_recommendations': ec2_sizing,
-        'reader_writer_config': reader_writer_config,
-        'deployment_recommendation': deployment_recommendation,
-        'ai_analysis': ai_analysis,
-        'pricing_data': pricing_data
-    }
+        return {
+            'rds_recommendations': rds_sizing,
+            'ec2_recommendations': ec2_sizing,
+            'reader_writer_config': reader_writer_config,
+            'deployment_recommendation': deployment_recommendation,
+            'ai_analysis': ai_analysis,
+            'pricing_data': pricing_data
+        }
 
     def _calculate_reader_writer_config(self, config: Dict) -> Dict:
         """Calculate reader/writer configuration"""
@@ -3051,20 +3050,20 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
         total_instances = writers + readers
 
         return {
-        'writers': writers,
-        'readers': readers,
-        'total_instances': total_instances,
-        'write_capacity_percent': (writers / total_instances) * 100 if total_instances > 0 else 100,
-        'read_capacity_percent': (readers / total_instances) * 100 if total_instances > 0 else 0,
-        'recommended_read_split': min(80, (readers / total_instances) * 100) if total_instances > 0 else 0,
-        'reasoning': f"AI-optimized for {database_size_gb}GB database"
+            'writers': writers,
+            'readers': readers,
+            'total_instances': total_instances,
+            'write_capacity_percent': (writers / total_instances) * 100 if total_instances > 0 else 100,
+            'read_capacity_percent': (readers / total_instances) * 100 if total_instances > 0 else 0,
+            'recommended_read_split': min(80, (readers / total_instances) * 100) if total_instances > 0 else 0,
+            'reasoning': f"AI-optimized for {database_size_gb}GB database"
         }
 
     def _recommend_deployment_type(self, config: Dict, rds_rec: Dict, ec2_rec: Dict) -> Dict:
         """Recommend deployment type based on user selection and analysis"""
         target_platform = config.get('target_platform', 'rds')
 
-# Use user's explicit choice but provide analysis
+        # Use user's explicit choice but provide analysis
         rds_score = 0
         ec2_score = 0
 
@@ -3083,44 +3082,43 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
 
         rds_score += 20  # Management simplicity
 
-# Override with user selection
+        # Override with user selection
         recommendation = target_platform
 
-# Calculate confidence based on alignment with analysis
+        # Calculate confidence based on alignment with analysis
         analytical_recommendation = 'rds' if rds_score > ec2_score else 'ec2'
         confidence = 0.9 if recommendation == analytical_recommendation else 0.6
 
         primary_reasons = [
-        f"User selected {target_platform.upper()} platform",
-        f"Suitable for {config['database_size_gb']:,}GB database",
-        f"Appropriate for {config.get('environment', 'non-production')} environment"
+            f"User selected {target_platform.upper()} platform",
+            f"Suitable for {config['database_size_gb']:,}GB database",
+            f"Appropriate for {config.get('environment', 'non-production')} environment"
         ]
 
         if recommendation != analytical_recommendation:
             primary_reasons.append(f"Note: Analysis suggests {analytical_recommendation.upper()} might be optimal")
 
         return {
-        'recommendation': recommendation,
-        'user_choice': target_platform,
-        'analytical_recommendation': analytical_recommendation,
-        'confidence': confidence,
-        'rds_score': rds_score,
-        'ec2_score': ec2_score,
-        'primary_reasons': primary_reasons
+            'recommendation': recommendation,
+            'user_choice': target_platform,
+            'analytical_recommendation': analytical_recommendation,
+            'confidence': confidence,
+            'rds_score': rds_score,
+            'ec2_score': ec2_score,
+            'primary_reasons': primary_reasons
         }
-
 
     def _calculate_rds_sizing(self, config: Dict, pricing_data: Dict) -> Dict:
         """Calculate RDS sizing based on database size and performance metrics"""
         database_size_gb = config['database_size_gb']
 
-# Get current database performance metrics for better sizing
+        # Get current database performance metrics for better sizing
         current_memory_gb = config.get('current_db_max_memory_gb', 0)
         current_cpu_cores = config.get('current_db_max_cpu_cores', 0)
         current_iops = config.get('current_db_max_iops', 0)
         current_throughput_mbps = config.get('current_db_max_throughput_mbps', 0)
 
-# Base sizing on database size (existing logic)
+        # Base sizing on database size (existing logic)
         if database_size_gb < 1000:
             base_instance_type = 'db.t3.medium'
             base_cost_per_hour = 0.068
@@ -3131,14 +3129,14 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
             base_instance_type = 'db.r6g.xlarge'
             base_cost_per_hour = 0.96
 
-# Performance-based sizing recommendations
+        # Performance-based sizing recommendations
         recommended_instance_type = base_instance_type
         performance_based_cost = base_cost_per_hour
         sizing_reasoning = ["Based on database size"]
 
-# Adjust based on current memory usage
+        # Adjust based on current memory usage
         if current_memory_gb > 0:
-# Add 20% buffer for AWS overhead and growth
+            # Add 20% buffer for AWS overhead and growth
             required_memory = current_memory_gb * 1.2
 
             if required_memory > 64:
@@ -3158,9 +3156,9 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
                 performance_based_cost = 0.48
                 sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
 
-# Adjust based on current CPU usage
+        # Adjust based on current CPU usage
         if current_cpu_cores > 0:
-# Add 25% buffer for peak load handling
+            # Add 25% buffer for peak load handling
             required_vcpu = current_cpu_cores * 1.25
 
             if required_vcpu > 16:
@@ -3168,33 +3166,33 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
                     recommended_instance_type = 'db.r6g.4xlarge'
                     performance_based_cost = 3.84
                     sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-                elif required_vcpu > 8:
-                    if recommended_instance_type in ['db.t3.medium', 'db.r6g.large']:
-                        recommended_instance_type = 'db.r6g.2xlarge'
+            elif required_vcpu > 8:
+                if recommended_instance_type in ['db.t3.medium', 'db.r6g.large']:
+                    recommended_instance_type = 'db.r6g.2xlarge'
                     performance_based_cost = 1.92
                     sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-                elif required_vcpu > 4:
-                    if recommended_instance_type == 'db.t3.medium':
-                        recommended_instance_type = 'db.r6g.xlarge'
+            elif required_vcpu > 4:
+                if recommended_instance_type == 'db.t3.medium':
+                    recommended_instance_type = 'db.r6g.xlarge'
                     performance_based_cost = 0.96
                     sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
 
-# Adjust based on IOPS requirements
+        # Adjust based on IOPS requirements
         if current_iops > 0:
-# Add 30% buffer for peak operations
+            # Add 30% buffer for peak operations
             required_iops = current_iops * 1.3
 
             if required_iops > 40000:
                 sizing_reasoning.append(f"High IOPS requirement: {required_iops:.0f} IOPS")
-# May need io1/io2 storage
+                # May need io1/io2 storage
             elif required_iops > 20000:
                 sizing_reasoning.append(f"Medium-high IOPS requirement: {required_iops:.0f} IOPS")
 
-# Use the performance-based recommendation if it's more suitable
+        # Use the performance-based recommendation if it's more suitable
         final_instance_type = recommended_instance_type
         cost_per_hour = performance_based_cost
 
-# Get real pricing if available
+        # Get real pricing if available
         rds_instances = pricing_data.get('rds_instances', {})
         if final_instance_type in rds_instances:
             cost_per_hour = rds_instances[final_instance_type].get('cost_per_hour', cost_per_hour)
@@ -3202,36 +3200,233 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
         storage_size = max(database_size_gb * 1.5, 100)
         storage_cost = storage_size * 0.08
 
-# SQL Server specific adjustments
+        # SQL Server specific adjustments
         database_engine = config.get('database_engine', 'mysql')
         if database_engine == 'sqlserver':
-# SQL Server requires more resources
+            # SQL Server requires more resources
             sizing_reasoning.append("SQL Server requires additional resources")
             cost_per_hour *= 1.2  # SQL Server licensing overhead
 
         return {
-        'primary_instance': final_instance_type,
-        'base_recommendation': base_instance_type,
-        'performance_based_recommendation': recommended_instance_type,
-        'instance_specs': pricing_data.get('rds_instances', {}).get(final_instance_type, {'vcpu': 2, 'memory': 4}),
-        'storage_type': 'gp3',
-        'storage_size_gb': storage_size,
-        'monthly_instance_cost': cost_per_hour * 24 * 30,
-        'monthly_storage_cost': storage_cost,
-        'total_monthly_cost': cost_per_hour * 24 * 30 + storage_cost,
-        'multi_az': config.get('environment') == 'production',
-        'backup_retention_days': 30 if config.get('environment') == 'production' else 7,
-        'sizing_reasoning': sizing_reasoning,
-        'performance_metrics_used': {
-        'current_memory_gb': current_memory_gb,
-        'current_cpu_cores': current_cpu_cores,
-        'current_iops': current_iops,
-        'current_throughput_mbps': current_throughput_mbps
+            'primary_instance': final_instance_type,
+            'base_recommendation': base_instance_type,
+            'performance_based_recommendation': recommended_instance_type,
+            'instance_specs': pricing_data.get('rds_instances', {}).get(final_instance_type, {'vcpu': 2, 'memory': 4}),
+            'storage_type': 'gp3',
+            'storage_size_gb': storage_size,
+            'monthly_instance_cost': cost_per_hour * 24 * 30,
+            'monthly_storage_cost': storage_cost,
+            'total_monthly_cost': cost_per_hour * 24 * 30 + storage_cost,
+            'multi_az': config.get('environment') == 'production',
+            'backup_retention_days': 30 if config.get('environment') == 'production' else 7,
+            'sizing_reasoning': sizing_reasoning,
+            'performance_metrics_used': {
+                'current_memory_gb': current_memory_gb,
+                'current_cpu_cores': current_cpu_cores,
+                'current_iops': current_iops,
+                'current_throughput_mbps': current_throughput_mbps
+            }
         }
+
+    def _calculate_ec2_sizing(self, config: Dict, pricing_data: Dict) -> Dict:
+        """Calculate EC2 sizing based on database size and performance metrics"""
+        database_size_gb = config['database_size_gb']
+
+        # Get current database performance metrics for better sizing
+        current_memory_gb = config.get('current_db_max_memory_gb', 0)
+        current_cpu_cores = config.get('current_db_max_cpu_cores', 0)
+        current_iops = config.get('current_db_max_iops', 0)
+        current_throughput_mbps = config.get('current_db_max_throughput_mbps', 0)
+
+        # Get the actual database engine for EC2
+        database_engine = config.get('ec2_database_engine') or config.get('database_engine', 'mysql')
+
+        # SQL Server deployment configuration
+        sql_server_deployment_type = config.get('sql_server_deployment_type', 'standalone')
+        is_sql_server_always_on = (database_engine == 'sqlserver' and sql_server_deployment_type == 'always_on')
+
+        # Base sizing on database size (existing logic)
+        if database_size_gb < 1000:
+            base_instance_type = 't3.large'
+            base_cost_per_hour = 0.0832
+        elif database_size_gb < 5000:
+            base_instance_type = 'r6i.large'
+            base_cost_per_hour = 0.252
+        else:
+            base_instance_type = 'r6i.xlarge'
+            base_cost_per_hour = 0.504
+
+        # For SQL Server Always On, upgrade instance size for cluster requirements
+        if is_sql_server_always_on:
+            if database_size_gb < 1000:
+                base_instance_type = 'r6i.large'  # Upgrade from t3.large
+                base_cost_per_hour = 0.252
+            elif database_size_gb < 5000:
+                base_instance_type = 'r6i.xlarge'  # Upgrade from r6i.large
+                base_cost_per_hour = 0.504
+            else:
+                base_instance_type = 'r6i.2xlarge'  # Upgrade from r6i.xlarge
+                base_cost_per_hour = 1.008
+
+        # Performance-based sizing recommendations
+        recommended_instance_type = base_instance_type
+        performance_based_cost = base_cost_per_hour
+        sizing_reasoning = ["Based on database size"]
+
+        # Adjust based on current memory usage
+        if current_memory_gb > 0:
+            # Add 25% buffer for OS overhead and growth (EC2 needs more overhead than RDS)
+            required_memory = current_memory_gb * 1.25
+
+            if required_memory > 128:
+                recommended_instance_type = 'r6i.4xlarge'
+                performance_based_cost = 2.016
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 64:
+                recommended_instance_type = 'r6i.2xlarge'
+                performance_based_cost = 1.008
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 32:
+                recommended_instance_type = 'r6i.xlarge'
+                performance_based_cost = 0.504
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 16:
+                recommended_instance_type = 'r6i.large'
+                performance_based_cost = 0.252
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+            elif required_memory > 8:
+                recommended_instance_type = 't3.xlarge'
+                performance_based_cost = 0.1664
+                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
+
+        # Adjust based on current CPU usage
+        if current_cpu_cores > 0:
+            # Add 30% buffer for peak load handling (more than RDS due to OS overhead)
+            required_vcpu = current_cpu_cores * 1.3
+
+            if required_vcpu > 16:
+                if recommended_instance_type not in ['r6i.4xlarge', 'c5.4xlarge']:
+                    recommended_instance_type = 'r6i.4xlarge'
+                    performance_based_cost = 2.016
+                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
+            elif required_vcpu > 8:
+                if recommended_instance_type in ['t3.large', 't3.xlarge', 'r6i.large']:
+                    recommended_instance_type = 'r6i.2xlarge'
+                    performance_based_cost = 1.008
+                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
+            elif required_vcpu > 4:
+                if recommended_instance_type in ['t3.large', 't3.xlarge']:
+                    recommended_instance_type = 'r6i.xlarge'
+                    performance_based_cost = 0.504
+                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
+
+        # Adjust based on IOPS requirements
+        if current_iops > 0:
+            # Add 35% buffer for peak operations (more than RDS)
+            required_iops = current_iops * 1.35
+
+            if required_iops > 50000:
+                sizing_reasoning.append(f"Very high IOPS requirement: {required_iops:.0f} IOPS - consider io1/io2 EBS")
+            elif required_iops > 25000:
+                sizing_reasoning.append(f"High IOPS requirement: {required_iops:.0f} IOPS - consider gp3 with provisioned IOPS")
+            elif required_iops > 10000:
+                sizing_reasoning.append(f"Medium IOPS requirement: {required_iops:.0f} IOPS")
+
+        # SQL Server specific adjustments
+        if database_engine == 'sqlserver':
+            sizing_reasoning.append("SQL Server on EC2 requires additional resources")
+
+            # SQL Server needs more memory and CPU
+            if current_memory_gb > 0 and current_memory_gb < 16:
+                if recommended_instance_type in ['t3.large', 't3.xlarge']:
+                    recommended_instance_type = 'r6i.large'
+                    performance_based_cost = 0.252
+                    sizing_reasoning.append("SQL Server minimum memory recommendation")
+
+            # SQL Server licensing considerations
+            licensing_factor = 1.0  # Assume BYOL for now
+            sizing_reasoning.append("Consider SQL Server licensing costs (BYOL assumed)")
+
+        # Use the performance-based recommendation
+        final_instance_type = recommended_instance_type
+        cost_per_hour = performance_based_cost
+
+        # Get real pricing if available
+        ec2_instances = pricing_data.get('ec2_instances', {})
+        if final_instance_type in ec2_instances:
+            cost_per_hour = ec2_instances[final_instance_type].get('cost_per_hour', cost_per_hour)
+
+        # Storage sizing - EC2 needs more storage overhead
+        storage_size = max(database_size_gb * 2.5, 100)
+        storage_cost = storage_size * 0.08
+
+        # EBS optimization for high IOPS workloads
+        if current_iops > 20000:
+            storage_cost *= 1.5  # io1/io2 premium
+            sizing_reasoning.append("High IOPS workload - io1/io2 EBS recommended")
+
+        # Operating system licensing
+        os_licensing = 0
+        if 'windows' in config.get('operating_system', ''):
+            if database_engine == 'sqlserver':
+                os_licensing = 200
+                sizing_reasoning.append("Windows OS licensing included")
+            else:
+                os_licensing = 150
+                sizing_reasoning.append("Windows OS licensing included")
+
+        # Calculate number of instances
+        if is_sql_server_always_on:
+            instance_count = 3  # Always On requires 3 nodes
+            deployment_description = "3-Node Always On Cluster"
+        else:
+            instance_count = 1  # Standalone deployment
+            deployment_description = "Single Instance"
+
+        return {
+            'primary_instance': final_instance_type,
+            'base_recommendation': base_instance_type,
+            'performance_based_recommendation': recommended_instance_type,
+            'database_engine': database_engine,
+            'instance_specs': pricing_data.get('ec2_instances', {}).get(final_instance_type, {'vcpu': 2, 'memory': 8}),
+            'storage_type': 'gp3' if current_iops <= 20000 else 'io1',
+            'storage_size_gb': storage_size,
+            'monthly_instance_cost': cost_per_hour * 24 * 30 * instance_count,
+            'monthly_storage_cost': storage_cost * instance_count,
+            'os_licensing_cost': os_licensing,
+            'total_monthly_cost': (cost_per_hour * 24 * 30 * instance_count) + (storage_cost * instance_count) + os_licensing,
+            'ebs_optimized': True,
+            'enhanced_networking': True,
+            'sizing_reasoning': sizing_reasoning,
+            'performance_metrics_used': {
+                'current_memory_gb': current_memory_gb,
+                'current_cpu_cores': current_cpu_cores,
+                'current_iops': current_iops,
+                'current_throughput_mbps': current_throughput_mbps
+            },
+            'sql_server_considerations': database_engine == 'sqlserver',
+            'sql_server_deployment_type': sql_server_deployment_type,
+            'instance_count': instance_count,
+            'deployment_description': deployment_description,
+            'is_always_on_cluster': is_sql_server_always_on,
+            'cost_per_hour_per_instance': cost_per_hour,
+            'total_cost_per_hour': cost_per_hour * instance_count,
+            'always_on_benefits': [
+                "Automatic failover capability",
+                "Read-scale with secondary replicas",
+                "Zero data loss with synchronous replicas",
+                "Enhanced backup strategies"
+            ] if is_sql_server_always_on else [],
+            'cluster_requirements': [
+                "Windows Server Failover Clustering (WSFC)",
+                "Shared storage or storage replication",
+                "Dedicated cluster network",
+                "Quorum configuration"
+            ] if is_sql_server_always_on else []
         }
 
     async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizing: Dict,
-    agent_analysis: Dict, network_perf: Dict) -> Dict:
+                                                       agent_analysis: Dict, network_perf: Dict) -> Dict:
         """AI-enhanced cost calculation"""
 
         deployment_rec = aws_sizing['deployment_recommendation']['recommendation']
@@ -3243,19 +3438,19 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
             aws_compute_cost = aws_sizing['ec2_recommendations']['monthly_instance_cost']
             aws_storage_cost = aws_sizing['ec2_recommendations']['monthly_storage_cost']
 
-# Agent costs
+        # Agent costs
         agent_monthly_cost = agent_analysis.get('monthly_cost', 0)
 
-# Destination storage costs
+        # Destination storage costs
         destination_storage = config.get('destination_storage_type', 'S3')
         destination_storage_cost = self._calculate_destination_storage_cost(config, destination_storage)
 
-# Network and other costs
+        # Network and other costs
         network_cost = 500
         os_licensing_cost = 300
         management_cost = 200
 
-# Backup storage costs (if applicable)
+        # Backup storage costs (if applicable)
         migration_method = config.get('migration_method', 'direct_replication')
         backup_storage_cost = 0
         if migration_method == 'backup_restore':
@@ -3263,28 +3458,28 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
             backup_storage_cost = backup_size_gb * 0.01  # Estimated backup storage cost
 
         total_monthly_cost = (aws_compute_cost + aws_storage_cost + agent_monthly_cost +
-        destination_storage_cost + network_cost + os_licensing_cost +
-        management_cost + backup_storage_cost)
+                              destination_storage_cost + network_cost + os_licensing_cost +
+                              management_cost + backup_storage_cost)
 
-# One-time costs
+        # One-time costs
         one_time_migration_cost = config['database_size_gb'] * 0.1 + config.get('number_of_agents', 1) * 500
         if migration_method == 'backup_restore':
             one_time_migration_cost += 1000  # Additional setup cost for backup/restore
 
         return {
-        'aws_compute_cost': aws_compute_cost,
-        'aws_storage_cost': aws_storage_cost,
-        'agent_cost': agent_monthly_cost,
-        'destination_storage_cost': destination_storage_cost,
-        'destination_storage_type': destination_storage,
-        'backup_storage_cost': backup_storage_cost,
-        'network_cost': network_cost,
-        'os_licensing_cost': os_licensing_cost,
-        'management_cost': management_cost,
-        'total_monthly_cost': total_monthly_cost,
-        'one_time_migration_cost': one_time_migration_cost,
-        'estimated_monthly_savings': 500,
-        'roi_months': 12
+            'aws_compute_cost': aws_compute_cost,
+            'aws_storage_cost': aws_storage_cost,
+            'agent_cost': agent_monthly_cost,
+            'destination_storage_cost': destination_storage_cost,
+            'destination_storage_type': destination_storage,
+            'backup_storage_cost': backup_storage_cost,
+            'network_cost': network_cost,
+            'os_licensing_cost': os_licensing_cost,
+            'management_cost': management_cost,
+            'total_monthly_cost': total_monthly_cost,
+            'one_time_migration_cost': one_time_migration_cost,
+            'estimated_monthly_savings': 500,
+            'roi_months': 12
         }
 
     def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
@@ -3325,7 +3520,7 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
 
             # Migration time
             migration_throughput = min(agent_config['total_max_throughput_mbps'],
-                                    network_perf['effective_bandwidth_mbps'])
+                                       network_perf['effective_bandwidth_mbps'])
 
             if migration_throughput > 0:
                 if migration_method == 'backup_restore':
@@ -3360,6 +3555,7 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
             }
 
         return comparisons
+
     def _get_performance_rating(self, dest_type: str) -> str:
         """Get performance rating for destination"""
         ratings = {'S3': 'Good', 'FSx_Windows': 'Very Good', 'FSx_Lustre': 'Excellent'}
@@ -3376,15 +3572,15 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
         return ratings.get(dest_type, 'Low')
 
     async def _generate_ai_overall_assessment_with_agents(self, config: Dict, onprem_performance: Dict,
-    aws_sizing: Dict, migration_time: float,
-    agent_analysis: Dict) -> Dict:
+                                                          aws_sizing: Dict, migration_time: float,
+                                                          agent_analysis: Dict) -> Dict:
         """Generate AI overall assessment"""
 
         readiness_score = 80
         success_probability = 85
         risk_level = 'Medium'
 
-# Adjust based on configuration
+        # Adjust based on configuration
         migration_method = config.get('migration_method', 'direct_replication')
 
         if config['database_size_gb'] > 10000:
@@ -3396,7 +3592,7 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
         if migration_time > 24:
             readiness_score -= 10
 
-# Backup storage adjustments
+        # Backup storage adjustments
         if migration_method == 'backup_restore':
             backup_storage_type = config.get('backup_storage_type', 'nas_drive')
             if backup_storage_type == 'windows_share':
@@ -3405,492 +3601,52 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
                 readiness_score += 5  # NFS efficiency
 
         return {
-        'migration_readiness_score': readiness_score,
-        'success_probability': success_probability,
-        'risk_level': risk_level,
-        'readiness_factors': [
-        'System appears ready for migration',
-        f"{migration_method.replace('_', ' ').title()} migration method selected"
-        ],
-        'recommended_next_steps': [
-        'Conduct detailed performance baseline',
-        'Set up AWS environment and testing',
-        'Plan comprehensive testing strategy'
-        ],
-        'timeline_recommendation': {
-        'planning_phase_weeks': 2,
-        'testing_phase_weeks': 3,
-        'migration_window_hours': migration_time,
-        'total_project_weeks': 6,
-        'recommended_approach': 'staged'
-        },
-        'agent_scaling_impact': {
-        'scaling_efficiency': agent_analysis.get('scaling_efficiency', 1.0) * 100,
-        'current_agents': config.get('number_of_agents', 1)
-        },
-        'destination_storage_impact': {
-        'storage_type': config.get('destination_storage_type', 'S3'),
-        'storage_performance_multiplier': agent_analysis.get('storage_performance_multiplier', 1.0)
-        },
-        'backup_storage_impact': {
-        'migration_method': migration_method,
-        'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
-        'backup_efficiency': agent_analysis.get('backup_efficiency', 1.0)
-        }
-        }
-
-    async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
-        """AI-enhanced AWS sizing"""
-
-# Get real-time pricing
-        pricing_data = await self.aws_api.get_real_time_pricing()
-
-# RDS sizing
-        rds_sizing = self._calculate_rds_sizing(config, pricing_data)
-
-# EC2 sizing
-        ec2_sizing = self._calculate_ec2_sizing(config, pricing_data)
-
-# Reader/writer configuration
-        reader_writer_config = self._calculate_reader_writer_config(config)
-
-# Deployment recommendation
-        deployment_recommendation = self._recommend_deployment_type(config, rds_sizing, ec2_sizing)
-
-# AI analysis
-        ai_analysis = await self.ai_manager.analyze_migration_workload(config, {})
-
-        return {
-        'rds_recommendations': rds_sizing,
-        'ec2_recommendations': ec2_sizing,
-        'reader_writer_config': reader_writer_config,
-        'deployment_recommendation': deployment_recommendation,
-        'ai_analysis': ai_analysis,
-        'pricing_data': pricing_data
+            'migration_readiness_score': readiness_score,
+            'success_probability': success_probability,
+            'risk_level': risk_level,
+            'readiness_factors': [
+                'System appears ready for migration',
+                f"{migration_method.replace('_', ' ').title()} migration method selected"
+            ],
+            'recommended_next_steps': [
+                'Conduct detailed performance baseline',
+                'Set up AWS environment and testing',
+                'Plan comprehensive testing strategy'
+            ],
+            'timeline_recommendation': {
+                'planning_phase_weeks': 2,
+                'testing_phase_weeks': 3,
+                'migration_window_hours': migration_time,
+                'total_project_weeks': 6,
+                'recommended_approach': 'staged'
+            },
+            'agent_scaling_impact': {
+                'scaling_efficiency': agent_analysis.get('scaling_efficiency', 1.0) * 100,
+                'current_agents': config.get('number_of_agents', 1)
+            },
+            'destination_storage_impact': {
+                'storage_type': config.get('destination_storage_type', 'S3'),
+                'storage_performance_multiplier': agent_analysis.get('storage_performance_multiplier', 1.0)
+            },
+            'backup_storage_impact': {
+                'migration_method': migration_method,
+                'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
+                'backup_efficiency': agent_analysis.get('backup_efficiency', 1.0)
+            }
         }
 
-    async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float,
-                                                onprem_performance: Dict, agent_analysis: Dict) -> float:
-        """AI-enhanced migration time calculation with backup storage considerations"""
-
-        database_size_gb = config['database_size_gb']
-        num_agents = config.get('number_of_agents', 1)
-        destination_storage = config.get('destination_storage_type', 'S3')
-        migration_method = config.get('migration_method', 'direct_replication')
-
-        # Calculate data size to transfer
-        if migration_method == 'backup_restore':
-            # For backup/restore, calculate backup file size
-            backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
-            data_size_gb = database_size_gb * backup_size_multiplier
-            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-
-            # Base calculation for file transfer
-            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
-
-            # Backup storage specific factors
-            if backup_storage_type == 'windows_share':
-                complexity_factor = 1.2  # SMB protocol overhead
-            else:  # nas_drive
-                complexity_factor = 1.1  # NFS is more efficient
-
-            # Add backup preparation time
-            backup_prep_time = 0.5 + (database_size_gb / 10000)  # 0.5-2 hours for backup prep
-
-        else:
-            # For direct replication, use database size
-            data_size_gb = database_size_gb
-            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
-            complexity_factor = 1.0
-            backup_prep_time = 0
-
-        # Database engine complexity
-        if config['source_database_engine'] != config['database_engine']:
-            complexity_factor *= 1.3
-
-        # OS and platform factors
-        if 'windows' in config['operating_system']:
-            complexity_factor *= 1.1
-
-        if config['server_type'] == 'vmware':
-            complexity_factor *= 1.05
-
-        # Destination storage adjustments
-        if destination_storage == 'FSx_Windows':
-            complexity_factor *= 0.9
-        elif destination_storage == 'FSx_Lustre':
-            complexity_factor *= 0.7
-
-        # Agent scaling adjustments
-        scaling_efficiency = agent_analysis.get('scaling_efficiency', 1.0)
-        storage_multiplier = agent_analysis.get('storage_performance_multiplier', 1.0)
-
-        if num_agents > 1:
-            agent_time_factor = (1 / min(num_agents * scaling_efficiency * storage_multiplier, 6.0))
-            complexity_factor *= agent_time_factor
-
-            if num_agents > 5:
-                complexity_factor *= 1.1
-
-        total_time = base_time_hours * complexity_factor + backup_prep_time
-
-        return total_time
-
-
-async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
-    """AI-enhanced AWS sizing"""
-
-    # Get real-time pricing
-    pricing_data = await self.aws_api.get_real_time_pricing()
-
-    # RDS sizing
-    rds_sizing = self._calculate_rds_sizing(config, pricing_data)
-
-    # EC2 sizing
-    ec2_sizing = self._calculate_ec2_sizing(config, pricing_data)
-
-    # Reader/writer configuration
-    reader_writer_config = self._calculate_reader_writer_config(config)
-
-    # Deployment recommendation
-    deployment_recommendation = self._recommend_deployment_type(config, rds_sizing, ec2_sizing)
-
-    # AI analysis
-    ai_analysis = await self.ai_manager.analyze_migration_workload(config, {})
-
-    return {
-        'rds_recommendations': rds_sizing,
-        'ec2_recommendations': ec2_sizing,
-        'reader_writer_config': reader_writer_config,
-        'deployment_recommendation': deployment_recommendation,
-        'ai_analysis': ai_analysis,
-        'pricing_data': pricing_data
-    }
-
-    async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
-        """Enhanced migration agent analysis with scaling support and backup storage considerations"""
-
-        num_agents = config.get('number_of_agents', 1)
-        destination_storage = config.get('destination_storage_type', 'S3')
-        migration_method = config.get('migration_method', 'direct_replication')
-
-# For backup/restore, always use DataSync
-        if migration_method == 'backup_restore':
-            primary_tool = 'datasync'
-            agent_size = config.get('datasync_agent_size', 'medium')
-            agent_config = self.agent_manager.calculate_agent_configuration('datasync', agent_size, num_agents, destination_storage)
-        elif primary_tool == 'datasync':
-            agent_size = config['datasync_agent_size']
-            agent_config = self.agent_manager.calculate_agent_configuration('datasync', agent_size, num_agents, destination_storage)
-        else:
-            agent_size = config['dms_agent_size']
-            agent_config = self.agent_manager.calculate_agent_configuration('dms', agent_size, num_agents, destination_storage)
-
-        total_max_throughput = agent_config['total_max_throughput_mbps']
-        network_bandwidth = network_perf['effective_bandwidth_mbps']
-
-# Apply backup storage efficiency factors
-        if migration_method == 'backup_restore':
-            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-            if backup_storage_type == 'windows_share':
-# SMB has some overhead
-                backup_efficiency = 0.85
-            else:  # nas_drive with NFS:
-                backup_efficiency = 0.92
-
-            effective_throughput = min(total_max_throughput * backup_efficiency, network_bandwidth)
-            else:
-            effective_throughput = min(total_max_throughput, network_bandwidth)
-            backup_efficiency = 1.0
-
-# Determine bottleneck
-        if total_max_throughput < network_bandwidth:
-            bottleneck = f'agents ({num_agents} agents)'
-            bottleneck_severity = 'high' if effective_throughput / total_max_throughput < 0.7 else 'medium'
-        else:
-            bottleneck = 'network'
-            bottleneck_severity = 'medium' if effective_throughput / network_bandwidth > 0.8 else 'high'
-
-# Add backup storage specific bottleneck detection
-        if migration_method == 'backup_restore':
-            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-            if backup_storage_type == 'windows_share' and effective_throughput < total_max_throughput * 0.9:
-                bottleneck = f'{bottleneck} + SMB protocol overhead'
-
-        return {
-        'primary_tool': primary_tool,
-        'agent_size': agent_size,
-        'number_of_agents': num_agents,
-        'destination_storage': destination_storage,
-        'migration_method': migration_method,
-        'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
-        'agent_configuration': agent_config,
-        'total_max_throughput_mbps': total_max_throughput,
-        'total_effective_throughput': effective_throughput,
-        'backup_efficiency': backup_efficiency,
-        'bottleneck': bottleneck,
-        'bottleneck_severity': bottleneck_severity,
-        'scaling_efficiency': agent_config['scaling_efficiency'],
-        'management_overhead': agent_config['management_overhead_factor'],
-        'storage_performance_multiplier': agent_config.get('storage_performance_multiplier', 1.0),
-        'cost_per_hour': agent_config['effective_cost_per_hour'],
-        'monthly_cost': agent_config['total_monthly_cost']
-        }
-
-    def _get_network_path_key(self, config: Dict) -> str:
-        """Get network path key based on migration method and backup storage"""
-        os_lower = config.get('operating_system', '').lower()
-        if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel']):
-            os_type = 'linux'
-        else:
-            os_type = 'windows'
-
-        environment = config.get('environment', 'non-production').replace('-', '_').lower()
-        destination_storage = config.get('destination_storage_type', 'S3').lower()
-        migration_method = config.get('migration_method', 'direct_replication')
-        backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-
-# For backup/restore method, use backup storage paths
-        if migration_method == 'backup_restore':
-            if environment in ['non_production', 'nonprod']:
-                if backup_storage_type == 'windows_share':
-                    return "nonprod_sj_windows_share_s3"
-                else:  # nas_drive:
-                    return "nonprod_sj_nas_drive_s3"
-                elif environment == 'production':
-                    if backup_storage_type == 'windows_share':
-                        return "prod_sa_windows_share_s3"
-                    else:  # nas_drive:
-                return "prod_sa_nas_drive_s3"
-
-# For direct replication, use original paths
-                    else:
-                if environment in ['non_production', 'nonprod']:
-                    if destination_storage == 's3':
-                        return f"nonprod_sj_{os_type}_nas_s3"
-                    elif destination_storage == 'fsx_windows':
-                        return f"nonprod_sj_{os_type}_nas_fsx_windows"
-                    elif destination_storage == 'fsx_lustre':
-                        return f"nonprod_sj_{os_type}_nas_fsx_lustre"
-                    elif environment == 'production':
-                        if destination_storage == 's3':
-                            return f"prod_sa_{os_type}_nas_s3"
-
-# Default fallback for direct replication
-        return f"nonprod_sj_{os_type}_nas_s3"
-
-    def _calculate_ec2_sizing(self, config: Dict, pricing_data: Dict) -> Dict:
-        """Calculate EC2 sizing based on database size and performance metrics"""
-        database_size_gb = config['database_size_gb']
-
-# Get current database performance metrics for better sizing
-        current_memory_gb = config.get('current_db_max_memory_gb', 0)
-        current_cpu_cores = config.get('current_db_max_cpu_cores', 0)
-        current_iops = config.get('current_db_max_iops', 0)
-        current_throughput_mbps = config.get('current_db_max_throughput_mbps', 0)
-
-# Get the actual database engine for EC2
-        database_engine = config.get('ec2_database_engine') or config.get('database_engine', 'mysql')
-
-# SQL Server deployment configuration
-        sql_server_deployment_type = config.get('sql_server_deployment_type', 'standalone')
-        is_sql_server_always_on = (database_engine == 'sqlserver' and sql_server_deployment_type == 'always_on')
-
-# Base sizing on database size (existing logic)
-        if database_size_gb < 1000:
-            base_instance_type = 't3.large'
-            base_cost_per_hour = 0.0832
-        elif database_size_gb < 5000:
-            base_instance_type = 'r6i.large'
-            base_cost_per_hour = 0.252
-        else:
-            base_instance_type = 'r6i.xlarge'
-            base_cost_per_hour = 0.504
-
-# For SQL Server Always On, upgrade instance size for cluster requirements
-        if is_sql_server_always_on:
-            if database_size_gb < 1000:
-                base_instance_type = 'r6i.large'  # Upgrade from t3.large
-                base_cost_per_hour = 0.252
-            elif database_size_gb < 5000:
-                base_instance_type = 'r6i.xlarge'  # Upgrade from r6i.large
-                base_cost_per_hour = 0.504
-            else:
-                base_instance_type = 'r6i.2xlarge'  # Upgrade from r6i.xlarge
-                base_cost_per_hour = 1.008
-
-# Performance-based sizing recommendations
-        recommended_instance_type = base_instance_type
-        performance_based_cost = base_cost_per_hour
-        sizing_reasoning = ["Based on database size"]
-
-# Adjust based on current memory usage
-        if current_memory_gb > 0:
-# Add 25% buffer for OS overhead and growth (EC2 needs more overhead than RDS)
-            required_memory = current_memory_gb * 1.25
-
-            if required_memory > 128:
-                recommended_instance_type = 'r6i.4xlarge'
-                performance_based_cost = 2.016
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 64:
-                recommended_instance_type = 'r6i.2xlarge'
-                performance_based_cost = 1.008
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 32:
-                recommended_instance_type = 'r6i.xlarge'
-                performance_based_cost = 0.504
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 16:
-                recommended_instance_type = 'r6i.large'
-                performance_based_cost = 0.252
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-            elif required_memory > 8:
-                recommended_instance_type = 't3.xlarge'
-                performance_based_cost = 0.1664
-                sizing_reasoning.append(f"Memory requirement: {required_memory:.0f} GB")
-
-# Adjust based on current CPU usage
-        if current_cpu_cores > 0:
-# Add 30% buffer for peak load handling (more than RDS due to OS overhead)
-            required_vcpu = current_cpu_cores * 1.3
-
-            if required_vcpu > 16:
-                if recommended_instance_type not in ['r6i.4xlarge', 'c5.4xlarge']:
-                    recommended_instance_type = 'r6i.4xlarge'
-                    performance_based_cost = 2.016
-                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-                elif required_vcpu > 8:
-                    if recommended_instance_type in ['t3.large', 't3.xlarge', 'r6i.large']:
-                        recommended_instance_type = 'r6i.2xlarge'
-                    performance_based_cost = 1.008
-                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-                elif required_vcpu > 4:
-                    if recommended_instance_type in ['t3.large', 't3.xlarge']:
-                        recommended_instance_type = 'r6i.xlarge'
-                    performance_based_cost = 0.504
-                    sizing_reasoning.append(f"CPU requirement: {required_vcpu:.0f} vCPUs")
-
-# Adjust based on IOPS requirements
-        if current_iops > 0:
-# Add 35% buffer for peak operations (more than RDS)
-            required_iops = current_iops * 1.35
-
-            if required_iops > 50000:
-                sizing_reasoning.append(f"Very high IOPS requirement: {required_iops:.0f} IOPS - consider io1/io2 EBS")
-            elif required_iops > 25000:
-                sizing_reasoning.append(f"High IOPS requirement: {required_iops:.0f} IOPS - consider gp3 with provisioned IOPS")
-            elif required_iops > 10000:
-                sizing_reasoning.append(f"Medium IOPS requirement: {required_iops:.0f} IOPS")
-
-# SQL Server specific adjustments
-        if database_engine == 'sqlserver':
-            sizing_reasoning.append("SQL Server on EC2 requires additional resources")
-
-# SQL Server needs more memory and CPU
-            if current_memory_gb > 0 and current_memory_gb < 16:
-                if recommended_instance_type in ['t3.large', 't3.xlarge']:
-                    recommended_instance_type = 'r6i.large'
-                    performance_based_cost = 0.252
-                    sizing_reasoning.append("SQL Server minimum memory recommendation")
-
-# SQL Server licensing considerations
-            licensing_factor = 1.0  # Assume BYOL for now
-            sizing_reasoning.append("Consider SQL Server licensing costs (BYOL assumed)")
-
-# Use the performance-based recommendation
-        final_instance_type = recommended_instance_type
-        cost_per_hour = performance_based_cost
-
-# Get real pricing if available
-        ec2_instances = pricing_data.get('ec2_instances', {})
-        if final_instance_type in ec2_instances:
-            cost_per_hour = ec2_instances[final_instance_type].get('cost_per_hour', cost_per_hour)
-
-# Storage sizing - EC2 needs more storage overhead
-        storage_size = max(database_size_gb * 2.5, 100)
-        storage_cost = storage_size * 0.08
-
-# EBS optimization for high IOPS workloads
-        if current_iops > 20000:
-            storage_cost *= 1.5  # io1/io2 premium
-            sizing_reasoning.append("High IOPS workload - io1/io2 EBS recommended")
-
-# Operating system licensing
-        os_licensing = 0
-        if 'windows' in config.get('operating_system', ''):
-            if database_engine == 'sqlserver':
-                os_licensing = 200
-                sizing_reasoning.append("Windows OS licensing included")
-            else:
-                os_licensing = 150
-                sizing_reasoning.append("Windows OS licensing included")
-
-# Calculate number of instances
-        if is_sql_server_always_on:
-            instance_count = 3  # Always On requires 3 nodes
-            deployment_description = "3-Node Always On Cluster"
-        else:
-            instance_count = 1  # Standalone deployment
-            deployment_description = "Single Instance"
-
-        return {
-        'primary_instance': final_instance_type,
-        'base_recommendation': base_instance_type,
-        'performance_based_recommendation': recommended_instance_type,
-        'database_engine': database_engine,
-        'instance_specs': pricing_data.get('ec2_instances', {}).get(final_instance_type, {'vcpu': 2, 'memory': 8}),
-        'storage_type': 'gp3' if current_iops <= 20000 else 'io1',
-        'storage_size_gb': storage_size,
-        'monthly_instance_cost': cost_per_hour * 24 * 30 * instance_count,
-        'monthly_storage_cost': storage_cost * instance_count,
-        'os_licensing_cost': os_licensing,
-        'total_monthly_cost': (cost_per_hour * 24 * 30 * instance_count) + (storage_cost * instance_count) + os_licensing,
-        'ebs_optimized': True,
-        'enhanced_networking': True,
-        'sizing_reasoning': sizing_reasoning,
-        'performance_metrics_used': {
-        'current_memory_gb': current_memory_gb,
-        'current_cpu_cores': current_cpu_cores,
-        'current_iops': current_iops,
-        'current_throughput_mbps': current_throughput_mbps
-        },
-        'sql_server_considerations': database_engine == 'sqlserver',
-        'sql_server_deployment_type': sql_server_deployment_type,
-        'instance_count': instance_count,
-        'deployment_description': deployment_description,
-        'is_always_on_cluster': is_sql_server_always_on,
-        'cost_per_hour_per_instance': cost_per_hour,
-        'total_cost_per_hour': cost_per_hour * instance_count,
-        'always_on_benefits': [
-        "Automatic failover capability",
-        "Read-scale with secondary replicas",
-        "Zero data loss with synchronous replicas",
-        "Enhanced backup strategies"
-        ] if is_sql_server_always_on else [],
-        'cluster_requirements': [
-        "Windows Server Failover Clustering (WSFC)",
-        "Shared storage or storage replication",
-        "Dedicated cluster network",
-        "Quorum configuration"
-        ] if is_sql_server_always_on else []
-        }
-
-
-
-
-    def config_has_changed(current_config, stored_config):
+    def config_has_changed(self, current_config, stored_config):
         """Check if configuration has changed significantly"""
         if stored_config is None:
             return True
 
-# Key fields that trigger re-analysis
+        # Key fields that trigger re-analysis
         key_fields = [
-        'database_size_gb', 'source_database_engine', 'database_engine',
-        'migration_method', 'backup_storage_type', 'destination_storage_type',
-        'number_of_agents', 'datasync_agent_size', 'dms_agent_size',
-        'operating_system', 'ram_gb', 'cpu_cores', 'environment',
-        'target_platform', 'sql_server_deployment_type'  # ADD THIS LINE
+            'database_size_gb', 'source_database_engine', 'database_engine',
+            'migration_method', 'backup_storage_type', 'destination_storage_type',
+            'number_of_agents', 'datasync_agent_size', 'dms_agent_size',
+            'operating_system', 'ram_gb', 'cpu_cores', 'environment',
+            'target_platform', 'sql_server_deployment_type'
         ]
 
         for field in key_fields:
@@ -3898,300 +3654,7 @@ async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
                 return True
 
         return False
-
-
-
-        database_size_gb = config['database_size_gb']
-        performance_req = config.get('performance_requirements', 'standard')
-        environment = config.get('environment', 'non-production')
-
-        writers = 1
-        readers = 0
-
-        if database_size_gb > 500:
-            readers += 1
-        if database_size_gb > 2000:
-            readers += 1
-        if database_size_gb > 10000:
-            readers += 2
-
-        if performance_req == 'high':
-            readers += 2
-
-        if environment == 'production':
-            readers = max(readers, 2)
-
-        total_instances = writers + readers
-
-        return {
-        'writers': writers,
-        'readers': readers,
-        'total_instances': total_instances,
-        'write_capacity_percent': (writers / total_instances) * 100 if total_instances > 0 else 100,
-        'read_capacity_percent': (readers / total_instances) * 100 if total_instances > 0 else 0,
-        'recommended_read_split': min(80, (readers / total_instances) * 100) if total_instances > 0 else 0,
-        'reasoning': f"AI-optimized for {database_size_gb}GB database"
-        }
-
-def _recommend_deployment_type(self, config: Dict, rds_rec: Dict, ec2_rec: Dict) -> Dict:
-    """Recommend deployment type based on user selection and analysis"""
-    target_platform = config.get('target_platform', 'rds')
-
-# Use user's explicit choice but provide analysis
-    rds_score = 0
-    ec2_score = 0
-
-    if config['database_size_gb'] < 2000:
-        rds_score += 40
-    elif config['database_size_gb'] > 10000:
-        ec2_score += 30
-
-        if config['performance_requirements'] == 'high':
-            ec2_score += 30
-        else:
-            rds_score += 35
-
-        if config['environment'] == 'production':
-            rds_score += 20
-
-        rds_score += 20  # Management simplicity
-
-# Override with user selection
-        recommendation = target_platform
-
-# Calculate confidence based on alignment with analysis
-        analytical_recommendation = 'rds' if rds_score > ec2_score else 'ec2'
-        confidence = 0.9 if recommendation == analytical_recommendation else 0.6
-
-        primary_reasons = [
-        f"User selected {target_platform.upper()} platform",
-        f"Suitable for {config['database_size_gb']:,}GB database",
-        f"Appropriate for {config.get('environment', 'non-production')} environment"
-        ]
-
-        if recommendation != analytical_recommendation:
-            primary_reasons.append(f"Note: Analysis suggests {analytical_recommendation.upper()} might be optimal")
-
-        return {
-        'recommendation': recommendation,
-        'user_choice': target_platform,
-        'analytical_recommendation': analytical_recommendation,
-        'confidence': confidence,
-        'rds_score': rds_score,
-        'ec2_score': ec2_score,
-        'primary_reasons': primary_reasons
-        }
-
-async def _calculate_ai_enhanced_costs_with_agents(self, config: Dict, aws_sizing: Dict,
-agent_analysis: Dict, network_perf: Dict) -> Dict:
-    """AI-enhanced cost calculation"""
-
-    deployment_rec = aws_sizing['deployment_recommendation']['recommendation']
-
-    if deployment_rec == 'rds':
-        aws_compute_cost = aws_sizing['rds_recommendations']['monthly_instance_cost']
-        aws_storage_cost = aws_sizing['rds_recommendations']['monthly_storage_cost']
-    else:
-        aws_compute_cost = aws_sizing['ec2_recommendations']['monthly_instance_cost']
-        aws_storage_cost = aws_sizing['ec2_recommendations']['monthly_storage_cost']
-
-# Agent costs
-        agent_monthly_cost = agent_analysis.get('monthly_cost', 0)
-
-# Destination storage costs
-        destination_storage = config.get('destination_storage_type', 'S3')
-        destination_storage_cost = self._calculate_destination_storage_cost(config, destination_storage)
-
-# Network and other costs
-        network_cost = 500
-        os_licensing_cost = 300
-        management_cost = 200
-
-# Backup storage costs (if applicable)
-        migration_method = config.get('migration_method', 'direct_replication')
-        backup_storage_cost = 0
-        if migration_method == 'backup_restore':
-            backup_size_gb = config['database_size_gb'] * config.get('backup_size_multiplier', 0.7)
-            backup_storage_cost = backup_size_gb * 0.01  # Estimated backup storage cost
-
-        total_monthly_cost = (aws_compute_cost + aws_storage_cost + agent_monthly_cost +
-        destination_storage_cost + network_cost + os_licensing_cost +
-        management_cost + backup_storage_cost)
-
-# One-time costs
-        one_time_migration_cost = config['database_size_gb'] * 0.1 + config.get('number_of_agents', 1) * 500
-        if migration_method == 'backup_restore':
-            one_time_migration_cost += 1000  # Additional setup cost for backup/restore
-
-        return {
-        'aws_compute_cost': aws_compute_cost,
-        'aws_storage_cost': aws_storage_cost,
-        'agent_cost': agent_monthly_cost,
-        'destination_storage_cost': destination_storage_cost,
-        'destination_storage_type': destination_storage,
-        'backup_storage_cost': backup_storage_cost,
-        'network_cost': network_cost,
-        'os_licensing_cost': os_licensing_cost,
-        'management_cost': management_cost,
-        'total_monthly_cost': total_monthly_cost,
-        'one_time_migration_cost': one_time_migration_cost,
-        'estimated_monthly_savings': 500,
-        'roi_months': 12
-        }
-
-def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
-    """Calculate destination storage cost"""
-    database_size_gb = config['database_size_gb']
-    storage_costs = {'S3': 0.023, 'FSx_Windows': 0.13, 'FSx_Lustre': 0.14}
-    base_cost_per_gb = storage_costs.get(destination_storage, 0.023)
-    return database_size_gb * 1.5 * base_cost_per_gb
-
-async def _generate_fsx_destination_comparisons(self, config: Dict) -> Dict:
-    """Generate FSx destination comparisons"""
-    comparisons = {}
-    destination_types = ['S3', 'FSx_Windows', 'FSx_Lustre']
-
-    for dest_type in destination_types:
-        temp_config = config.copy()
-        temp_config['destination_storage_type'] = dest_type
-
-# Network path
-        network_path_key = self._get_network_path_key(temp_config)
-        network_perf = self.network_manager.calculate_ai_enhanced_path_performance(network_path_key)
-
-# Agent configuration
-        migration_method = config.get('migration_method', 'direct_replication')
-        if migration_method == 'backup_restore':
-            primary_tool = 'datasync'
-            agent_size = config.get('datasync_agent_size', 'medium')
-        else:
-            is_homogeneous = config['source_database_engine'] == config['database_engine']
-            primary_tool = 'datasync' if is_homogeneous else 'dms'
-            agent_size = config.get('datasync_agent_size' if is_homogeneous else 'dms_agent_size', 'medium')
-
-            num_agents = config.get('number_of_agents', 1)
-
-            agent_config = self.agent_manager.calculate_agent_configuration(
-            primary_tool, agent_size, num_agents, dest_type
-            )
-
-# Migration time
-            migration_throughput = min(agent_config['total_max_throughput_mbps'],
-            network_perf['effective_bandwidth_mbps'])
-
-            if migration_throughput > 0:
-                if migration_method == 'backup_restore':
-                    backup_size_gb = config['database_size_gb'] * config.get('backup_size_multiplier', 0.7)
-                    migration_time = (backup_size_gb * 8 * 1000) / (migration_throughput * 3600)
-                else:
-                    migration_time = (config['database_size_gb'] * 8 * 1000) / (migration_throughput * 3600)
-                else:
-                    migration_time = float('inf')
-
-# Storage cost
-            storage_cost = self._calculate_destination_storage_cost(config, dest_type)
-
-            comparisons[dest_type] = {
-            'destination_type': dest_type,
-            'estimated_migration_time_hours': migration_time,
-            'migration_throughput_mbps': migration_throughput,
-            'estimated_monthly_storage_cost': storage_cost,
-            'performance_rating': self._get_performance_rating(dest_type),
-            'cost_rating': self._get_cost_rating(dest_type),
-            'complexity_rating': self._get_complexity_rating(dest_type),
-            'recommendations': [
-            f'{dest_type} is suitable for this workload',
-            f'Consider performance vs cost trade-offs'
-            ],
-            'network_performance': network_perf,
-            'agent_configuration': {
-            'number_of_agents': num_agents,
-            'total_monthly_cost': agent_config['total_monthly_cost'],
-            'storage_performance_multiplier': agent_config['storage_performance_multiplier']
-            }
-            }
-
-        return comparisons
-
-def _get_performance_rating(self, dest_type: str) -> str:
-    """Get performance rating for destination"""
-    ratings = {'S3': 'Good', 'FSx_Windows': 'Very Good', 'FSx_Lustre': 'Excellent'}
-    return ratings.get(dest_type, 'Good')
-
-def _get_cost_rating(self, dest_type: str) -> str:
-    """Get cost rating for destination"""
-    ratings = {'S3': 'Excellent', 'FSx_Windows': 'Good', 'FSx_Lustre': 'Fair'}
-    return ratings.get(dest_type, 'Good')
-
-def _get_complexity_rating(self, dest_type: str) -> str:
-    """Get complexity rating for destination"""
-    ratings = {'S3': 'Low', 'FSx_Windows': 'Medium', 'FSx_Lustre': 'High'}
-    return ratings.get(dest_type, 'Low')
-
-async def _generate_ai_overall_assessment_with_agents(self, config: Dict, onprem_performance: Dict,
-aws_sizing: Dict, migration_time: float,
-agent_analysis: Dict) -> Dict:
-    """Generate AI overall assessment"""
-
-    readiness_score = 80
-    success_probability = 85
-    risk_level = 'Medium'
-
-# Adjust based on configuration
-    migration_method = config.get('migration_method', 'direct_replication')
-
-    if config['database_size_gb'] > 10000:
-        readiness_score -= 10
-
-        if config['source_database_engine'] != config['database_engine'] and migration_method != 'backup_restore':
-            readiness_score -= 15
-
-        if migration_time > 24:
-            readiness_score -= 10
-
-# Backup storage adjustments
-        if migration_method == 'backup_restore':
-            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-            if backup_storage_type == 'windows_share':
-                readiness_score -= 5  # SMB overhead
-            else:
-                readiness_score += 5  # NFS efficiency
-
-        return {
-        'migration_readiness_score': readiness_score,
-        'success_probability': success_probability,
-        'risk_level': risk_level,
-        'readiness_factors': [
-        'System appears ready for migration',
-        f"{migration_method.replace('_', ' ').title()} migration method selected"
-        ],
-        'recommended_next_steps': [
-        'Conduct detailed performance baseline',
-        'Set up AWS environment and testing',
-        'Plan comprehensive testing strategy'
-        ],
-        'timeline_recommendation': {
-        'planning_phase_weeks': 2,
-        'testing_phase_weeks': 3,
-        'migration_window_hours': migration_time,
-        'total_project_weeks': 6,
-        'recommended_approach': 'staged'
-        },
-        'agent_scaling_impact': {
-        'scaling_efficiency': agent_analysis.get('scaling_efficiency', 1.0) * 100,
-        'current_agents': config.get('number_of_agents', 1)
-        },
-        'destination_storage_impact': {
-        'storage_type': config.get('destination_storage_type', 'S3'),
-        'storage_performance_multiplier': agent_analysis.get('storage_performance_multiplier', 1.0)
-        },
-        'backup_storage_impact': {
-        'migration_method': migration_method,
-        'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
-        'backup_efficiency': agent_analysis.get('backup_efficiency', 1.0)
-        }
-        }
-
+    
 # Helper functions for rendering
 def render_enhanced_header():
     """Enhanced header with professional styling"""
