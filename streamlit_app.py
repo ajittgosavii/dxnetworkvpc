@@ -25,6 +25,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 import seaborn as sns
 import concurrent.futures
 import threading
+import uuid
 
 
 # Configure logging
@@ -5026,7 +5027,7 @@ def render_network_intelligence_tab(analysis: Dict, config: Dict):
         # Create network path diagram
         try:
             network_diagram = create_network_path_diagram(network_perf)
-            st.plotly_chart(network_diagram, use_container_width=True, key="network_path_diagram")
+            st.plotly_chart(network_diagram, use_container_width=True, key=f"network_{int(time.time() * 1000000)}")
         except Exception as e:
             st.warning(f"Network diagram could not be rendered: {str(e)}")
             
@@ -5272,7 +5273,7 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
                     color_discrete_sequence=px.colors.qualitative.Set3
                 )
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig_pie, use_container_width=True, key="monthly_cost_pie_chart")
+                st.plotly_chart(fig_pie, use_container_width=True, key=f"monthly_cost_pie_{int(time.time() * 1000000)}")
             else:
                 st.info("Cost breakdown visualization not available")
         else:
@@ -5307,7 +5308,7 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
             yaxis_title="Cumulative Cost (USD)",
             hovermode='x unified'
         )
-        st.plotly_chart(fig_line, use_container_width=True, key="three_year_projection_line_chart")
+        st.plotly_chart(fig_line, use_container_width=True, key=f"line_chart_{int(time.time() * 1000000)}")
     
     # === COST SOURCE AND ACCURACY ===
     st.markdown("---")
@@ -5376,7 +5377,7 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
                     color_discrete_sequence=px.colors.qualitative.Set3
                 )
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig_pie, use_container_width=True, key="monthly_cost_pie_chart")
+                st.plotly_chart(fig, use_container_width=True, key=f"chart_{int(time.time() * 1000000)}")
             else:
                 st.info("Cost breakdown visualization not available")
         else:
@@ -5698,7 +5699,7 @@ def render_os_performance_tab(analysis: Dict, config: Dict):
             title="OS Performance Profile"
         )
         
-        st.plotly_chart(fig_radar, use_container_width=True, key="os_performance_radar_chart")
+        st.plotly_chart(fig_radar, use_container_width=True, key=f"radar_{int(time.time() * 1000000)}")
     
     with col2:
         st.markdown("**🤖 AI OS Insights:**")
