@@ -6455,212 +6455,247 @@ def _render_export_functionality(unified_costs: Dict, config: Dict, analysis: Di
             mime="application/json"
         )
 
-def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
-    """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
+def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
+    """
+    Render comprehensive AWS cost analysis tab with improved organization and error handling.
+    
+    Args:
+        analysis (Dict): Analysis data containing comprehensive cost information
+        config (Dict): Configuration dictionary with analysis parameters
+    """
     st.subheader("💰 Complete AWS Cost Analysis")
     
-    # Get comprehensive cost data
+    # Extract and validate cost data
     comprehensive_costs = analysis.get('comprehensive_costs', {})
-    
     if not comprehensive_costs:
         st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
         return
     
-    # Executive Cost Summary
-    st.markdown("**📊 Executive Cost Summary**")
+    # Render main sections
+    _render_executive_summary(comprehensive_costs)
+    _render_service_breakdown(comprehensive_costs)
+    _render_cost_visualizations(comprehensive_costs)
     
+    # Success indicator
+    st.success("✅ Comprehensive cost analysis completed successfully.")
+
+
+def _render_executive_summary(comprehensive_costs: Dict):
+    """Render the executive cost summary section."""
+    st.markdown("### 📊 Executive Cost Summary")
+    
+    # Extract cost metrics with safe defaults
+    total_monthly = comprehensive_costs.get('total_monthly', 0)
+    total_one_time = comprehensive_costs.get('total_one_time', 0)
+    three_year_total = comprehensive_costs.get('three_year_total', 0)
+    monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+    
+    # Create metric columns
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        total_monthly = comprehensive_costs.get('total_monthly', 0)
         st.metric(
-            "💰 Total Monthly",
-            f"${total_monthly:,.0f}",
+            label="💰 Total Monthly",
+            value=f"${total_monthly:,.0f}",
             delta=f"Annual: ${total_monthly * 12:,.0f}"
         )
     
     with col2:
-        total_one_time = comprehensive_costs.get('total_one_time', 0)
         st.metric(
-            "🔄 One-Time Costs",
-            f"${total_one_time:,.0f}",
+            label="🔄 One-Time Costs",
+            value=f"${total_one_time:,.0f}",
             delta="Setup & Migration"
         )
     
     with col3:
-        three_year_total = comprehensive_costs.get('three_year_total', 0)
         st.metric(
-            "📅 3-Year Total",
-            f"${three_year_total:,.0f}",
+            label="📅 3-Year Total",
+            value=f"${three_year_total:,.0f}",
             delta="All costs included"
         )
     
     with col4:
-        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
         if monthly_breakdown:
-            largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
+            largest_service, largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
+            service_name = largest_service.replace('_', ' ').title()
             st.metric(
-                "🎯 Largest Cost",
-                largest_cost[0].replace('_', ' ').title(),
-                delta=f"${largest_cost[1]:,.0f}/mo"
+                label="🎯 Largest Cost",
+                value=service_name,
+                delta=f"${largest_cost:,.0f}/month"
             )
         else:
-            st.metric("🎯 Largest Cost", "Unknown", delta="No data")
-    
-    # Create a simple service breakdown table instead of the problematic code
-    st.markdown("---")
-    st.markdown("**🔧 AWS Services Cost Breakdown**")
-    
-    # Get cost components safely
-    compute_costs = comprehensive_costs.get('compute_costs', {})
-    storage_costs = comprehensive_costs.get('storage_costs', {})
-    network_costs = comprehensive_costs.get('network_costs', {})
-    migration_costs = comprehensive_costs.get('migration_costs', {})
-    
-    # Create simplified breakdown
-    breakdown_data = []
-    
-    # Compute costs
-    if compute_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Database Compute',
-            'Service Type': compute_costs.get('service_type', 'Unknown'),
-            'Monthly Cost': f"${compute_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Primary database infrastructure"
-        })
-    
-    # Storage costs
-    if storage_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Storage Services',
-            'Service Type': 'EBS + Destination Storage',
-            'Monthly Cost': f"${storage_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Database and destination storage"
-        })
-    
-    # Network costs
-    if network_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Network Services',
-            'Service Type': 'Direct Connect + Data Transfer',
-            'Monthly Cost': f"${network_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Connectivity and data transfer"
-        })
-    
-    # Migration costs
-    if migration_costs.get('monthly_total', 0) > 0:
-        breakdown_data.append({
-            'Service Category': 'Migration Services',
-            'Service Type': 'DataSync/DMS Agents',
-            'Monthly Cost': f"${migration_costs.get('monthly_total', 0):,.0f}",
-            'Details': f"Migration processing agents"
-        })
-    
-    if breakdown_data:
-        df_breakdown = pd.DataFrame(breakdown_data)
-        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
-    else:
-        st.info("No detailed cost breakdown available")
-    
-    # Rest of the function continues with visualizations and other content...
-    st.markdown("---")
-    st.markdown("**📊 Cost Visualization**")
-    
-    if monthly_breakdown:
-        # Create pie chart
-        fig_pie = px.pie(
-            values=list(monthly_breakdown.values()),
-            names=[k.replace('_', ' ').title() for k in monthly_breakdown.keys()],
-            title="Monthly Cost Distribution"
-        )
-        st.plotly_chart(fig_pie, use_container_width=True)
-    
-    st.info("✅ This is the fixed version of the comprehensive cost analysis tab.")
-    """Run comprehensive analysis including unified cost calculation"""
-    
-    # Run the existing comprehensive analysis
-    analysis_data = await analyzer.comprehensive_ai_migration_analysis(config)
-    
-    # Create unified cost calculator and add unified costs
-    unified_calculator = UnifiedAWSCostCalculator(analyzer.aws_api)
-    unified_costs = await unified_calculator.calculate_unified_aws_costs(config, analysis_data)
-    
-    # Add unified costs to analysis data
-    analysis_data['unified_aws_costs'] = unified_costs
-    
-    return analysis_data
+            st.metric(
+                label="🎯 Largest Cost",
+                value="No data available",
+                delta="Run analysis"
+            )
 
-# Updated main function to include the new tab
-async def main_with_unified_costs():
-    """Enhanced main application with unified cost analysis"""
-    render_enhanced_header()
+
+def _render_service_breakdown(comprehensive_costs: Dict):
+    """Render the AWS services cost breakdown table."""
+    st.markdown("---")
+    st.markdown("### 🔧 AWS Services Cost Breakdown")
     
-    # Enhanced sidebar controls
-    config = render_enhanced_sidebar_controls()
+    # Extract cost components
+    cost_components = {
+        'compute_costs': comprehensive_costs.get('compute_costs', {}),
+        'storage_costs': comprehensive_costs.get('storage_costs', {}),
+        'network_costs': comprehensive_costs.get('network_costs', {}),
+        'migration_costs': comprehensive_costs.get('migration_costs', {})
+    }
     
-    # Initialize the migration analyzer
-    if 'analyzer' not in st.session_state:
-        st.session_state.analyzer = EnhancedMigrationAnalyzer()
-    
-    # Check if we need to run analysis
-    if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
-        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
-            try:
-                # Run the comprehensive analysis with unified costs
-                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
-                
-                st.session_state.analysis_data = analysis_data
-                st.session_state.last_config = config.copy()
-                
-                st.success("✅ Analysis completed successfully with unified cost calculation!")
-                
-            except Exception as e:
-                st.error(f"❌ Analysis failed: {str(e)}")
-                logger.error(f"Analysis error: {e}")
-                return
-    else:
-        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
-    
-    analysis_data = st.session_state.analysis_data
-    
-    # Create tabs for organized display - UPDATED TAB LIST
-    tab_names = [
-        "💰 Total AWS Cost",  # NEW: First tab for unified costs
-        "🧠 AI Insights & Analysis",
-        "🌐 Network Intelligence", 
-        "💻 OS Performance Analysis",
-        "🎯 AWS Sizing & Configuration",
-        "🤖 Agent Scaling Analysis",
-        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
+    # Build breakdown data
+    breakdown_data = []
+    service_configs = [
+        {
+            'key': 'compute_costs',
+            'category': 'Database Compute',
+            'type_key': 'service_type',
+            'default_type': 'Database Infrastructure',
+            'description': 'Primary database infrastructure'
+        },
+        {
+            'key': 'storage_costs',
+            'category': 'Storage Services',
+            'type_key': 'storage_type',
+            'default_type': 'EBS + Destination Storage',
+            'description': 'Database and destination storage'
+        },
+        {
+            'key': 'network_costs',
+            'category': 'Network Services',
+            'type_key': 'network_type',
+            'default_type': 'Direct Connect + Data Transfer',
+            'description': 'Connectivity and data transfer'
+        },
+        {
+            'key': 'migration_costs',
+            'category': 'Migration Services',
+            'type_key': 'migration_type',
+            'default_type': 'DataSync/DMS Agents',
+            'description': 'Migration processing agents'
+        }
     ]
     
-    tabs = st.tabs(tab_names)
+    for service_config in service_configs:
+        cost_data = cost_components[service_config['key']]
+        monthly_total = cost_data.get('monthly_total', 0)
+        
+        if monthly_total > 0:
+            service_type = cost_data.get(service_config['type_key'], service_config['default_type'])
+            breakdown_data.append({
+                'Service Category': service_config['category'],
+                'Service Type': service_type,
+                'Monthly Cost': f"${monthly_total:,.0f}",
+                'Annual Cost': f"${monthly_total * 12:,.0f}",
+                'Details': service_config['description']
+            })
     
-    # Render each tab
-    with tabs[0]:  # NEW: Total AWS Cost tab
-        render_total_aws_cost_tab(analysis_data, config)
-    
-    with tabs[1]:
-        render_ai_insights_tab_enhanced(analysis_data, config)
-    
-    with tabs[2]:
-        render_network_intelligence_tab(analysis_data, config)
-    
-    with tabs[3]:
-        render_os_performance_tab(analysis_data, config)
-    
-    with tabs[4]:
-        render_aws_sizing_tab(analysis_data, config)
-    
-    with tabs[5]:
-        render_agent_scaling_tab(analysis_data, config)
-    
-    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
-        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
-    
-    # Render footer
-    render_footer()
+    # Display breakdown table or info message
+    if breakdown_data:
+        df_breakdown = pd.DataFrame(breakdown_data)
+        st.dataframe(
+            df_breakdown,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Service Category": st.column_config.TextColumn("Service Category", width="medium"),
+                "Service Type": st.column_config.TextColumn("Service Type", width="medium"),
+                "Monthly Cost": st.column_config.TextColumn("Monthly Cost", width="small"),
+                "Annual Cost": st.column_config.TextColumn("Annual Cost", width="small"),
+                "Details": st.column_config.TextColumn("Details", width="large")
+            }
+        )
+        
+        # Summary statistics
+        total_services = len(breakdown_data)
+        total_monthly_from_breakdown = sum(float(item['Monthly Cost'].replace('$', '').replace(',', '')) 
+                                         for item in breakdown_data)
+        
+        st.info(f"📈 **Summary:** {total_services} service categories identified with "
+               f"${total_monthly_from_breakdown:,.0f} total monthly cost")
+    else:
+        st.info("📋 No detailed cost breakdown available. Please ensure all cost components are configured.")
 
-# Replace the existing main call at the bottom of the file
-if __name__ == "__main__":
-    asyncio.run(main_with_unified_costs())
+
+def _render_cost_visualizations(comprehensive_costs: Dict):
+    """Render cost visualization charts."""
+    st.markdown("---")
+    st.markdown("### 📊 Cost Visualizations")
+    
+    monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+    
+    if not monthly_breakdown:
+        st.info("📈 No visualization data available. Cost breakdown is empty.")
+        return
+    
+    # Create two columns for visualizations
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Pie chart for cost distribution
+        try:
+            labels = [key.replace('_', ' ').title() for key in monthly_breakdown.keys()]
+            values = list(monthly_breakdown.values())
+            
+            fig_pie = px.pie(
+                values=values,
+                names=labels,
+                title="Monthly Cost Distribution by Service"
+            )
+            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_pie, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error creating pie chart: {str(e)}")
+    
+    with col2:
+        # Bar chart for cost comparison
+        try:
+            fig_bar = px.bar(
+                x=list(monthly_breakdown.values()),
+                y=[key.replace('_', ' ').title() for key in monthly_breakdown.keys()],
+                orientation='h',
+                title="Monthly Costs by Service Category",
+                labels={'x': 'Monthly Cost ($)', 'y': 'Service Category'}
+            )
+            fig_bar.update_layout(yaxis={'categoryorder': 'total ascending'})
+            st.plotly_chart(fig_bar, use_container_width=True)
+        except Exception as e:
+            st.error(f"Error creating bar chart: {str(e)}")
+    
+    # Cost trends or additional insights
+    if len(monthly_breakdown) > 1:
+        highest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
+        lowest_cost = min(monthly_breakdown.items(), key=lambda x: x[1])
+        
+        st.markdown("#### 💡 Cost Insights")
+        st.markdown(f"""
+        - **Highest Cost Service:** {highest_cost[0].replace('_', ' ').title()} (${highest_cost[1]:,.0f}/month)
+        - **Lowest Cost Service:** {lowest_cost[0].replace('_', ' ').title()} (${lowest_cost[1]:,.0f}/month)
+        - **Cost Ratio:** The highest cost service is {highest_cost[1]/lowest_cost[1]:.1f}x more expensive than the lowest
+        """)
+
+
+# Additional helper function for configuration change detection
+def config_has_changed(current_config: Dict, previous_config: Dict) -> bool:
+    """
+    Check if configuration has changed to determine if re-analysis is needed.
+    
+    Args:
+        current_config (Dict): Current configuration
+        previous_config (Dict): Previous configuration
+        
+    Returns:
+        bool: True if configuration has changed, False otherwise
+    """
+    if previous_config is None:
+        return True
+    
+    # Compare key configuration parameters
+    key_params = ['database_size', 'network_bandwidth', 'migration_timeline', 'aws_region']
+    
+    for param in key_params:
+        if current_config.get(param) != previous_config.get(param):
+            return True
+    
+    return False
