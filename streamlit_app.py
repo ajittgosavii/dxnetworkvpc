@@ -1581,12 +1581,11 @@ class CostValidationManager:
         'is_validated': is_validated
         }
 
-    def _create_standardized_breakdown(self, analysis: Dict, config: Dict,:
-    cost_source: str, total_monthly: float) -> Dict:
+    def _create_standardized_breakdown(self, analysis: Dict, config: Dict) -> Dict:
         """Create standardized cost breakdown"""
 
-        agent_analysis = analysis.get('agent_analysis', {})
-        aws_sizing = analysis.get('aws_sizing_recommendations', {})
+            agent_analysis = analysis.get('agent_analysis', {})
+            aws_sizing = analysis.get('aws_sizing_recommendations', {})
 
 # Agent costs (single source of truth)
         agent_cost = agent_analysis.get('monthly_cost', 0)
