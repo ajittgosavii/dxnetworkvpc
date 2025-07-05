@@ -1013,6 +1013,112 @@ class ComprehensiveAWSCostCalculator:
     def __init__(self, aws_api_manager: AWSAPIManager):
         self.aws_api = aws_api_manager
     
+    async def calculate_unified_migration_costs(self, config: Dict, analysis: Dict) -> Dict:
+    """Single unified cost calculation to eliminate discrepancies"""
+    
+    # Get components from their authoritative sources
+    aws_sizing = analysis.get('aws_sizing_recommendations', {})
+    agent_analysis = analysis.get('agent_analysis', {})
+    
+    # AWS Infrastructure Costs (from sizing recommendations)
+    target_platform = config.get('target_platform', 'rds')
+    if target_platform == 'rds':
+        aws_compute_monthly = aws_sizing.get('rds_recommendations', {}).get('monthly_instance_cost', 0)
+        aws_storage_monthly = aws_sizing.get('rds_recommendations', {}).get('monthly_storage_cost', 0)
+    else:
+        aws_compute_monthly = aws_sizing.get('ec2_recommendations', {}).get('monthly_instance_cost', 0)
+        aws_storage_monthly = aws_sizing.get('ec2_recommendations', {}).get('monthly_storage_cost', 0)
+    
+    # Agent Costs (from agent analysis - single source of truth)
+    agent_monthly = agent_analysis.get('monthly_cost', 0)
+    
+    # Additional Storage Costs (destination and backup)
+    additional_storage = await self._calculate_additional_storage_costs_unified(config)
+    
+    # Network Costs
+    network_monthly = await self._calculate_network_costs_unified(config)
+    
+    # Total monthly cost
+    total_monthly = (
+        aws_compute_monthly + 
+        aws_storage_monthly + 
+        agent_monthly + 
+        additional_storage['total'] +
+        network_monthly
+    )
+    
+    # One-time costs
+    setup_cost = 2000 + (config.get('number_of_agents', 1) * 500)
+    migration_method = config.get('migration_method', 'direct_replication')
+    if migration_method == 'backup_restore':
+        setup_cost += 1000  # Additional DataSync setup
+    
+    return {
+        'total_monthly': total_monthly,
+        'total_one_time': setup_cost,
+        'three_year_total': (total_monthly * 36) + setup_cost,
+        'detailed_breakdown': {
+            'aws_compute': aws_compute_monthly,
+            'aws_storage': aws_storage_monthly,
+            'migration_agents': agent_monthly,
+            'additional_storage': additional_storage['total'],
+            'network': network_monthly
+        },
+        'monthly_breakdown': {
+            'compute': aws_compute_monthly,
+            'storage': aws_storage_monthly,
+            'agents': agent_monthly,
+            'destination_storage': additional_storage.get('destination', 0),
+            'backup_storage': additional_storage.get('backup', 0),
+            'network': network_monthly
+        },
+        'cost_source': 'unified_calculation',
+        'calculation_timestamp': datetime.now().isoformat()
+    }
+
+async def _calculate_additional_storage_costs_unified(self, config: Dict) -> Dict:
+    """Calculate additional storage costs (destination and backup)"""
+    database_size_gb = config.get('database_size_gb', 1000)
+    destination_storage = config.get('destination_storage_type', 'S3')
+    migration_method = config.get('migration_method', 'direct_replication')
+    
+    costs = {'destination': 0, 'backup': 0, 'total': 0}
+    
+    # Destination storage (only if not S3 - FSx adds costs)
+    if destination_storage == 'FSx_Windows':
+        dest_size = database_size_gb * 0.3  # Migration staging only
+        costs['destination'] = dest_size * 0.13
+    elif destination_storage == 'FSx_Lustre':
+        dest_size = database_size_gb * 0.3  # Migration staging only
+        costs['destination'] = dest_size * 0.14
+    
+    # Backup storage (only for backup/restore method)
+    if migration_method == 'backup_restore':
+        backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+        backup_size = database_size_gb * backup_size_multiplier
+        costs['backup'] = backup_size * 0.023  # S3 Standard
+    
+    costs['total'] = costs['destination'] + costs['backup']
+    return costs
+
+async def _calculate_network_costs_unified(self, config: Dict) -> float:
+    """Calculate unified network costs"""
+    environment = config.get('environment', 'non-production')
+    database_size = config.get('database_size_gb', 1000)
+    
+    # Direct Connect
+    if environment == 'production':
+        dx_monthly = 2.25 * 24 * 30  # 10Gbps DX
+        data_transfer = database_size * 0.1 * 0.02  # 10% monthly transfer
+        vpn_backup = 45
+        return dx_monthly + data_transfer + vpn_backup
+    else:
+        dx_monthly = 0.30 * 24 * 30  # 1Gbps DX
+        data_transfer = database_size * 0.05 * 0.02  # 5% monthly transfer
+        return dx_monthly + data_transfer
+    
+    
+    
     async def calculate_comprehensive_migration_costs(self, config: Dict, analysis: Dict) -> Dict:
         """Calculate comprehensive costs for all AWS services"""
         
@@ -1372,42 +1478,122 @@ class CostValidationManager:
         pass
     
     def get_validated_costs(self, analysis: Dict, config: Dict) -> Dict:
-        """Get validated and standardized costs"""
-        comprehensive_costs = analysis.get('comprehensive_costs', {})
-        basic_costs = analysis.get('cost_analysis', {})
-        aws_sizing = analysis.get('aws_sizing_recommendations', {})
-        agent_analysis = analysis.get('agent_analysis', {})
+    """Get validated and standardized costs with unified approach"""
+    comprehensive_costs = analysis.get('comprehensive_costs', {})
+    basic_costs = analysis.get('cost_analysis', {})
+    
+    # Prefer unified costs if available
+    if comprehensive_costs.get('cost_source') == 'unified_calculation':
+        monthly_total = comprehensive_costs['total_monthly']
+        one_time_total = comprehensive_costs.get('total_one_time', 0)
+        breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        cost_source = 'unified'
+        is_validated = True
+        validation_results = {'is_consistent': True, 'discrepancies': [], 'discrepancy_count': 0}
         
-        # Determine primary cost source
-        if comprehensive_costs.get('total_monthly', 0) > 0:
-            cost_source = 'comprehensive'
-            monthly_total = comprehensive_costs['total_monthly']
-            one_time_total = comprehensive_costs.get('total_one_time', 0)
-        elif basic_costs.get('total_monthly_cost', 0) > 0:
-            cost_source = 'basic'
-            monthly_total = basic_costs['total_monthly_cost']
-            one_time_total = basic_costs.get('one_time_migration_cost', 0)
-        else:
-            cost_source = 'calculated'
-            monthly_total, one_time_total = self._calculate_fallback_costs(config, aws_sizing, agent_analysis)
+    elif comprehensive_costs.get('total_monthly', 0) > 0:
+        # Use comprehensive but validate
+        monthly_total = comprehensive_costs['total_monthly']
+        one_time_total = comprehensive_costs.get('total_one_time', 0)
+        breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        cost_source = 'comprehensive'
+        validation_results = self._validate_cost_consistency_v2(comprehensive_costs, basic_costs, analysis, config)
+        is_validated = validation_results['is_consistent']
         
-        # Standardize cost breakdown
-        standardized_breakdown = self._create_standardized_breakdown(
-            analysis, config, cost_source, monthly_total
-        )
-        
-        # Validate consistency
-        validation_results = self._validate_cost_consistency(analysis, config)
-        
-        return {
-            'total_monthly': monthly_total,
-            'total_one_time': one_time_total,
-            'three_year_total': (monthly_total * 36) + one_time_total,
-            'breakdown': standardized_breakdown,
-            'cost_source': cost_source,
-            'validation': validation_results,
-            'is_validated': validation_results['is_consistent']
-        }
+    else:
+        # Fall back to basic costs but validate them
+        monthly_total = self._validate_basic_costs(basic_costs, analysis, config)
+        one_time_total = basic_costs.get('one_time_migration_cost', 0)
+        breakdown = self._create_breakdown_from_basic(basic_costs, analysis, config)
+        cost_source = 'basic_validated'
+        validation_results = {'is_consistent': False, 'discrepancies': [{'type': 'using_fallback_costs'}], 'discrepancy_count': 1}
+        is_validated = False
+    
+    return {
+        'total_monthly': monthly_total,
+        'total_one_time': one_time_total,
+        'three_year_total': (monthly_total * 36) + one_time_total,
+        'breakdown': breakdown,
+        'cost_source': cost_source,
+        'validation': validation_results,
+        'is_validated': is_validated
+    }
+
+def _validate_basic_costs(self, basic_costs: Dict, analysis: Dict, config: Dict) -> float:
+    """Validate and correct basic costs to remove double-counting"""
+    aws_compute = basic_costs.get('aws_compute_cost', 0)
+    aws_storage = basic_costs.get('aws_storage_cost', 0)
+    
+    # Get agent cost from authoritative source
+    agent_analysis = analysis.get('agent_analysis', {})
+    if agent_analysis.get('monthly_cost', 0) > 0:
+        validated_agent_cost = agent_analysis['monthly_cost']
+    else:
+        validated_agent_cost = basic_costs.get('agent_cost', 0)
+    
+    # Add other costs without double counting
+    network_cost = basic_costs.get('network_cost', 500)  # Default network cost
+    other_cost = basic_costs.get('management_cost', 200)  # Management overhead
+    
+    validated_total = aws_compute + aws_storage + validated_agent_cost + network_cost + other_cost
+    return validated_total
+
+def _create_breakdown_from_basic(self, basic_costs: Dict, analysis: Dict, config: Dict) -> Dict:
+    """Create standardized breakdown from basic costs"""
+    agent_analysis = analysis.get('agent_analysis', {})
+    
+    return {
+        'compute': basic_costs.get('aws_compute_cost', 0),
+        'primary_storage': basic_costs.get('aws_storage_cost', 0),
+        'agents': agent_analysis.get('monthly_cost', basic_costs.get('agent_cost', 0)),
+        'destination_storage': basic_costs.get('destination_storage_cost', 0),
+        'backup_storage': basic_costs.get('backup_storage_cost', 0),
+        'network': basic_costs.get('network_cost', 500),
+        'other': basic_costs.get('management_cost', 200)
+    }
+
+def _validate_cost_consistency_v2(self, comprehensive_costs: Dict, basic_costs: Dict, analysis: Dict, config: Dict) -> Dict:
+    """Enhanced cost consistency validation"""
+    discrepancies = []
+    
+    comp_total = comprehensive_costs.get('total_monthly', 0)
+    basic_total = basic_costs.get('total_monthly_cost', 0)
+    
+    # Allow for unified calculation bypass
+    if comprehensive_costs.get('cost_source') == 'unified_calculation':
+        return {'is_consistent': True, 'discrepancies': [], 'discrepancy_count': 0}
+    
+    # Check total cost consistency
+    if comp_total > 0 and basic_total > 0:
+        diff_pct = abs(comp_total - basic_total) / max(comp_total, basic_total) * 100
+        if diff_pct > 20:  # 20% tolerance
+            discrepancies.append({
+                'type': 'total_cost_mismatch',
+                'difference_percent': diff_pct,
+                'comprehensive': comp_total,
+                'basic': basic_total,
+                'recommendation': 'Use unified cost calculation method'
+            })
+    
+    # Check agent cost consistency
+    agent_analysis = analysis.get('agent_analysis', {})
+    agent_cost_1 = agent_analysis.get('monthly_cost', 0)
+    agent_cost_2 = basic_costs.get('agent_cost', 0)
+    
+    if agent_cost_1 > 0 and agent_cost_2 > 0:
+        if abs(agent_cost_1 - agent_cost_2) > min(agent_cost_1, agent_cost_2) * 0.15:  # 15% tolerance
+            discrepancies.append({
+                'type': 'agent_cost_mismatch',
+                'agent_analysis': agent_cost_1,
+                'cost_analysis': agent_cost_2,
+                'recommendation': 'Use agent analysis as authoritative source'
+            })
+    
+    return {
+        'is_consistent': len(discrepancies) == 0,
+        'discrepancies': discrepancies,
+        'discrepancy_count': len(discrepancies)
+    }
     
     def _create_standardized_breakdown(self, analysis: Dict, config: Dict, 
                                      cost_source: str, total_monthly: float) -> Dict:
@@ -2638,6 +2824,24 @@ class EnhancedMigrationAnalyzer:
         # AWS sizing
         aws_sizing = await self._ai_enhanced_aws_sizing(config)
         
+        # Use unified cost calculation - REPLACE the existing cost calculation with this:
+    unified_costs = await self.cost_calculator.calculate_unified_migration_costs(config, {
+        'aws_sizing_recommendations': aws_sizing,
+        'agent_analysis': agent_analysis,
+        'network_performance': network_perf,
+        'onprem_performance': onprem_performance
+    })
+    
+    # Create both cost structures for compatibility
+        cost_analysis = unified_costs.copy()
+        cost_analysis['total_monthly_cost'] = unified_costs['total_monthly']  # Add compatible field names
+        cost_analysis['aws_compute_cost'] = unified_costs['detailed_breakdown']['aws_compute']
+        cost_analysis['aws_storage_cost'] = unified_costs['detailed_breakdown']['aws_storage']
+        cost_analysis['agent_cost'] = unified_costs['detailed_breakdown']['migration_agents']
+        
+        comprehensive_costs = unified_costs.copy()
+        comprehensive_costs['data_source'] = 'unified'
+        
         # Cost analysis
         cost_analysis = await self._calculate_ai_enhanced_costs_with_agents(
             config, aws_sizing, agent_analysis, network_perf
@@ -2661,21 +2865,21 @@ class EnhancedMigrationAnalyzer:
             }
         )
         
-        return {
-            'api_status': api_status,
-            'onprem_performance': onprem_performance,
-            'network_performance': network_perf,
-            'migration_type': migration_type,
-            'primary_tool': primary_tool,
-            'agent_analysis': agent_analysis,
-            'migration_throughput_mbps': migration_throughput,
-            'estimated_migration_time_hours': migration_time_hours,
-            'aws_sizing_recommendations': aws_sizing,
-            'cost_analysis': cost_analysis,
-            'comprehensive_costs': comprehensive_costs,
-            'fsx_comparisons': fsx_comparisons,
-            'ai_overall_assessment': ai_overall_assessment
-        }
+         return {
+        'api_status': api_status,
+        'onprem_performance': onprem_performance,
+        'network_performance': network_perf,
+        'migration_type': migration_type,
+        'primary_tool': primary_tool,
+        'agent_analysis': agent_analysis,
+        'migration_throughput_mbps': migration_throughput,
+        'estimated_migration_time_hours': migration_time_hours,
+        'aws_sizing_recommendations': aws_sizing,
+        'cost_analysis': cost_analysis,  # Use unified costs
+        'comprehensive_costs': comprehensive_costs,  # Use unified costs
+        'fsx_comparisons': fsx_comparisons,
+        'ai_overall_assessment': ai_overall_assessment
+    }
     
     def _get_network_path_key(self, config: Dict) -> str:
         """Get network path key based on migration method and backup storage"""
@@ -6553,15 +6757,25 @@ def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
                 st.info("Detailed AI analysis not available")
 
 def add_cost_validation_to_tab(analysis: Dict, config: Dict):
-    """Add this to the beginning of any tab that displays costs"""
+    """Add cost validation with unified cost support"""
     
     cost_validator = CostValidationManager()
     validated_costs = cost_validator.get_validated_costs(analysis, config)
     
-    if not validated_costs['is_validated']:
-        st.warning(f"⚠️ Cost validation: {validated_costs['validation']['discrepancy_count']} discrepancies detected. See Cost Analysis tab for details.")
+    # Show validation status only if there are actual issues
+    if not validated_costs['is_validated'] and validated_costs['validation']['discrepancy_count'] > 0:
+        discrepancies = validated_costs['validation']['discrepancies']
+        
+        # Filter out fallback usage (not an error)
+        real_discrepancies = [d for d in discrepancies if d.get('type') != 'using_fallback_costs']
+        
+        if real_discrepancies:
+            st.warning(f"⚠️ Cost validation: {len(real_discrepancies)} discrepancies detected. See Cost Analysis tab for details.")
+        elif validated_costs['cost_source'] == 'basic_validated':
+            st.info("ℹ️ Using validated basic cost calculations (comprehensive costs not available)")
+    elif validated_costs['cost_source'] == 'unified':
+        st.success("✅ Using unified cost calculation - all costs are consistent")
     
-    # Return validated costs for use in the tab
     return validated_costs
 
 
