@@ -698,16 +698,6 @@ class AnthropicAIManager:
                 return 3
             else:
                 return 4
-            else:
-# Original logic for direct replication
-        if database_size < 1000:
-            return 1
-        elif database_size < 5000:
-            return 2
-        elif database_size < 20000:
-            return 3
-        else:
-            return 4
 
     def _calculate_storage_performance_impact(self, storage_type: str) -> Dict:
         """Calculate performance impact for storage"""
