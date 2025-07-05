@@ -5525,11 +5525,6 @@ def render_footer():
     st.markdown("""
     <div class="enterprise-footer">
         <h3>🤖 AWS Enterprise Database Migration Analyzer AI v3.0</h3>
-        <p>Professional migration analysis powered by Anthropic Claude AI and real-time AWS APIs</p>
-        <p>Comprehensive agent scaling, FSx destination analysis, backup storage support, and cost optimization</p>
-        <p style="margin-top: 1rem; font-size: 0.9rem;">
-            📧 Enterprise Support: migration-support@company.com | 📞 24/7 Support: 1-800-MIGRATE
-        </p>
     </div>
     """, unsafe_allow_html=True)
 
