@@ -1153,7 +1153,7 @@ class ComprehensiveAWSCostCalculator:
         'cost_optimization_recommendations': self._generate_cost_optimization_recommendations(monthly_costs, config)
         }
 
-   async def _calculate_compute_costs(self, config: Dict, pricing_data: Dict) -> Dict:
+   async def _calculate_compute_costs(self, config: Dict, pricing_data: Dict) -> Dict:  # ✅ Method indented 4 spaces
         """Calculate compute costs (EC2/RDS)"""
         target_platform = config.get('target_platform', 'rds')
         database_size_gb = config.get('database_size_gb', 1000)
@@ -1183,7 +1183,7 @@ class ComprehensiveAWSCostCalculator:
                 reader_count = 1 if database_size_gb > 2000 else 0
 
             writer_monthly = instance_cost * 24 * 30
-            reader_monthly = instance_cost * 24 * 30 * reader_count * 0.9  # Readers are slightly cheaper
+            reader_monthly = instance_cost * 24 * 30 * reader_count * 0.9
 
             # Multi-AZ costs
             multi_az_cost = writer_monthly if environment == 'production' else 0
@@ -1203,7 +1203,7 @@ class ComprehensiveAWSCostCalculator:
                 }
             }
 
-        else:  # EC2 - ✅ Correctly indented at same level as the if statement above
+        else:  # EC2
             # EC2 instance costs
             if database_size_gb < 1000:
                 instance_type = 't3.large'
@@ -1228,7 +1228,7 @@ class ComprehensiveAWSCostCalculator:
             # Operating system licensing
             os_licensing = 0
             if 'windows' in config.get('operating_system', ''):
-                os_licensing = 150 * instance_count  # Windows licensing per instance
+                os_licensing = 150 * instance_count
 
             return {
                 'service_type': 'EC2',
