@@ -5377,7 +5377,7 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
                     color_discrete_sequence=px.colors.qualitative.Set3
                 )
                 fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig, use_container_width=True, key=f"chart_{int(time.time() * 1000000)}")
+                st.plotly_chart(fig_pie, use_container_width=True, key=f"chart_{int(time.time() * 1000000)}")
             else:
                 st.info("Cost breakdown visualization not available")
         else:
