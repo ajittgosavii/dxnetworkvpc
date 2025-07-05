@@ -825,7 +825,7 @@ class AWSAPIManager:
                             }
                         except Exception as e:
                             logger.warning(f"Failed to get pricing for {instance_type}: {e}")
-                pricing_data[instance_type] = self._get_fallback_instance_pricing(instance_type)
+                            pricing_data[instance_type] = self._get_fallback_instance_pricing(instance_type)
 
         return pricing_data
 
