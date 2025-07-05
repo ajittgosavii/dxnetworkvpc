@@ -2858,7 +2858,7 @@ class EnhancedMigrationAnalyzer:
         # Default fallback for direct replication
         return f"nonprod_sj_{os_type}_nas_s3"
 
-   async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
+    async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
         """Enhanced migration agent analysis with scaling support and backup storage considerations"""
 
         num_agents = config.get('number_of_agents', 1)
@@ -2929,101 +2929,102 @@ class EnhancedMigrationAnalyzer:
         }
 
     async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float,
-    onprem_performance: Dict, agent_analysis: Dict) -> float:
-        """AI-enhanced migration time calculation with backup storage considerations"""
+                                                onprem_performance: Dict, agent_analysis: Dict) -> float:
+    """AI-enhanced migration time calculation with backup storage considerations"""
 
-        database_size_gb = config['database_size_gb']
-        num_agents = config.get('number_of_agents', 1)
-        destination_storage = config.get('destination_storage_type', 'S3')
-        migration_method = config.get('migration_method', 'direct_replication')
+    database_size_gb = config['database_size_gb']
+    num_agents = config.get('number_of_agents', 1)
+    destination_storage = config.get('destination_storage_type', 'S3')
+    migration_method = config.get('migration_method', 'direct_replication')
 
-# Calculate data size to transfer
-        if migration_method == 'backup_restore':
-# For backup/restore, calculate backup file size
-            backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
-            data_size_gb = database_size_gb * backup_size_multiplier
-            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+    # Calculate data size to transfer
+    if migration_method == 'backup_restore':
+        # For backup/restore, calculate backup file size
+        backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+        data_size_gb = database_size_gb * backup_size_multiplier
+        backup_storage_type = config.get('backup_storage_type', 'nas_drive')
 
-# Base calculation for file transfer
-            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
+        # Base calculation for file transfer
+        base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
 
-# Backup storage specific factors
-            if backup_storage_type == 'windows_share':
-                complexity_factor = 1.2  # SMB protocol overhead
-            else:  # nas_drive:
-                complexity_factor = 1.1  # NFS is more efficient
+        # Backup storage specific factors
+        if backup_storage_type == 'windows_share':
+            complexity_factor = 1.2  # SMB protocol overhead
+        else:  # nas_drive
+            complexity_factor = 1.1  # NFS is more efficient
 
-# Add backup preparation time
-            backup_prep_time = 0.5 + (database_size_gb / 10000)  # 0.5-2 hours for backup prep
+        # Add backup preparation time
+        backup_prep_time = 0.5 + (database_size_gb / 10000)  # 0.5-2 hours for backup prep
 
-            else:
-# For direct replication, use database size
-            data_size_gb = database_size_gb
-            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
-            complexity_factor = 1.0
-            backup_prep_time = 0
+    else:
+        # For direct replication, use database size
+        data_size_gb = database_size_gb
+        base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
+        complexity_factor = 1.0
+        backup_prep_time = 0
 
-# Database engine complexity
-        if config['source_database_engine'] != config['database_engine']:
-            complexity_factor *= 1.3
+    # Database engine complexity
+    if config['source_database_engine'] != config['database_engine']:
+        complexity_factor *= 1.3
 
-# OS and platform factors
-        if 'windows' in config['operating_system']:
+    # OS and platform factors
+    if 'windows' in config['operating_system']:
+        complexity_factor *= 1.1
+
+    if config['server_type'] == 'vmware':
+        complexity_factor *= 1.05
+
+    # Destination storage adjustments
+    if destination_storage == 'FSx_Windows':
+        complexity_factor *= 0.9
+    elif destination_storage == 'FSx_Lustre':
+        complexity_factor *= 0.7
+
+    # Agent scaling adjustments
+    scaling_efficiency = agent_analysis.get('scaling_efficiency', 1.0)
+    storage_multiplier = agent_analysis.get('storage_performance_multiplier', 1.0)
+
+    if num_agents > 1:
+        agent_time_factor = (1 / min(num_agents * scaling_efficiency * storage_multiplier, 6.0))
+        complexity_factor *= agent_time_factor
+
+        if num_agents > 5:
             complexity_factor *= 1.1
 
-        if config['server_type'] == 'vmware':
-            complexity_factor *= 1.05
+    total_time = base_time_hours * complexity_factor + backup_prep_time
 
-# Destination storage adjustments
-        if destination_storage == 'FSx_Windows':
-            complexity_factor *= 0.9
-        elif destination_storage == 'FSx_Lustre':
-            complexity_factor *= 0.7
+    return total_time
 
-# Agent scaling adjustments
-        scaling_efficiency = agent_analysis.get('scaling_efficiency', 1.0)
-        storage_multiplier = agent_analysis.get('storage_performance_multiplier', 1.0)
 
-        if num_agents > 1:
-            agent_time_factor = (1 / min(num_agents * scaling_efficiency * storage_multiplier, 6.0))
-            complexity_factor *= agent_time_factor
+async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
+    """AI-enhanced AWS sizing"""
 
-            if num_agents > 5:
-                complexity_factor *= 1.1
+    # Get real-time pricing
+    pricing_data = await self.aws_api.get_real_time_pricing()
 
-        total_time = base_time_hours * complexity_factor + backup_prep_time
+    # RDS sizing
+    rds_sizing = self._calculate_rds_sizing(config, pricing_data)
 
-        return total_time
+    # EC2 sizing
+    ec2_sizing = self._calculate_ec2_sizing(config, pricing_data)
 
-    async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
-        """AI-enhanced AWS sizing"""
+    # Reader/writer configuration
+    reader_writer_config = self._calculate_reader_writer_config(config)
 
-# Get real-time pricing
-        pricing_data = await self.aws_api.get_real_time_pricing()
+    # Deployment recommendation
+    deployment_recommendation = self._recommend_deployment_type(config, rds_sizing, ec2_sizing)
 
-# RDS sizing
-        rds_sizing = self._calculate_rds_sizing(config, pricing_data)
+    # AI analysis
+    ai_analysis = await self.ai_manager.analyze_migration_workload(config, {})
 
-# EC2 sizing
-        ec2_sizing = self._calculate_ec2_sizing(config, pricing_data)
-
-# Reader/writer configuration
-        reader_writer_config = self._calculate_reader_writer_config(config)
-
-# Deployment recommendation
-        deployment_recommendation = self._recommend_deployment_type(config, rds_sizing, ec2_sizing)
-
-# AI analysis
-        ai_analysis = await self.ai_manager.analyze_migration_workload(config, {})
-
-        return {
+    return {
         'rds_recommendations': rds_sizing,
         'ec2_recommendations': ec2_sizing,
         'reader_writer_config': reader_writer_config,
         'deployment_recommendation': deployment_recommendation,
         'ai_analysis': ai_analysis,
         'pricing_data': pricing_data
-        }
+    }
 
     def _calculate_reader_writer_config(self, config: Dict) -> Dict:
         """Calculate reader/writer configuration"""
