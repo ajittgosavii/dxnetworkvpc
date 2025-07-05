@@ -6455,6 +6455,87 @@ def _render_export_functionality(unified_costs: Dict, config: Dict, analysis: Di
             mime="application/json"
         )
 
+# Updated main function to include the new tab
+async def main_with_unified_costs():
+    """Enhanced main application with unified cost analysis"""
+    render_enhanced_header()
+    
+    # Enhanced sidebar controls
+    config = render_enhanced_sidebar_controls()
+    
+    # Initialize the migration analyzer
+    if 'analyzer' not in st.session_state:
+        st.session_state.analyzer = EnhancedMigrationAnalyzer()
+    
+    # Check if we need to run analysis
+    if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
+        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
+            try:
+                # Run the comprehensive analysis with unified costs
+                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
+                
+                st.session_state.analysis_data = analysis_data
+                st.session_state.last_config = config.copy()
+                
+                st.success("✅ Analysis completed successfully with unified cost calculation!")
+                
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                logger.error(f"Analysis error: {e}")
+                return
+    else:
+        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
+    
+    analysis_data = st.session_state.analysis_data
+    
+    # Create tabs for organized display - UPDATED TAB LIST
+    tab_names = [
+        "💰 Total AWS Cost",  # NEW: First tab for unified costs
+        "🧠 AI Insights & Analysis",
+        "🌐 Network Intelligence", 
+        "💻 OS Performance Analysis",
+        "🎯 AWS Sizing & Configuration",
+        "🤖 Agent Scaling Analysis",
+        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
+    ]
+    
+    tabs = st.tabs(tab_names)
+    
+    # Render each tab
+    with tabs[0]:  # NEW: Total AWS Cost tab
+        render_total_aws_cost_tab(analysis_data, config)
+    
+    with tabs[1]:
+        render_ai_insights_tab_enhanced(analysis_data, config)
+    
+    with tabs[2]:
+        render_network_intelligence_tab(analysis_data, config)
+    
+    with tabs[3]:
+        render_os_performance_tab(analysis_data, config)
+    
+    with tabs[4]:
+        render_aws_sizing_tab(analysis_data, config)
+    
+    with tabs[5]:
+        render_agent_scaling_tab(analysis_data, config)
+    
+    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
+        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
+    
+    # Render footer
+    render_footer()
+
+# Replace the existing main call at the bottom of the file
+if __name__ == "__main__":
+    asyncio.run(main_with_unified_costs()), '').replace(',', '').replace('.', '').isdigit()])
+
+# EXPLANATION OF THE FIXES:
+# 1. Fixed: *, row  →  _, row  (correct tuple unpacking)
+# 2. Fixed: category*data  →  category_data  (correct variable name)  
+# 3. Fixed: String parsing with better error handling
+# 4. Added try/except to handle parsing errors gracefully
+
 def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
     """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
     st.subheader("💰 Complete AWS Cost Analysis")
