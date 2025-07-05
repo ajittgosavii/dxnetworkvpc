@@ -1153,7 +1153,7 @@ class ComprehensiveAWSCostCalculator:
         'cost_optimization_recommendations': self._generate_cost_optimization_recommendations(monthly_costs, config)
         }
 
-   async def _calculate_compute_costs(self, config: Dict, pricing_data: Dict) -> Dict:
+    async def _calculate_compute_costs(self, config: Dict, pricing_data: Dict) -> Dict:
         """Calculate compute costs (EC2/RDS)"""
         target_platform = config.get('target_platform', 'rds')
         database_size_gb = config.get('database_size_gb', 1000)
