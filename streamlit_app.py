@@ -161,9 +161,9 @@ class AnthropicAIManager:
             try:
                 self.client = anthropic.Anthropic(api_key=self.api_key)
                 test_message = self.client.messages.create(
-                model="claude-3-5-sonnet-20241022",
-                max_tokens=10,
-                messages=[{"role": "user", "content": "test"}]
+                    model="claude-3-5-sonnet-20241022",
+                    max_tokens=10,
+                    messages=[{"role": "user", "content": "test"}]
                 )
                 self.connected = True
                 logger.info("Anthropic AI client initialized and tested successfully")
@@ -171,8 +171,9 @@ class AnthropicAIManager:
                 self.connected = False
                 self.error_message = str(e)
                 logger.error(f"Failed to initialize Anthropic client: {e}")
-            else:
-                self.connected = False
+        else:
+            # This runs only when no API key is provided
+            self.connected = False
             self.error_message = "No API key provided"
 
     async def analyze_migration_workload(self, config: Dict, performance_data: Dict) -> Dict:
