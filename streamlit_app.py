@@ -4644,7 +4644,7 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
                 'Category': 'Migration Services'
             })
         
-        if service_breakdown_data:
+    if service_breakdown_data:
             st.markdown("**📋 Complete AWS Services Breakdown:**")
             df_services = pd.DataFrame(service_breakdown_data)
         
@@ -6389,6 +6389,7 @@ if __name__ == "__main__":
 # 2. Fixed: category*data  →  category_data  (correct variable name)  
 # 3. Fixed: String parsing with better error handling
 # 4. Added try/except to handle parsing errors gracefully
+
 def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
     """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
     st.subheader("💰 Complete AWS Cost Analysis")
