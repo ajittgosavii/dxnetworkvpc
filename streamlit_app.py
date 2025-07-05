@@ -2858,14 +2858,14 @@ class EnhancedMigrationAnalyzer:
         # Default fallback for direct replication
         return f"nonprod_sj_{os_type}_nas_s3"
 
-    async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
+   async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
         """Enhanced migration agent analysis with scaling support and backup storage considerations"""
 
         num_agents = config.get('number_of_agents', 1)
         destination_storage = config.get('destination_storage_type', 'S3')
         migration_method = config.get('migration_method', 'direct_replication')
 
-# For backup/restore, always use DataSync
+        # For backup/restore, always use DataSync
         if migration_method == 'backup_restore':
             primary_tool = 'datasync'
             agent_size = config.get('datasync_agent_size', 'medium')
@@ -2880,21 +2880,21 @@ class EnhancedMigrationAnalyzer:
         total_max_throughput = agent_config['total_max_throughput_mbps']
         network_bandwidth = network_perf['effective_bandwidth_mbps']
 
-# Apply backup storage efficiency factors
+        # Apply backup storage efficiency factors
         if migration_method == 'backup_restore':
             backup_storage_type = config.get('backup_storage_type', 'nas_drive')
             if backup_storage_type == 'windows_share':
-# SMB has some overhead
+                # SMB has some overhead
                 backup_efficiency = 0.85
-            else:  # nas_drive with NFS:
+            else:  # nas_drive with NFS
                 backup_efficiency = 0.92
-
+            
             effective_throughput = min(total_max_throughput * backup_efficiency, network_bandwidth)
-            else:
+        else:
             effective_throughput = min(total_max_throughput, network_bandwidth)
             backup_efficiency = 1.0
 
-# Determine bottleneck
+        # Determine bottleneck
         if total_max_throughput < network_bandwidth:
             bottleneck = f'agents ({num_agents} agents)'
             bottleneck_severity = 'high' if effective_throughput / total_max_throughput < 0.7 else 'medium'
@@ -2902,30 +2902,30 @@ class EnhancedMigrationAnalyzer:
             bottleneck = 'network'
             bottleneck_severity = 'medium' if effective_throughput / network_bandwidth > 0.8 else 'high'
 
-# Add backup storage specific bottleneck detection
+        # Add backup storage specific bottleneck detection
         if migration_method == 'backup_restore':
             backup_storage_type = config.get('backup_storage_type', 'nas_drive')
             if backup_storage_type == 'windows_share' and effective_throughput < total_max_throughput * 0.9:
                 bottleneck = f'{bottleneck} + SMB protocol overhead'
 
         return {
-        'primary_tool': primary_tool,
-        'agent_size': agent_size,
-        'number_of_agents': num_agents,
-        'destination_storage': destination_storage,
-        'migration_method': migration_method,
-        'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
-        'agent_configuration': agent_config,
-        'total_max_throughput_mbps': total_max_throughput,
-        'total_effective_throughput': effective_throughput,
-        'backup_efficiency': backup_efficiency,
-        'bottleneck': bottleneck,
-        'bottleneck_severity': bottleneck_severity,
-        'scaling_efficiency': agent_config['scaling_efficiency'],
-        'management_overhead': agent_config['management_overhead_factor'],
-        'storage_performance_multiplier': agent_config.get('storage_performance_multiplier', 1.0),
-        'cost_per_hour': agent_config['effective_cost_per_hour'],
-        'monthly_cost': agent_config['total_monthly_cost']
+            'primary_tool': primary_tool,
+            'agent_size': agent_size,
+            'number_of_agents': num_agents,
+            'destination_storage': destination_storage,
+            'migration_method': migration_method,
+            'backup_storage_type': config.get('backup_storage_type', 'nas_drive'),
+            'agent_configuration': agent_config,
+            'total_max_throughput_mbps': total_max_throughput,
+            'total_effective_throughput': effective_throughput,
+            'backup_efficiency': backup_efficiency,
+            'bottleneck': bottleneck,
+            'bottleneck_severity': bottleneck_severity,
+            'scaling_efficiency': agent_config['scaling_efficiency'],
+            'management_overhead': agent_config['management_overhead_factor'],
+            'storage_performance_multiplier': agent_config.get('storage_performance_multiplier', 1.0),
+            'cost_per_hour': agent_config['effective_cost_per_hour'],
+            'monthly_cost': agent_config['total_monthly_cost']
         }
 
     async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float,
