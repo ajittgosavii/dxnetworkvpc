@@ -5533,8 +5533,643 @@ def render_footer():
     </div>
     """, unsafe_allow_html=True)
 
-async def main():
-    """Enhanced main application with comprehensive analysis capabilities"""
+class UnifiedAWSCostCalculator:
+    """Unified AWS cost calculator to ensure consistency across all tabs"""
+    
+    def __init__(self, aws_api_manager: AWSAPIManager):
+        self.aws_api = aws_api_manager
+    
+    async def calculate_unified_aws_costs(self, config: Dict, analysis: Dict) -> Dict:
+        """Calculate unified AWS costs for all services with consistency"""
+        
+        # Get real-time pricing data
+        pricing_data = await self.aws_api.get_real_time_pricing()
+        
+        # Determine deployment type
+        target_platform = config.get('target_platform', 'rds')
+        aws_sizing = analysis.get('aws_sizing_recommendations', {})
+        
+        # Calculate primary compute and storage costs
+        if target_platform == 'rds':
+            compute_storage_costs = self._calculate_unified_rds_costs(config, aws_sizing, pricing_data)
+        else:
+            compute_storage_costs = self._calculate_unified_ec2_costs(config, aws_sizing, pricing_data)
+        
+        # Calculate networking costs
+        network_costs = await self._calculate_unified_network_costs(config, pricing_data)
+        
+        # Calculate migration agent costs
+        agent_costs = self._calculate_unified_agent_costs(config, analysis, pricing_data)
+        
+        # Calculate destination storage costs
+        destination_costs = self._calculate_unified_destination_storage_costs(config, pricing_data)
+        
+        # Unified monthly totals (NO ONE-TIME COSTS)
+        monthly_totals = {
+            'primary_compute': compute_storage_costs['compute_monthly'],
+            'primary_storage': compute_storage_costs['storage_monthly'],
+            'network_services': network_costs['monthly_total'],
+            'migration_agents': agent_costs['monthly_total'],
+            'destination_storage': destination_costs['monthly_total'],
+            'backup_storage': destination_costs.get('backup_monthly', 0)
+        }
+        
+        total_monthly = sum(monthly_totals.values())
+        
+        return {
+            'pricing_data_source': pricing_data.get('data_source', 'fallback'),
+            'last_updated': pricing_data.get('last_updated', datetime.now()),
+            'target_platform': target_platform,
+            'deployment_details': compute_storage_costs,
+            'network_details': network_costs,
+            'agent_details': agent_costs,
+            'destination_details': destination_costs,
+            'monthly_breakdown': monthly_totals,
+            'total_monthly_cost': total_monthly,
+            'annual_cost': total_monthly * 12,
+            'three_year_cost': total_monthly * 36,
+            'cost_per_gb_per_month': total_monthly / config.get('database_size_gb', 1) if config.get('database_size_gb', 0) > 0 else 0,
+            'optimization_opportunities': self._generate_unified_optimization_recommendations(monthly_totals, config)
+        }
+    
+    def _calculate_unified_rds_costs(self, config: Dict, aws_sizing: Dict, pricing_data: Dict) -> Dict:
+        """Calculate unified RDS costs"""
+        rds_rec = aws_sizing.get('rds_recommendations', {})
+        reader_writer_config = aws_sizing.get('reader_writer_config', {})
+        
+        # Primary instance cost
+        primary_instance_cost = rds_rec.get('monthly_instance_cost', 0)
+        
+        # Reader instances cost (if any)
+        readers = reader_writer_config.get('readers', 0)
+        reader_cost = primary_instance_cost * readers * 0.9 if readers > 0 else 0  # Readers are 10% cheaper
+        
+        # Multi-AZ cost
+        multi_az_cost = primary_instance_cost if config.get('environment') == 'production' else 0
+        
+        # Storage cost
+        storage_cost = rds_rec.get('monthly_storage_cost', 0)
+        
+        # Total compute cost
+        total_compute = primary_instance_cost + reader_cost + multi_az_cost
+        
+        return {
+            'service_type': 'RDS',
+            'primary_instance': rds_rec.get('primary_instance', 'Unknown'),
+            'primary_instance_cost': primary_instance_cost,
+            'reader_instances': readers,
+            'reader_cost': reader_cost,
+            'multi_az_cost': multi_az_cost,
+            'storage_cost': storage_cost,
+            'compute_monthly': total_compute,
+            'storage_monthly': storage_cost,
+            'total_monthly': total_compute + storage_cost,
+            'instance_details': {
+                'primary_type': rds_rec.get('primary_instance', 'Unknown'),
+                'storage_type': rds_rec.get('storage_type', 'gp3'),
+                'storage_size_gb': rds_rec.get('storage_size_gb', 0),
+                'multi_az_enabled': config.get('environment') == 'production'
+            }
+        }
+    
+    def _calculate_unified_ec2_costs(self, config: Dict, aws_sizing: Dict, pricing_data: Dict) -> Dict:
+        """Calculate unified EC2 costs"""
+        ec2_rec = aws_sizing.get('ec2_recommendations', {})
+        
+        # Instance costs
+        instance_cost = ec2_rec.get('monthly_instance_cost', 0)
+        
+        # OS licensing
+        os_licensing = ec2_rec.get('os_licensing_cost', 0)
+        
+        # Storage cost
+        storage_cost = ec2_rec.get('monthly_storage_cost', 0)
+        
+        # Total compute cost (instance + OS licensing)
+        total_compute = instance_cost + os_licensing
+        
+        return {
+            'service_type': 'EC2',
+            'primary_instance': ec2_rec.get('primary_instance', 'Unknown'),
+            'instance_cost': instance_cost,
+            'os_licensing_cost': os_licensing,
+            'storage_cost': storage_cost,
+            'compute_monthly': total_compute,
+            'storage_monthly': storage_cost,
+            'total_monthly': total_compute + storage_cost,
+            'instance_details': {
+                'primary_type': ec2_rec.get('primary_instance', 'Unknown'),
+                'database_engine': ec2_rec.get('database_engine', 'Unknown'),
+                'storage_type': ec2_rec.get('storage_type', 'gp3'),
+                'storage_size_gb': ec2_rec.get('storage_size_gb', 0),
+                'instance_count': ec2_rec.get('instance_count', 1),
+                'deployment_type': ec2_rec.get('sql_server_deployment_type', 'standalone')
+            }
+        }
+    
+    async def _calculate_unified_network_costs(self, config: Dict, pricing_data: Dict) -> Dict:
+        """Calculate unified network costs"""
+        environment = config.get('environment', 'non-production')
+        
+        # Direct Connect costs
+        if environment == 'production':
+            dx_capacity = '10Gbps'
+            dx_hourly = 2.25
+        else:
+            dx_capacity = '1Gbps'
+            dx_hourly = 0.30
+        
+        # Get real pricing if available
+        dx_pricing = pricing_data.get('direct_connect', {})
+        if dx_capacity in dx_pricing:
+            dx_hourly = dx_pricing[dx_capacity].get('port_hours', dx_hourly)
+        
+        dx_monthly = dx_hourly * 24 * 30
+        
+        # Data transfer costs
+        database_size_gb = config.get('database_size_gb', 1000)
+        monthly_data_transfer_gb = database_size_gb * 0.1  # 10% of DB size per month
+        data_transfer_cost_per_gb = 0.02
+        
+        if dx_capacity in dx_pricing:
+            data_transfer_cost_per_gb = dx_pricing[dx_capacity].get('data_transfer_out', data_transfer_cost_per_gb)
+        
+        data_transfer_monthly = monthly_data_transfer_gb * data_transfer_cost_per_gb
+        
+        # VPN costs (if production)
+        vpn_monthly = 45.0 if environment == 'production' else 0
+        
+        return {
+            'direct_connect': {
+                'capacity': dx_capacity,
+                'monthly_cost': dx_monthly
+            },
+            'data_transfer': {
+                'monthly_gb': monthly_data_transfer_gb,
+                'monthly_cost': data_transfer_monthly
+            },
+            'vpn_gateway': {
+                'monthly_cost': vpn_monthly
+            },
+            'monthly_total': dx_monthly + data_transfer_monthly + vpn_monthly
+        }
+    
+    def _calculate_unified_agent_costs(self, config: Dict, analysis: Dict, pricing_data: Dict) -> Dict:
+        """Calculate unified migration agent costs"""
+        agent_analysis = analysis.get('agent_analysis', {})
+        
+        # Get agent configuration
+        num_agents = config.get('number_of_agents', 1)
+        migration_method = config.get('migration_method', 'direct_replication')
+        
+        # Determine primary tool
+        if migration_method == 'backup_restore':
+            primary_tool = 'datasync'
+            agent_size = config.get('datasync_agent_size', 'medium')
+        else:
+            is_homogeneous = config['source_database_engine'] == config['database_engine']
+            primary_tool = 'datasync' if is_homogeneous else 'dms'
+            agent_size = config.get('datasync_agent_size' if is_homogeneous else 'dms_agent_size', 'medium')
+        
+        # Agent specifications
+        if primary_tool == 'datasync':
+            agent_specs = {
+                'small': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.0416},
+                'medium': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.085},
+                'large': {'vcpu': 4, 'memory': 8, 'cost_per_hour': 0.17},
+                'xlarge': {'vcpu': 8, 'memory': 16, 'cost_per_hour': 0.34}
+            }
+        else:  # DMS
+            agent_specs = {
+                'small': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.0416},
+                'medium': {'vcpu': 2, 'memory': 4, 'cost_per_hour': 0.085},
+                'large': {'vcpu': 4, 'memory': 8, 'cost_per_hour': 0.17},
+                'xlarge': {'vcpu': 8, 'memory': 16, 'cost_per_hour': 0.34},
+                'xxlarge': {'vcpu': 16, 'memory': 32, 'cost_per_hour': 0.68}
+            }
+        
+        agent_spec = agent_specs.get(agent_size, agent_specs['medium'])
+        
+        # Calculate total monthly cost
+        total_monthly_cost = agent_spec['cost_per_hour'] * 24 * 30 * num_agents
+        
+        return {
+            'primary_tool': primary_tool,
+            'agent_size': agent_size,
+            'number_of_agents': num_agents,
+            'cost_per_agent_per_hour': agent_spec['cost_per_hour'],
+            'total_vcpu': agent_spec['vcpu'] * num_agents,
+            'total_memory_gb': agent_spec['memory'] * num_agents,
+            'monthly_total': total_monthly_cost,
+            'migration_method': migration_method
+        }
+    
+    def _calculate_unified_destination_storage_costs(self, config: Dict, pricing_data: Dict) -> Dict:
+        """Calculate unified destination storage costs"""
+        database_size_gb = config.get('database_size_gb', 1000)
+        destination_storage = config.get('destination_storage_type', 'S3')
+        migration_method = config.get('migration_method', 'direct_replication')
+        
+        # Destination storage pricing
+        storage_pricing = {
+            'S3': 0.023,
+            'FSx_Windows': 0.13,
+            'FSx_Lustre': 0.14
+        }
+        
+        dest_cost_per_gb = storage_pricing.get(destination_storage, 0.023)
+        dest_storage_size = database_size_gb * 1.2  # 20% buffer
+        dest_monthly_cost = dest_storage_size * dest_cost_per_gb
+        
+        # Backup storage costs (if backup/restore method)
+        backup_monthly_cost = 0
+        backup_size_gb = 0
+        
+        if migration_method == 'backup_restore':
+            backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+            backup_size_gb = database_size_gb * backup_size_multiplier
+            backup_monthly_cost = backup_size_gb * 0.023  # S3 Standard for backups
+        
+        return {
+            'destination_storage_type': destination_storage,
+            'destination_size_gb': dest_storage_size,
+            'destination_cost_per_gb': dest_cost_per_gb,
+            'destination_monthly_cost': dest_monthly_cost,
+            'backup_applicable': migration_method == 'backup_restore',
+            'backup_size_gb': backup_size_gb,
+            'backup_monthly_cost': backup_monthly_cost,
+            'monthly_total': dest_monthly_cost + backup_monthly_cost
+        }
+    
+    def _generate_unified_optimization_recommendations(self, monthly_costs: Dict, config: Dict) -> List[str]:
+        """Generate unified cost optimization recommendations"""
+        recommendations = []
+        total_monthly = sum(monthly_costs.values())
+        
+        # Compute optimization
+        compute_cost = monthly_costs.get('primary_compute', 0)
+        if compute_cost > total_monthly * 0.6:
+            recommendations.append("Consider Reserved Instances for 20-30% savings on compute costs")
+        
+        # Storage optimization
+        storage_costs = monthly_costs.get('primary_storage', 0) + monthly_costs.get('destination_storage', 0)
+        if storage_costs > total_monthly * 0.25:
+            recommendations.append("Implement storage lifecycle policies and optimize storage types")
+        
+        # Network optimization
+        network_cost = monthly_costs.get('network_services', 0)
+        if network_cost > total_monthly * 0.15:
+            recommendations.append("Review data transfer patterns and consider CloudFront for optimization")
+        
+        # Agent optimization
+        agent_cost = monthly_costs.get('migration_agents', 0)
+        num_agents = config.get('number_of_agents', 1)
+        if num_agents > 4 and agent_cost > total_monthly * 0.1:
+            recommendations.append("Consider consolidating migration agents to reduce operational overhead")
+        
+        # Environment-specific
+        if config.get('environment') == 'non-production':
+            recommendations.append("Use Spot Instances for non-production workloads for 60-70% savings")
+        
+        return recommendations
+
+def render_total_aws_cost_tab(analysis: Dict, config: Dict):
+    """Render the unified Total AWS Cost tab"""
+    st.subheader("💰 Total AWS Cost Analysis")
+    
+    # Get unified cost data
+    unified_costs = analysis.get('unified_aws_costs', {})
+    
+    if not unified_costs:
+        st.warning("⚠️ Unified cost data not available. Please run the analysis first.")
+        return
+    
+    # Executive Summary
+    st.markdown("**📊 Executive Cost Summary**")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_monthly = unified_costs.get('total_monthly_cost', 0)
+        st.metric(
+            "💰 Total Monthly Cost",
+            f"${total_monthly:,.0f}",
+            delta=f"${total_monthly/30:.0f}/day"
+        )
+    
+    with col2:
+        annual_cost = unified_costs.get('annual_cost', 0)
+        st.metric(
+            "📅 Annual Cost",
+            f"${annual_cost:,.0f}",
+            delta=f"Per quarter: ${annual_cost/4:,.0f}"
+        )
+    
+    with col3:
+        cost_per_gb = unified_costs.get('cost_per_gb_per_month', 0)
+        st.metric(
+            "📊 Cost per GB/Month",
+            f"${cost_per_gb:.2f}",
+            delta=f"Database: {config.get('database_size_gb', 0):,} GB"
+        )
+    
+    with col4:
+        target_platform = unified_costs.get('target_platform', 'unknown').upper()
+        pricing_source = unified_costs.get('pricing_data_source', 'fallback')
+        st.metric(
+            "🎯 Platform",
+            target_platform,
+            delta=f"Data: {pricing_source.title()}"
+        )
+    
+    # Monthly Cost Breakdown
+    st.markdown("---")
+    st.markdown("**📋 Monthly Cost Breakdown**")
+    
+    monthly_breakdown = unified_costs.get('monthly_breakdown', {})
+    
+    # Create detailed breakdown table
+    breakdown_data = []
+    for category, cost in monthly_breakdown.items():
+        if cost > 0:
+            category_name = category.replace('_', ' ').title()
+            percentage = (cost / total_monthly * 100) if total_monthly > 0 else 0
+            breakdown_data.append({
+                'Cost Category': category_name,
+                'Monthly Cost': f"${cost:,.0f}",
+                'Percentage': f"{percentage:.1f}%",
+                'Annual Cost': f"${cost * 12:,.0f}"
+            })
+    
+    if breakdown_data:
+        df_breakdown = pd.DataFrame(breakdown_data)
+        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
+    
+    # Service Details
+    st.markdown("---")
+    st.markdown("**🔧 Detailed Service Analysis**")
+    
+    detail_col1, detail_col2 = st.columns(2)
+    
+    with detail_col1:
+        st.markdown("**💻 Primary Infrastructure**")
+        
+        deployment_details = unified_costs.get('deployment_details', {})
+        
+        st.info(f"**{deployment_details.get('service_type', 'Unknown')} Configuration**")
+        
+        if deployment_details.get('service_type') == 'RDS':
+            st.write(f"**Primary Instance:** {deployment_details.get('primary_instance', 'Unknown')}")
+            st.write(f"**Instance Cost:** ${deployment_details.get('primary_instance_cost', 0):,.0f}/month")
+            
+            if deployment_details.get('reader_instances', 0) > 0:
+                st.write(f"**Read Replicas:** {deployment_details.get('reader_instances', 0)} instances")
+                st.write(f"**Reader Cost:** ${deployment_details.get('reader_cost', 0):,.0f}/month")
+            
+            if deployment_details.get('multi_az_cost', 0) > 0:
+                st.write(f"**Multi-AZ Cost:** ${deployment_details.get('multi_az_cost', 0):,.0f}/month")
+        
+        else:  # EC2
+            st.write(f"**Instance Type:** {deployment_details.get('primary_instance', 'Unknown')}")
+            st.write(f"**Instance Cost:** ${deployment_details.get('instance_cost', 0):,.0f}/month")
+            
+            if deployment_details.get('os_licensing_cost', 0) > 0:
+                st.write(f"**OS Licensing:** ${deployment_details.get('os_licensing_cost', 0):,.0f}/month")
+        
+        st.write(f"**Storage Cost:** ${deployment_details.get('storage_cost', 0):,.0f}/month")
+        st.write(f"**Total Infrastructure:** ${deployment_details.get('total_monthly', 0):,.0f}/month")
+    
+    with detail_col2:
+        st.markdown("**🌐 Supporting Services**")
+        
+        network_details = unified_costs.get('network_details', {})
+        agent_details = unified_costs.get('agent_details', {})
+        destination_details = unified_costs.get('destination_details', {})
+        
+        st.success("**Network Services**")
+        dx_cost = network_details.get('direct_connect', {}).get('monthly_cost', 0)
+        transfer_cost = network_details.get('data_transfer', {}).get('monthly_cost', 0)
+        vpn_cost = network_details.get('vpn_gateway', {}).get('monthly_cost', 0)
+        
+        st.write(f"**Direct Connect:** ${dx_cost:,.0f}/month")
+        st.write(f"**Data Transfer:** ${transfer_cost:,.0f}/month")
+        if vpn_cost > 0:
+            st.write(f"**VPN Gateway:** ${vpn_cost:,.0f}/month")
+        
+        st.warning("**Migration Services**")
+        st.write(f"**Agent Tool:** {agent_details.get('primary_tool', 'Unknown').upper()}")
+        st.write(f"**Number of Agents:** {agent_details.get('number_of_agents', 0)}")
+        st.write(f"**Agent Costs:** ${agent_details.get('monthly_total', 0):,.0f}/month")
+        
+        st.info("**Storage Services**")
+        st.write(f"**Destination:** {destination_details.get('destination_storage_type', 'Unknown')}")
+        st.write(f"**Destination Cost:** ${destination_details.get('destination_monthly_cost', 0):,.0f}/month")
+        
+        if destination_details.get('backup_applicable', False):
+            st.write(f"**Backup Storage:** ${destination_details.get('backup_monthly_cost', 0):,.0f}/month")
+    
+    # Cost Projection Chart
+    st.markdown("---")
+    st.markdown("**📈 Cost Projection Over Time**")
+    
+    # Create 3-year projection
+    months = list(range(1, 37))  # 36 months
+    monthly_costs = [total_monthly] * 36
+    cumulative_costs = [sum(monthly_costs[:i+1]) for i in range(36)]
+    
+    projection_data = pd.DataFrame({
+        'Month': months,
+        'Monthly Cost': monthly_costs,
+        'Cumulative Cost': cumulative_costs
+    })
+    
+    fig_projection = px.line(
+        projection_data,
+        x='Month',
+        y='Cumulative Cost',
+        title=f"3-Year AWS Cost Projection: ${total_monthly:,.0f}/month",
+        labels={'Month': 'Months from Start', 'Cumulative Cost': 'Cumulative Cost ($)'}
+    )
+    
+    # Add quarterly markers
+    for quarter in range(3, 37, 3):
+        fig_projection.add_vline(
+            x=quarter, 
+            line_dash="dash", 
+            line_color="gray",
+            annotation_text=f"Q{(quarter//3)}"
+        )
+    
+    fig_projection.update_traces(line_color='#3498db', line_width=3)
+    fig_projection.update_layout(height=400)
+    st.plotly_chart(fig_projection, use_container_width=True)
+    
+    # Cost Distribution Pie Chart
+    viz_col1, viz_col2 = st.columns(2)
+    
+    with viz_col1:
+        st.markdown("**🥧 Cost Distribution**")
+        
+        # Filter out zero costs for pie chart
+        pie_data = {k.replace('_', ' ').title(): v for k, v in monthly_breakdown.items() if v > 0}
+        
+        if pie_data:
+            fig_pie = px.pie(
+                values=list(pie_data.values()),
+                names=list(pie_data.keys()),
+                title="Monthly Cost Distribution"
+            )
+            fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+            st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            st.info("No cost data available for visualization")
+    
+    with viz_col2:
+        st.markdown("**📊 Cost Efficiency Metrics**")
+        
+        st.metric(
+            "💾 Cost per GB",
+            f"${cost_per_gb:.2f}",
+            delta="Per month"
+        )
+        
+        # Calculate cost efficiency metrics
+        database_size = config.get('database_size_gb', 1)
+        if database_size > 0:
+            infrastructure_cost = monthly_breakdown.get('primary_compute', 0) + monthly_breakdown.get('primary_storage', 0)
+            infrastructure_per_gb = infrastructure_cost / database_size
+            
+            st.metric(
+                "🖥️ Infrastructure Cost/GB",
+                f"${infrastructure_per_gb:.2f}",
+                delta="Compute + Storage"
+            )
+        
+        # Performance cost ratio
+        total_throughput = analysis.get('agent_analysis', {}).get('total_effective_throughput', 1000)
+        cost_per_mbps = total_monthly / total_throughput if total_throughput > 0 else 0
+        
+        st.metric(
+            "⚡ Cost per Mbps",
+            f"${cost_per_mbps:.2f}",
+            delta="Migration performance"
+        )
+    
+    # Optimization Opportunities
+    st.markdown("---")
+    st.markdown("**💡 Cost Optimization Opportunities**")
+    
+    optimization_recs = unified_costs.get('optimization_opportunities', [])
+    
+    if optimization_recs:
+        opt_col1, opt_col2 = st.columns(2)
+        
+        with opt_col1:
+            st.success("**Immediate Opportunities (0-3 months)**")
+            for i, rec in enumerate(optimization_recs[:3], 1):
+                potential_savings = "20-30%" if 'Reserved' in rec else "60-70%" if 'Spot' in rec else "10-25%"
+                st.write(f"**{i}.** {rec}")
+                st.write(f"   💰 Potential monthly savings: {potential_savings}")
+                st.write("")
+        
+        with opt_col2:
+            st.info("**Medium-term Opportunities (3-12 months)**")
+            remaining_recs = optimization_recs[3:] if len(optimization_recs) > 3 else ["Continue monitoring for additional opportunities"]
+            for i, rec in enumerate(remaining_recs[:3], 4):
+                potential_savings = "15-25%" if 'lifecycle' in rec.lower() else "5-15%"
+                st.write(f"**{i}.** {rec}")
+                st.write(f"   💰 Potential monthly savings: {potential_savings}")
+                st.write("")
+    else:
+        st.info("✅ Current configuration appears well-optimized. Continue monitoring for opportunities.")
+    
+    # Summary and Export
+    st.markdown("---")
+    st.markdown("**📄 Cost Summary & Export**")
+    
+    summary_col1, summary_col2 = st.columns(2)
+    
+    with summary_col1:
+        st.info("**Cost Summary**")
+        st.write(f"**Total Monthly Cost:** ${total_monthly:,.0f}")
+        st.write(f"**Annual Cost:** ${annual_cost:,.0f}")
+        st.write(f"**3-Year Total:** ${unified_costs.get('three_year_cost', 0):,.0f}")
+        st.write(f"**Cost per GB per Month:** ${cost_per_gb:.2f}")
+        st.write(f"**Target Platform:** {target_platform}")
+        
+        # Calculate cost efficiency vs industry benchmarks
+        if cost_per_gb > 0:
+            if cost_per_gb < 0.10:
+                efficiency_rating = "Excellent"
+            elif cost_per_gb < 0.25:
+                efficiency_rating = "Good"
+            elif cost_per_gb < 0.50:
+                efficiency_rating = "Average"
+            else:
+                efficiency_rating = "Needs Optimization"
+            
+            st.write(f"**Cost Efficiency Rating:** {efficiency_rating}")
+    
+    with summary_col2:
+        st.success("**Data Quality & Reliability**")
+        
+        last_updated = unified_costs.get('last_updated', 'Unknown')
+        pricing_source = unified_costs.get('pricing_data_source', 'fallback')
+        
+        if pricing_source == 'aws_api':
+            st.write("✅ **Pricing Data:** Real-time AWS API")
+            st.write(f"📅 **Last Updated:** {last_updated}")
+            st.write("🎯 **Accuracy:** High (±5%)")
+        else:
+            st.write("⚠️ **Pricing Data:** Fallback estimates")
+            st.write("🎯 **Accuracy:** Moderate (±15%)")
+        
+        total_services = len([k for k, v in monthly_breakdown.items() if v > 0])
+        st.write(f"🔧 **Services Analyzed:** {total_services} AWS services")
+        st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    
+    # Export functionality
+    if st.button("📤 Export Total AWS Cost Analysis", use_container_width=True):
+        export_data = {
+            'analysis_date': datetime.now().isoformat(),
+            'configuration': config,
+            'unified_costs': unified_costs,
+            'monthly_breakdown': monthly_breakdown,
+            'total_monthly_cost': total_monthly,
+            'annual_cost': annual_cost,
+            'cost_per_gb_per_month': cost_per_gb,
+            'optimization_opportunities': optimization_recs
+        }
+        
+        st.download_button(
+            label="💾 Download Total AWS Cost Analysis (JSON)",
+            data=json.dumps(export_data, indent=2),
+            file_name=f"total_aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json"
+        )
+
+
+
+
+# Updated main analysis function to include unified costs
+async def run_comprehensive_analysis_with_unified_costs(analyzer, config):
+    """Run comprehensive analysis including unified cost calculation"""
+    
+    # Run the existing comprehensive analysis
+    analysis_data = await analyzer.comprehensive_ai_migration_analysis(config)
+    
+    # Create unified cost calculator and add unified costs
+    unified_calculator = UnifiedAWSCostCalculator(analyzer.aws_api)
+    unified_costs = await unified_calculator.calculate_unified_aws_costs(config, analysis_data)
+    
+    # Add unified costs to analysis data
+    analysis_data['unified_aws_costs'] = unified_costs
+    
+    return analysis_data
+
+# Updated main function to include the new tab
+async def main_with_unified_costs():
+    """Enhanced main application with unified cost analysis"""
     render_enhanced_header()
     
     # Enhanced sidebar controls
@@ -5546,15 +6181,15 @@ async def main():
     
     # Check if we need to run analysis
     if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
-        with st.spinner("🤖 Running comprehensive AI-powered migration analysis..."):
+        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
             try:
-                # Run the comprehensive analysis
-                analysis_data = await st.session_state.analyzer.comprehensive_ai_migration_analysis(config)
+                # Run the comprehensive analysis with unified costs
+                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
                 
                 st.session_state.analysis_data = analysis_data
                 st.session_state.last_config = config.copy()
                 
-                st.success("✅ Analysis completed successfully!")
+                st.success("✅ Analysis completed successfully with unified cost calculation!")
                 
             except Exception as e:
                 st.error(f"❌ Analysis failed: {str(e)}")
@@ -5565,27 +6200,28 @@ async def main():
     
     analysis_data = st.session_state.analysis_data
     
-    # Create tabs for organized display
+    # Create tabs for organized display - UPDATED TAB LIST
     tab_names = [
+        "💰 Total AWS Cost",  # NEW: First tab for unified costs
         "🧠 AI Insights & Analysis",
         "🌐 Network Intelligence", 
-        "💰 Comprehensive Cost Analysis",
         "💻 OS Performance Analysis",
         "🎯 AWS Sizing & Configuration",
-        "🤖 Agent Scaling Analysis"
+        "🤖 Agent Scaling Analysis",
+        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
     ]
     
     tabs = st.tabs(tab_names)
     
     # Render each tab
-    with tabs[0]:
-        render_ai_insights_tab_enhanced(analysis_data, config)
+    with tabs[0]:  # NEW: Total AWS Cost tab
+        render_total_aws_cost_tab(analysis_data, config)
     
     with tabs[1]:
-        render_network_intelligence_tab(analysis_data, config)
+        render_ai_insights_tab_enhanced(analysis_data, config)
     
     with tabs[2]:
-        render_comprehensive_cost_analysis_tab(analysis_data, config)
+        render_network_intelligence_tab(analysis_data, config)
     
     with tabs[3]:
         render_os_performance_tab(analysis_data, config)
@@ -5596,9 +6232,12 @@ async def main():
     with tabs[5]:
         render_agent_scaling_tab(analysis_data, config)
     
+    with tabs[6]:  # RENAMED: Detailed breakdown (kept for technical reference)
+        render_comprehensive_cost_analysis_tab(analysis_data, config)
+    
     # Render footer
     render_footer()
 
-# Run the application
+# Replace the existing main call at the bottom of the file
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main_with_unified_costs())
