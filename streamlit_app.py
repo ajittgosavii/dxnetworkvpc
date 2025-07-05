@@ -1154,95 +1154,95 @@ class ComprehensiveAWSCostCalculator:
         }
 
    async def _calculate_compute_costs(self, config: Dict, pricing_data: Dict) -> Dict:
-    """Calculate compute costs (EC2/RDS)"""
-    target_platform = config.get('target_platform', 'rds')
-    database_size_gb = config.get('database_size_gb', 1000)
-    environment = config.get('environment', 'non-production')
+        """Calculate compute costs (EC2/RDS)"""
+        target_platform = config.get('target_platform', 'rds')
+        database_size_gb = config.get('database_size_gb', 1000)
+        environment = config.get('environment', 'non-production')
 
-    if target_platform == 'rds':
-        # RDS instance costs
-        if database_size_gb < 1000:
-            instance_type = 'db.t3.medium'
-            instance_cost = 0.068
-        elif database_size_gb < 5000:
-            instance_type = 'db.r6g.large'
-            instance_cost = 0.48
-        else:
-            instance_type = 'db.r6g.xlarge'
-            instance_cost = 0.96
+        if target_platform == 'rds':
+            # RDS instance costs
+            if database_size_gb < 1000:
+                instance_type = 'db.t3.medium'
+                instance_cost = 0.068
+            elif database_size_gb < 5000:
+                instance_type = 'db.r6g.large'
+                instance_cost = 0.48
+            else:
+                instance_type = 'db.r6g.xlarge'
+                instance_cost = 0.96
 
-        # Get real pricing if available
-        rds_instances = pricing_data.get('rds_instances', {})
-        if instance_type in rds_instances:
-            instance_cost = rds_instances[instance_type].get('cost_per_hour', instance_cost)
+            # Get real pricing if available
+            rds_instances = pricing_data.get('rds_instances', {})
+            if instance_type in rds_instances:
+                instance_cost = rds_instances[instance_type].get('cost_per_hour', instance_cost)
 
-        # Calculate reader instances
-        if environment == 'production':
-            reader_count = 2 if database_size_gb > 5000 else 1
-        else:
-            reader_count = 1 if database_size_gb > 2000 else 0
+            # Calculate reader instances
+            if environment == 'production':
+                reader_count = 2 if database_size_gb > 5000 else 1
+            else:
+                reader_count = 1 if database_size_gb > 2000 else 0
 
-        writer_monthly = instance_cost * 24 * 30
-        reader_monthly = instance_cost * 24 * 30 * reader_count * 0.9  # Readers are slightly cheaper
+            writer_monthly = instance_cost * 24 * 30
+            reader_monthly = instance_cost * 24 * 30 * reader_count * 0.9  # Readers are slightly cheaper
 
-        # Multi-AZ costs
-        multi_az_cost = writer_monthly if environment == 'production' else 0
+            # Multi-AZ costs
+            multi_az_cost = writer_monthly if environment == 'production' else 0
 
-        return {
-            'service_type': 'RDS',
-            'primary_instance': instance_type,
-            'writer_instances': 1,
-            'reader_instances': reader_count,
-            'writer_monthly_cost': writer_monthly,
-            'reader_monthly_cost': reader_monthly,
-            'multi_az_cost': multi_az_cost,
-            'monthly_total': writer_monthly + reader_monthly + multi_az_cost,
-            'instance_details': {
-                'primary': {'type': instance_type, 'cost_per_hour': instance_cost},
-                'readers': {'count': reader_count, 'cost_per_hour': instance_cost * 0.9}
+            return {
+                'service_type': 'RDS',
+                'primary_instance': instance_type,
+                'writer_instances': 1,
+                'reader_instances': reader_count,
+                'writer_monthly_cost': writer_monthly,
+                'reader_monthly_cost': reader_monthly,
+                'multi_az_cost': multi_az_cost,
+                'monthly_total': writer_monthly + reader_monthly + multi_az_cost,
+                'instance_details': {
+                    'primary': {'type': instance_type, 'cost_per_hour': instance_cost},
+                    'readers': {'count': reader_count, 'cost_per_hour': instance_cost * 0.9}
+                }
             }
-        }
 
-    else:  # EC2 - ✅ Correctly indented at same level as the if statement above
-        # EC2 instance costs
-        if database_size_gb < 1000:
-            instance_type = 't3.large'
-            instance_cost = 0.0832
-        elif database_size_gb < 5000:
-            instance_type = 'r6i.large'
-            instance_cost = 0.252
-        else:
-            instance_type = 'r6i.xlarge'
-            instance_cost = 0.504
+        else:  # EC2 - ✅ Correctly indented at same level as the if statement above
+            # EC2 instance costs
+            if database_size_gb < 1000:
+                instance_type = 't3.large'
+                instance_cost = 0.0832
+            elif database_size_gb < 5000:
+                instance_type = 'r6i.large'
+                instance_cost = 0.252
+            else:
+                instance_type = 'r6i.xlarge'
+                instance_cost = 0.504
 
-        # Get real pricing if available
-        ec2_instances = pricing_data.get('ec2_instances', {})
-        if instance_type in ec2_instances:
-            instance_cost = ec2_instances[instance_type].get('cost_per_hour', instance_cost)
+            # Get real pricing if available
+            ec2_instances = pricing_data.get('ec2_instances', {})
+            if instance_type in ec2_instances:
+                instance_cost = ec2_instances[instance_type].get('cost_per_hour', instance_cost)
 
-        # Calculate additional instances for HA
-        instance_count = 2 if environment == 'production' else 1
+            # Calculate additional instances for HA
+            instance_count = 2 if environment == 'production' else 1
 
-        monthly_cost = instance_cost * 24 * 30 * instance_count
+            monthly_cost = instance_cost * 24 * 30 * instance_count
 
-        # Operating system licensing
-        os_licensing = 0
-        if 'windows' in config.get('operating_system', ''):
-            os_licensing = 150 * instance_count  # Windows licensing per instance
+            # Operating system licensing
+            os_licensing = 0
+            if 'windows' in config.get('operating_system', ''):
+                os_licensing = 150 * instance_count  # Windows licensing per instance
 
-        return {
-            'service_type': 'EC2',
-            'primary_instance': instance_type,
-            'instance_count': instance_count,
-            'monthly_instance_cost': monthly_cost,
-            'os_licensing_cost': os_licensing,
-            'monthly_total': monthly_cost + os_licensing,
-            'instance_details': {
-                'type': instance_type,
-                'count': instance_count,
-                'cost_per_hour': instance_cost
+            return {
+                'service_type': 'EC2',
+                'primary_instance': instance_type,
+                'instance_count': instance_count,
+                'monthly_instance_cost': monthly_cost,
+                'os_licensing_cost': os_licensing,
+                'monthly_total': monthly_cost + os_licensing,
+                'instance_details': {
+                    'type': instance_type,
+                    'count': instance_count,
+                    'cost_per_hour': instance_cost
+                }
             }
-        }
 
     async def _calculate_storage_costs(self, config: Dict, pricing_data: Dict) -> Dict:
         """Calculate storage costs (EBS, S3, FSx)"""
