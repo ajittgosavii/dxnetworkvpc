@@ -5126,6 +5126,12 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
     cost_validator = CostValidationManager()
     validated_costs = cost_validator.get_validated_costs(analysis, config)
     
+    # Get fallback data for compatibility
+    comprehensive_costs = analysis.get('comprehensive_costs', {})
+    basic_cost_analysis = analysis.get('cost_analysis', {})
+    aws_sizing = analysis.get('aws_sizing_recommendations', {})
+    agent_analysis = analysis.get('agent_analysis', {})
+    
     # Display validation status prominently
     if validated_costs['is_validated']:
         st.success("✅ All cost calculations have been validated and are consistent across tabs")
@@ -5158,24 +5164,25 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
     
     col1, col2, col3, col4, col5, col6 = st.columns(6)
     
+    total_monthly = validated_costs['total_monthly']
+    total_one_time = validated_costs['total_one_time']
+    three_year_total = validated_costs['three_year_total']
+    breakdown = validated_costs['breakdown']
+    
     with col1:
-        total_monthly = validated_costs['total_monthly']
         st.metric("💰 Total Monthly (Validated)", f"${total_monthly:,.0f}",
                  delta=f"Annual: ${total_monthly * 12:,.0f}")
     
     with col2:
-        total_one_time = validated_costs['total_one_time']
         st.metric("🔄 One-Time Setup", f"${total_one_time:,.0f}",
                  delta="Migration & Setup")
     
     with col3:
-        three_year_total = validated_costs['three_year_total']
         st.metric("📅 3-Year Total", f"${three_year_total:,.0f}",
                  delta="Complete TCO")
     
     with col4:
-        breakdown = validated_costs['breakdown']
-        largest_component = max(breakdown.items(), key=lambda x: x[1])
+        largest_component = max(breakdown.items(), key=lambda x: x[1]) if breakdown else ('unknown', 0)
         st.metric("🎯 Largest Cost", largest_component[0].replace('_', ' ').title(),
                  delta=f"${largest_component[1]:,.0f}/mo")
     
@@ -5213,7 +5220,7 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
     for component, cost in breakdown.items():
         if cost > 0:
             service_name, description = breakdown_mapping.get(component, (component.title(), 'Unknown service'))
-            percentage = (cost / total_monthly) * 100
+            percentage = (cost / total_monthly) * 100 if total_monthly > 0 else 0
             
             service_breakdown_data.append({
                 'AWS Service': service_name,
@@ -5236,6 +5243,69 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
         else:
             st.warning(f"⚠️ **Cost Breakdown Mismatch:** Sum=${calculated_total:,.0f}, Expected=${total_monthly:,.0f}")
     
+    # === MONTHLY COST DISTRIBUTION CHART ===
+    st.markdown("---")
+    st.markdown("**📊 Cost Projections & Financial Analysis**")
+    
+    proj_col1, proj_col2 = st.columns(2)
+    
+    with proj_col1:
+        st.markdown("**Monthly Cost Distribution**")
+        
+        # Create pie chart using validated breakdown
+        if breakdown:
+            # Clean up category names and filter out zero costs
+            clean_breakdown = {}
+            for category, cost in breakdown.items():
+                if cost > 0:
+                    clean_name = category.replace('_', ' ').title()
+                    clean_breakdown[clean_name] = cost
+            
+            if clean_breakdown:
+                fig_pie = px.pie(
+                    values=list(clean_breakdown.values()),
+                    names=list(clean_breakdown.keys()),
+                    title="Monthly Costs by Service Category",
+                    color_discrete_sequence=px.colors.qualitative.Set3
+                )
+                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig_pie, use_container_width=True)
+            else:
+                st.info("Cost breakdown visualization not available")
+        else:
+            st.info("Monthly cost distribution data not available")
+    
+    with proj_col2:
+        st.markdown("**3-Year Cost Projection**")
+        
+        # Create timeline projection
+        months = list(range(0, 37, 3))  # Every 3 months for 3 years
+        cumulative_costs = []
+        
+        for month in months:
+            cumulative_cost = total_one_time + (total_monthly * month)
+            cumulative_costs.append(cumulative_cost)
+        
+        projection_data = pd.DataFrame({
+            'Months': months,
+            'Cumulative Cost ($)': cumulative_costs
+        })
+        
+        fig_line = px.line(
+            projection_data,
+            x='Months',
+            y='Cumulative Cost ($)',
+            title="3-Year Cumulative Cost Projection",
+            markers=True
+        )
+        fig_line.update_traces(line_color='#2E86C1', marker_color='#E74C3C')
+        fig_line.update_layout(
+            xaxis_title="Months from Migration",
+            yaxis_title="Cumulative Cost (USD)",
+            hovermode='x unified'
+        )
+        st.plotly_chart(fig_line, use_container_width=True)
+    
     # === COST SOURCE AND ACCURACY ===
     st.markdown("---")
     st.markdown("**🔍 Cost Data Source & Accuracy Information**")
@@ -5250,10 +5320,9 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
         st.write(f"**Cross-Tab Consistency:** {'✅ Consistent' if validated_costs['is_validated'] else '❌ Inconsistent'}")
     
     with accuracy_col2:
-        comprehensive_costs = analysis.get('comprehensive_costs', {})
-        pricing_data = comprehensive_costs.get('pricing_data', {})
-        
         st.success("**🎯 Accuracy Information**")
+        
+        pricing_data = comprehensive_costs.get('pricing_data', {})
         data_source = pricing_data.get('data_source', 'estimated')
         
         if data_source == 'aws_api':
@@ -5274,7 +5343,9 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
         st.write("• Check agent cost consistency")
         st.write("• Verify backup storage logic")
         st.write("• Ensure no double-counting")
-        st.write(f"• **Quality Score:** {(100 - len(validated_costs['validation']['discrepancies']) * 20):.0f}/100")
+        quality_score = max(0, 100 - len(validated_costs['validation']['discrepancies']) * 20)
+        st.write(f"• **Quality Score:** {quality_score:.0f}/100")
+    
     
     # === COST PROJECTIONS AND ANALYSIS ===
     st.markdown("---")
