@@ -1014,7 +1014,7 @@ class ComprehensiveAWSCostCalculator:
         self.aws_api = aws_api_manager
     
     async def calculate_unified_migration_costs(self, config: Dict, analysis: Dict) -> Dict:
-    """Single unified cost calculation to eliminate discrepancies"""
+        """Single unified cost calculation to eliminate discrepancies"""
     
     # Get components from their authoritative sources
     aws_sizing = analysis.get('aws_sizing_recommendations', {})
