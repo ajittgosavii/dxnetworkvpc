@@ -3985,15 +3985,32 @@ def render_enhanced_sidebar_controls():
 # Agent Configuration
     st.sidebar.subheader("🤖 Migration Agent Configuration")
 
-# Determine primary tool based on migration method
+# Determine primary tool based on migration method and correct database engine
     if migration_method == 'backup_restore':
         primary_tool = "DataSync"
         is_homogeneous = True  # Always use DataSync for backup/restore
     else:
-        is_homogeneous = source_database_engine == database_engine
+        # Get the correct target database engine based on platform
+        if target_platform == "rds":
+            target_db_engine = database_engine
+        else:  # EC2
+            target_db_engine = ec2_database_engine if ec2_database_engine else database_engine
+        
+        # Check if migration is homogeneous (same source and target engines)
+        is_homogeneous = source_database_engine == target_db_engine
         primary_tool = "DataSync" if is_homogeneous else "DMS"
 
     st.sidebar.success(f"**Primary Tool:** AWS {primary_tool}")
+
+    # Show migration method info
+    if migration_method == 'backup_restore':
+        st.sidebar.info(f"**Method:** Backup/Restore via DataSync from {backup_storage_type.replace('_', ' ').title()}")
+        st.sidebar.write(f"**Backup Size:** {int(backup_size_multiplier*100)}% of database ({backup_size_multiplier:.1f}x)")
+    else:
+        migration_type = 'homogeneous' if is_homogeneous else 'heterogeneous'
+        st.sidebar.info(f"**Method:** Direct replication ({migration_type})")
+        if not is_homogeneous:
+            st.sidebar.warning(f"**Schema Conversion:** {source_database_engine.upper()} → {target_db_engine.upper()}")
 
 # Show migration method info
     if migration_method == 'backup_restore':
