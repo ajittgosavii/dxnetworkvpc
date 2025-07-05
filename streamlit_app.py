@@ -3395,10 +3395,8 @@ def render_api_status_sidebar():
     </div>
     """, unsafe_allow_html=True)
 
-# Replace the render_enhanced_sidebar_controls function with this complete version
-
 def render_enhanced_sidebar_controls():
-    """Enhanced sidebar with AI-powered recommendations - COMPLETE VERSION"""
+    """Enhanced sidebar with AI-powered recommendations"""
     st.sidebar.header("🤖 AI-Powered Migration Configuration v3.0")
     
     render_api_status_sidebar()
@@ -3512,7 +3510,7 @@ def render_enhanced_sidebar_controls():
     # Initialize variables that might be conditionally set
     database_engine = None
     ec2_database_engine = None
-    sql_server_deployment_type = "standalone"  # Default value
+    sql_server_deployment_type = None
     
     # Target Database Selection based on platform
     if target_platform == "rds":
@@ -3562,8 +3560,27 @@ def render_enhanced_sidebar_controls():
                     'always_on': '🔄 SQL Server Always On (3-Node Cluster)'
                 }[x]
             )
+            
+            # Show deployment-specific information
+            if sql_server_deployment_type == "always_on":
+                st.sidebar.info("""
+                **🔄 SQL Server Always On Cluster:**
+                • 3 EC2 instances (Primary + 2 Replicas)
+                • High Availability & Disaster Recovery
+                • Automatic failover capability
+                • Shared storage or storage replication
+                • Higher cost but enterprise-grade reliability
+                """)
+            else:
+                st.sidebar.info("""
+                **🖥️ Standalone SQL Server:**
+                • Single EC2 instance
+                • Standard SQL Server deployment
+                • Cost-effective for non-HA requirements
+                • Manual backup and recovery processes
+                """)
     
-    # Add remaining configuration options
+    # Add placeholder database properties for missing UI elements
     database_size_gb = st.sidebar.number_input("Database Size (GB)", 
                                               min_value=100, max_value=100000, value=1000, step=100)
     
@@ -3652,6 +3669,13 @@ def render_enhanced_sidebar_controls():
     
     st.sidebar.success(f"**Primary Tool:** AWS {primary_tool}")
     
+    # Show migration method info
+    if migration_method == 'backup_restore':
+        st.sidebar.info(f"**Method:** Backup/Restore via DataSync from {backup_storage_type.replace('_', ' ').title()}")
+        st.sidebar.write(f"**Backup Size:** {int(backup_size_multiplier*100)}% of database ({backup_size_multiplier:.1f}x)")
+    else:
+        st.sidebar.info(f"**Method:** Direct replication ({'homogeneous' if is_homogeneous else 'heterogeneous'})")
+    
     number_of_agents = st.sidebar.number_input(
         "Number of Migration Agents",
         min_value=1, max_value=10, value=2, step=1,
@@ -3670,7 +3694,7 @@ def render_enhanced_sidebar_controls():
                 'xlarge': '📦 XLarge (c5.2xlarge) - 2000 Mbps/agent'
             }[x]
         )
-        dms_agent_size = "medium"  # Default value
+        dms_agent_size = None
     else:
         dms_agent_size = st.sidebar.selectbox(
             "DMS Instance Size",
@@ -3684,7 +3708,7 @@ def render_enhanced_sidebar_controls():
                 'xxlarge': '🔄 XXLarge (c5.4xlarge) - 2500 Mbps/agent'
             }[x]
         )
-        datasync_agent_size = "medium"  # Default value
+        datasync_agent_size = None
     
     # AI Configuration
     st.sidebar.subheader("🧠 AI Configuration")
@@ -3693,7 +3717,7 @@ def render_enhanced_sidebar_controls():
     if st.sidebar.button("🔄 Refresh AI Analysis", type="primary"):
         st.rerun()
     
-    # Return the COMPLETE configuration dictionary
+    # Return the configuration dictionary
     return {
         'operating_system': operating_system,
         'server_type': server_type,
