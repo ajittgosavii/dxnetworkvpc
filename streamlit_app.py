@@ -2661,9 +2661,9 @@ class OnPremPerformanceAnalyzer:
         }
 
     def _calculate_ai_enhanced_overall_performance(self, cpu_perf: Dict, mem_perf: Dict,:
-    storage_perf: Dict, net_perf: Dict,
-    db_perf: Dict, os_impact: Dict, config: Dict) -> Dict:
-        """AI-enhanced overall performance calculation"""
+        storage_perf: Dict, net_perf: Dict,
+        db_perf: Dict, os_impact: Dict, config: Dict) -> Dict:
+            """AI-enhanced overall performance calculation"""
 
         cpu_score = min(100, (cpu_perf['final_performance'] / 50) * 100)
         memory_score = min(100, (mem_perf['effective_memory_gb'] / 64) * 100)
