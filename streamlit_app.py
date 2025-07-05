@@ -6143,8 +6143,141 @@ def render_total_aws_cost_tab(analysis: Dict, config: Dict):
             mime="application/json"
         )
 
-# Updated main analysis function to include unified costs
-async def run_comprehensive_analysis_with_unified_costs(analyzer, config):
+# DIRECT FIX: Replace the problematic line 4657 in your original streamlit_app.py with this:
+
+# BROKEN LINE (line 4657):
+# category_total = sum([float(row['Monthly Cost'].replace(', '').replace(',', '')) for *, row in category*data.iterrows()])
+
+# FIXED LINE - Replace line 4657 with this:
+def fix_line_4657():
+    """
+    Replace line 4657 in your streamlit_app.py with this corrected version:
+    """
+    # CORRECT CODE:
+    category_total = 0
+    for _, row in category_data.iterrows():
+        cost_str = row['Monthly Cost'].replace('
+def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
+    """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
+    st.subheader("💰 Complete AWS Cost Analysis")
+    
+    # Get comprehensive cost data
+    comprehensive_costs = analysis.get('comprehensive_costs', {})
+    
+    if not comprehensive_costs:
+        st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
+        return
+    
+    # Executive Cost Summary
+    st.markdown("**📊 Executive Cost Summary**")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_monthly = comprehensive_costs.get('total_monthly', 0)
+        st.metric(
+            "💰 Total Monthly",
+            f"${total_monthly:,.0f}",
+            delta=f"Annual: ${total_monthly * 12:,.0f}"
+        )
+    
+    with col2:
+        total_one_time = comprehensive_costs.get('total_one_time', 0)
+        st.metric(
+            "🔄 One-Time Costs",
+            f"${total_one_time:,.0f}",
+            delta="Setup & Migration"
+        )
+    
+    with col3:
+        three_year_total = comprehensive_costs.get('three_year_total', 0)
+        st.metric(
+            "📅 3-Year Total",
+            f"${three_year_total:,.0f}",
+            delta="All costs included"
+        )
+    
+    with col4:
+        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        if monthly_breakdown:
+            largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
+            st.metric(
+                "🎯 Largest Cost",
+                largest_cost[0].replace('_', ' ').title(),
+                delta=f"${largest_cost[1]:,.0f}/mo"
+            )
+        else:
+            st.metric("🎯 Largest Cost", "Unknown", delta="No data")
+    
+    # Create a simple service breakdown table instead of the problematic code
+    st.markdown("---")
+    st.markdown("**🔧 AWS Services Cost Breakdown**")
+    
+    # Get cost components safely
+    compute_costs = comprehensive_costs.get('compute_costs', {})
+    storage_costs = comprehensive_costs.get('storage_costs', {})
+    network_costs = comprehensive_costs.get('network_costs', {})
+    migration_costs = comprehensive_costs.get('migration_costs', {})
+    
+    # Create simplified breakdown
+    breakdown_data = []
+    
+    # Compute costs
+    if compute_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Database Compute',
+            'Service Type': compute_costs.get('service_type', 'Unknown'),
+            'Monthly Cost': f"${compute_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Primary database infrastructure"
+        })
+    
+    # Storage costs
+    if storage_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Storage Services',
+            'Service Type': 'EBS + Destination Storage',
+            'Monthly Cost': f"${storage_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Database and destination storage"
+        })
+    
+    # Network costs
+    if network_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Network Services',
+            'Service Type': 'Direct Connect + Data Transfer',
+            'Monthly Cost': f"${network_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Connectivity and data transfer"
+        })
+    
+    # Migration costs
+    if migration_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Migration Services',
+            'Service Type': 'DataSync/DMS Agents',
+            'Monthly Cost': f"${migration_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Migration processing agents"
+        })
+    
+    if breakdown_data:
+        df_breakdown = pd.DataFrame(breakdown_data)
+        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
+    else:
+        st.info("No detailed cost breakdown available")
+    
+    # Rest of the function continues with visualizations and other content...
+    st.markdown("---")
+    st.markdown("**📊 Cost Visualization**")
+    
+    if monthly_breakdown:
+        # Create pie chart
+        fig_pie = px.pie(
+            values=list(monthly_breakdown.values()),
+            names=[k.replace('_', ' ').title() for k in monthly_breakdown.keys()],
+            title="Monthly Cost Distribution"
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+    
+    st.info("✅ This is the fixed version of the comprehensive cost analysis tab.")
     """Run comprehensive analysis including unified cost calculation"""
     
     # Run the existing comprehensive analysis
@@ -6224,8 +6357,650 @@ async def main_with_unified_costs():
     with tabs[5]:
         render_agent_scaling_tab(analysis_data, config)
     
-    with tabs[6]:  # RENAMED: Detailed breakdown (kept for technical reference)
-        render_comprehensive_cost_analysis_tab(analysis_data, config)
+    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
+        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
+    
+    # Render footer
+    render_footer()
+
+# Replace the existing main call at the bottom of the file
+if __name__ == "__main__":
+    asyncio.run(main_with_unified_costs()), '').replace(',', '')
+        try:
+            category_total += float(cost_str)
+        except (ValueError, TypeError):
+            pass  # Skip if can't parse the cost string
+    
+    return category_total
+
+# Alternative one-liner fix (if you prefer to keep it as a one-liner):
+# category_total = sum([float(row['Monthly Cost'].replace('
+def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
+    """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
+    st.subheader("💰 Complete AWS Cost Analysis")
+    
+    # Get comprehensive cost data
+    comprehensive_costs = analysis.get('comprehensive_costs', {})
+    
+    if not comprehensive_costs:
+        st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
+        return
+    
+    # Executive Cost Summary
+    st.markdown("**📊 Executive Cost Summary**")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_monthly = comprehensive_costs.get('total_monthly', 0)
+        st.metric(
+            "💰 Total Monthly",
+            f"${total_monthly:,.0f}",
+            delta=f"Annual: ${total_monthly * 12:,.0f}"
+        )
+    
+    with col2:
+        total_one_time = comprehensive_costs.get('total_one_time', 0)
+        st.metric(
+            "🔄 One-Time Costs",
+            f"${total_one_time:,.0f}",
+            delta="Setup & Migration"
+        )
+    
+    with col3:
+        three_year_total = comprehensive_costs.get('three_year_total', 0)
+        st.metric(
+            "📅 3-Year Total",
+            f"${three_year_total:,.0f}",
+            delta="All costs included"
+        )
+    
+    with col4:
+        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        if monthly_breakdown:
+            largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
+            st.metric(
+                "🎯 Largest Cost",
+                largest_cost[0].replace('_', ' ').title(),
+                delta=f"${largest_cost[1]:,.0f}/mo"
+            )
+        else:
+            st.metric("🎯 Largest Cost", "Unknown", delta="No data")
+    
+    # Create a simple service breakdown table instead of the problematic code
+    st.markdown("---")
+    st.markdown("**🔧 AWS Services Cost Breakdown**")
+    
+    # Get cost components safely
+    compute_costs = comprehensive_costs.get('compute_costs', {})
+    storage_costs = comprehensive_costs.get('storage_costs', {})
+    network_costs = comprehensive_costs.get('network_costs', {})
+    migration_costs = comprehensive_costs.get('migration_costs', {})
+    
+    # Create simplified breakdown
+    breakdown_data = []
+    
+    # Compute costs
+    if compute_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Database Compute',
+            'Service Type': compute_costs.get('service_type', 'Unknown'),
+            'Monthly Cost': f"${compute_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Primary database infrastructure"
+        })
+    
+    # Storage costs
+    if storage_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Storage Services',
+            'Service Type': 'EBS + Destination Storage',
+            'Monthly Cost': f"${storage_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Database and destination storage"
+        })
+    
+    # Network costs
+    if network_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Network Services',
+            'Service Type': 'Direct Connect + Data Transfer',
+            'Monthly Cost': f"${network_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Connectivity and data transfer"
+        })
+    
+    # Migration costs
+    if migration_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Migration Services',
+            'Service Type': 'DataSync/DMS Agents',
+            'Monthly Cost': f"${migration_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Migration processing agents"
+        })
+    
+    if breakdown_data:
+        df_breakdown = pd.DataFrame(breakdown_data)
+        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
+    else:
+        st.info("No detailed cost breakdown available")
+    
+    # Rest of the function continues with visualizations and other content...
+    st.markdown("---")
+    st.markdown("**📊 Cost Visualization**")
+    
+    if monthly_breakdown:
+        # Create pie chart
+        fig_pie = px.pie(
+            values=list(monthly_breakdown.values()),
+            names=[k.replace('_', ' ').title() for k in monthly_breakdown.keys()],
+            title="Monthly Cost Distribution"
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+    
+    st.info("✅ This is the fixed version of the comprehensive cost analysis tab.")
+    """Run comprehensive analysis including unified cost calculation"""
+    
+    # Run the existing comprehensive analysis
+    analysis_data = await analyzer.comprehensive_ai_migration_analysis(config)
+    
+    # Create unified cost calculator and add unified costs
+    unified_calculator = UnifiedAWSCostCalculator(analyzer.aws_api)
+    unified_costs = await unified_calculator.calculate_unified_aws_costs(config, analysis_data)
+    
+    # Add unified costs to analysis data
+    analysis_data['unified_aws_costs'] = unified_costs
+    
+    return analysis_data
+
+# Updated main function to include the new tab
+async def main_with_unified_costs():
+    """Enhanced main application with unified cost analysis"""
+    render_enhanced_header()
+    
+    # Enhanced sidebar controls
+    config = render_enhanced_sidebar_controls()
+    
+    # Initialize the migration analyzer
+    if 'analyzer' not in st.session_state:
+        st.session_state.analyzer = EnhancedMigrationAnalyzer()
+    
+    # Check if we need to run analysis
+    if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
+        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
+            try:
+                # Run the comprehensive analysis with unified costs
+                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
+                
+                st.session_state.analysis_data = analysis_data
+                st.session_state.last_config = config.copy()
+                
+                st.success("✅ Analysis completed successfully with unified cost calculation!")
+                
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                logger.error(f"Analysis error: {e}")
+                return
+    else:
+        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
+    
+    analysis_data = st.session_state.analysis_data
+    
+    # Create tabs for organized display - UPDATED TAB LIST
+    tab_names = [
+        "💰 Total AWS Cost",  # NEW: First tab for unified costs
+        "🧠 AI Insights & Analysis",
+        "🌐 Network Intelligence", 
+        "💻 OS Performance Analysis",
+        "🎯 AWS Sizing & Configuration",
+        "🤖 Agent Scaling Analysis",
+        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
+    ]
+    
+    tabs = st.tabs(tab_names)
+    
+    # Render each tab
+    with tabs[0]:  # NEW: Total AWS Cost tab
+        render_total_aws_cost_tab(analysis_data, config)
+    
+    with tabs[1]:
+        render_ai_insights_tab_enhanced(analysis_data, config)
+    
+    with tabs[2]:
+        render_network_intelligence_tab(analysis_data, config)
+    
+    with tabs[3]:
+        render_os_performance_tab(analysis_data, config)
+    
+    with tabs[4]:
+        render_aws_sizing_tab(analysis_data, config)
+    
+    with tabs[5]:
+        render_agent_scaling_tab(analysis_data, config)
+    
+    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
+        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
+    
+    # Render footer
+    render_footer()
+
+# Replace the existing main call at the bottom of the file
+if __name__ == "__main__":
+    asyncio.run(main_with_unified_costs()), '').replace(',', '')) for _, row in category_data.iterrows() if row['Monthly Cost'].replace('
+def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
+    """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
+    st.subheader("💰 Complete AWS Cost Analysis")
+    
+    # Get comprehensive cost data
+    comprehensive_costs = analysis.get('comprehensive_costs', {})
+    
+    if not comprehensive_costs:
+        st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
+        return
+    
+    # Executive Cost Summary
+    st.markdown("**📊 Executive Cost Summary**")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_monthly = comprehensive_costs.get('total_monthly', 0)
+        st.metric(
+            "💰 Total Monthly",
+            f"${total_monthly:,.0f}",
+            delta=f"Annual: ${total_monthly * 12:,.0f}"
+        )
+    
+    with col2:
+        total_one_time = comprehensive_costs.get('total_one_time', 0)
+        st.metric(
+            "🔄 One-Time Costs",
+            f"${total_one_time:,.0f}",
+            delta="Setup & Migration"
+        )
+    
+    with col3:
+        three_year_total = comprehensive_costs.get('three_year_total', 0)
+        st.metric(
+            "📅 3-Year Total",
+            f"${three_year_total:,.0f}",
+            delta="All costs included"
+        )
+    
+    with col4:
+        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        if monthly_breakdown:
+            largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
+            st.metric(
+                "🎯 Largest Cost",
+                largest_cost[0].replace('_', ' ').title(),
+                delta=f"${largest_cost[1]:,.0f}/mo"
+            )
+        else:
+            st.metric("🎯 Largest Cost", "Unknown", delta="No data")
+    
+    # Create a simple service breakdown table instead of the problematic code
+    st.markdown("---")
+    st.markdown("**🔧 AWS Services Cost Breakdown**")
+    
+    # Get cost components safely
+    compute_costs = comprehensive_costs.get('compute_costs', {})
+    storage_costs = comprehensive_costs.get('storage_costs', {})
+    network_costs = comprehensive_costs.get('network_costs', {})
+    migration_costs = comprehensive_costs.get('migration_costs', {})
+    
+    # Create simplified breakdown
+    breakdown_data = []
+    
+    # Compute costs
+    if compute_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Database Compute',
+            'Service Type': compute_costs.get('service_type', 'Unknown'),
+            'Monthly Cost': f"${compute_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Primary database infrastructure"
+        })
+    
+    # Storage costs
+    if storage_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Storage Services',
+            'Service Type': 'EBS + Destination Storage',
+            'Monthly Cost': f"${storage_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Database and destination storage"
+        })
+    
+    # Network costs
+    if network_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Network Services',
+            'Service Type': 'Direct Connect + Data Transfer',
+            'Monthly Cost': f"${network_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Connectivity and data transfer"
+        })
+    
+    # Migration costs
+    if migration_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Migration Services',
+            'Service Type': 'DataSync/DMS Agents',
+            'Monthly Cost': f"${migration_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Migration processing agents"
+        })
+    
+    if breakdown_data:
+        df_breakdown = pd.DataFrame(breakdown_data)
+        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
+    else:
+        st.info("No detailed cost breakdown available")
+    
+    # Rest of the function continues with visualizations and other content...
+    st.markdown("---")
+    st.markdown("**📊 Cost Visualization**")
+    
+    if monthly_breakdown:
+        # Create pie chart
+        fig_pie = px.pie(
+            values=list(monthly_breakdown.values()),
+            names=[k.replace('_', ' ').title() for k in monthly_breakdown.keys()],
+            title="Monthly Cost Distribution"
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+    
+    st.info("✅ This is the fixed version of the comprehensive cost analysis tab.")
+    """Run comprehensive analysis including unified cost calculation"""
+    
+    # Run the existing comprehensive analysis
+    analysis_data = await analyzer.comprehensive_ai_migration_analysis(config)
+    
+    # Create unified cost calculator and add unified costs
+    unified_calculator = UnifiedAWSCostCalculator(analyzer.aws_api)
+    unified_costs = await unified_calculator.calculate_unified_aws_costs(config, analysis_data)
+    
+    # Add unified costs to analysis data
+    analysis_data['unified_aws_costs'] = unified_costs
+    
+    return analysis_data
+
+# Updated main function to include the new tab
+async def main_with_unified_costs():
+    """Enhanced main application with unified cost analysis"""
+    render_enhanced_header()
+    
+    # Enhanced sidebar controls
+    config = render_enhanced_sidebar_controls()
+    
+    # Initialize the migration analyzer
+    if 'analyzer' not in st.session_state:
+        st.session_state.analyzer = EnhancedMigrationAnalyzer()
+    
+    # Check if we need to run analysis
+    if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
+        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
+            try:
+                # Run the comprehensive analysis with unified costs
+                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
+                
+                st.session_state.analysis_data = analysis_data
+                st.session_state.last_config = config.copy()
+                
+                st.success("✅ Analysis completed successfully with unified cost calculation!")
+                
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                logger.error(f"Analysis error: {e}")
+                return
+    else:
+        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
+    
+    analysis_data = st.session_state.analysis_data
+    
+    # Create tabs for organized display - UPDATED TAB LIST
+    tab_names = [
+        "💰 Total AWS Cost",  # NEW: First tab for unified costs
+        "🧠 AI Insights & Analysis",
+        "🌐 Network Intelligence", 
+        "💻 OS Performance Analysis",
+        "🎯 AWS Sizing & Configuration",
+        "🤖 Agent Scaling Analysis",
+        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
+    ]
+    
+    tabs = st.tabs(tab_names)
+    
+    # Render each tab
+    with tabs[0]:  # NEW: Total AWS Cost tab
+        render_total_aws_cost_tab(analysis_data, config)
+    
+    with tabs[1]:
+        render_ai_insights_tab_enhanced(analysis_data, config)
+    
+    with tabs[2]:
+        render_network_intelligence_tab(analysis_data, config)
+    
+    with tabs[3]:
+        render_os_performance_tab(analysis_data, config)
+    
+    with tabs[4]:
+        render_aws_sizing_tab(analysis_data, config)
+    
+    with tabs[5]:
+        render_agent_scaling_tab(analysis_data, config)
+    
+    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
+        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
+    
+    # Render footer
+    render_footer()
+
+# Replace the existing main call at the bottom of the file
+if __name__ == "__main__":
+    asyncio.run(main_with_unified_costs()), '').replace(',', '').replace('.', '').isdigit()])
+
+# EXPLANATION OF THE FIXES:
+# 1. Fixed: *, row  →  _, row  (correct tuple unpacking)
+# 2. Fixed: category*data  →  category_data  (correct variable name)  
+# 3. Fixed: String parsing with better error handling
+# 4. Added try/except to handle parsing errors gracefully
+def render_comprehensive_cost_analysis_tab_fixed(analysis: Dict, config: Dict):
+    """Render comprehensive AWS cost analysis tab with all services clearly organized - FIXED VERSION"""
+    st.subheader("💰 Complete AWS Cost Analysis")
+    
+    # Get comprehensive cost data
+    comprehensive_costs = analysis.get('comprehensive_costs', {})
+    
+    if not comprehensive_costs:
+        st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
+        return
+    
+    # Executive Cost Summary
+    st.markdown("**📊 Executive Cost Summary**")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_monthly = comprehensive_costs.get('total_monthly', 0)
+        st.metric(
+            "💰 Total Monthly",
+            f"${total_monthly:,.0f}",
+            delta=f"Annual: ${total_monthly * 12:,.0f}"
+        )
+    
+    with col2:
+        total_one_time = comprehensive_costs.get('total_one_time', 0)
+        st.metric(
+            "🔄 One-Time Costs",
+            f"${total_one_time:,.0f}",
+            delta="Setup & Migration"
+        )
+    
+    with col3:
+        three_year_total = comprehensive_costs.get('three_year_total', 0)
+        st.metric(
+            "📅 3-Year Total",
+            f"${three_year_total:,.0f}",
+            delta="All costs included"
+        )
+    
+    with col4:
+        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        if monthly_breakdown:
+            largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1])
+            st.metric(
+                "🎯 Largest Cost",
+                largest_cost[0].replace('_', ' ').title(),
+                delta=f"${largest_cost[1]:,.0f}/mo"
+            )
+        else:
+            st.metric("🎯 Largest Cost", "Unknown", delta="No data")
+    
+    # Create a simple service breakdown table instead of the problematic code
+    st.markdown("---")
+    st.markdown("**🔧 AWS Services Cost Breakdown**")
+    
+    # Get cost components safely
+    compute_costs = comprehensive_costs.get('compute_costs', {})
+    storage_costs = comprehensive_costs.get('storage_costs', {})
+    network_costs = comprehensive_costs.get('network_costs', {})
+    migration_costs = comprehensive_costs.get('migration_costs', {})
+    
+    # Create simplified breakdown
+    breakdown_data = []
+    
+    # Compute costs
+    if compute_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Database Compute',
+            'Service Type': compute_costs.get('service_type', 'Unknown'),
+            'Monthly Cost': f"${compute_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Primary database infrastructure"
+        })
+    
+    # Storage costs
+    if storage_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Storage Services',
+            'Service Type': 'EBS + Destination Storage',
+            'Monthly Cost': f"${storage_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Database and destination storage"
+        })
+    
+    # Network costs
+    if network_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Network Services',
+            'Service Type': 'Direct Connect + Data Transfer',
+            'Monthly Cost': f"${network_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Connectivity and data transfer"
+        })
+    
+    # Migration costs
+    if migration_costs.get('monthly_total', 0) > 0:
+        breakdown_data.append({
+            'Service Category': 'Migration Services',
+            'Service Type': 'DataSync/DMS Agents',
+            'Monthly Cost': f"${migration_costs.get('monthly_total', 0):,.0f}",
+            'Details': f"Migration processing agents"
+        })
+    
+    if breakdown_data:
+        df_breakdown = pd.DataFrame(breakdown_data)
+        st.dataframe(df_breakdown, use_container_width=True, hide_index=True)
+    else:
+        st.info("No detailed cost breakdown available")
+    
+    # Rest of the function continues with visualizations and other content...
+    st.markdown("---")
+    st.markdown("**📊 Cost Visualization**")
+    
+    if monthly_breakdown:
+        # Create pie chart
+        fig_pie = px.pie(
+            values=list(monthly_breakdown.values()),
+            names=[k.replace('_', ' ').title() for k in monthly_breakdown.keys()],
+            title="Monthly Cost Distribution"
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+    
+    st.info("✅ This is the fixed version of the comprehensive cost analysis tab.")
+    """Run comprehensive analysis including unified cost calculation"""
+    
+    # Run the existing comprehensive analysis
+    analysis_data = await analyzer.comprehensive_ai_migration_analysis(config)
+    
+    # Create unified cost calculator and add unified costs
+    unified_calculator = UnifiedAWSCostCalculator(analyzer.aws_api)
+    unified_costs = await unified_calculator.calculate_unified_aws_costs(config, analysis_data)
+    
+    # Add unified costs to analysis data
+    analysis_data['unified_aws_costs'] = unified_costs
+    
+    return analysis_data
+
+# Updated main function to include the new tab
+async def main_with_unified_costs():
+    """Enhanced main application with unified cost analysis"""
+    render_enhanced_header()
+    
+    # Enhanced sidebar controls
+    config = render_enhanced_sidebar_controls()
+    
+    # Initialize the migration analyzer
+    if 'analyzer' not in st.session_state:
+        st.session_state.analyzer = EnhancedMigrationAnalyzer()
+    
+    # Check if we need to run analysis
+    if 'analysis_data' not in st.session_state or config_has_changed(config, st.session_state.get('last_config')):
+        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
+            try:
+                # Run the comprehensive analysis with unified costs
+                analysis_data = await run_comprehensive_analysis_with_unified_costs(st.session_state.analyzer, config)
+                
+                st.session_state.analysis_data = analysis_data
+                st.session_state.last_config = config.copy()
+                
+                st.success("✅ Analysis completed successfully with unified cost calculation!")
+                
+            except Exception as e:
+                st.error(f"❌ Analysis failed: {str(e)}")
+                logger.error(f"Analysis error: {e}")
+                return
+    else:
+        st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
+    
+    analysis_data = st.session_state.analysis_data
+    
+    # Create tabs for organized display - UPDATED TAB LIST
+    tab_names = [
+        "💰 Total AWS Cost",  # NEW: First tab for unified costs
+        "🧠 AI Insights & Analysis",
+        "🌐 Network Intelligence", 
+        "💻 OS Performance Analysis",
+        "🎯 AWS Sizing & Configuration",
+        "🤖 Agent Scaling Analysis",
+        "📊 Detailed Cost Breakdown"  # RENAMED: Old comprehensive cost analysis
+    ]
+    
+    tabs = st.tabs(tab_names)
+    
+    # Render each tab
+    with tabs[0]:  # NEW: Total AWS Cost tab
+        render_total_aws_cost_tab(analysis_data, config)
+    
+    with tabs[1]:
+        render_ai_insights_tab_enhanced(analysis_data, config)
+    
+    with tabs[2]:
+        render_network_intelligence_tab(analysis_data, config)
+    
+    with tabs[3]:
+        render_os_performance_tab(analysis_data, config)
+    
+    with tabs[4]:
+        render_aws_sizing_tab(analysis_data, config)
+    
+    with tabs[5]:
+        render_agent_scaling_tab(analysis_data, config)
+    
+    with tabs[6]:  # FIXED: Detailed breakdown (using fixed version)
+        render_comprehensive_cost_analysis_tab_fixed(analysis_data, config)
     
     # Render footer
     render_footer()
