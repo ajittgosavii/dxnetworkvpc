@@ -456,7 +456,7 @@ class AnthropicAIManager:
             'Use dedicated backup network',
             'Configure SMB compression'
             ]
-            else:  # nas_drive
+        else:  # nas_drive
             considerations['advantages'] = [
             'High-performance NFS protocol',
             'Better bandwidth utilization',
