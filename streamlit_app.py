@@ -3395,8 +3395,10 @@ def render_api_status_sidebar():
     </div>
     """, unsafe_allow_html=True)
 
+# Replace the render_enhanced_sidebar_controls function with this complete version
+
 def render_enhanced_sidebar_controls():
-    """Enhanced sidebar with AI-powered recommendations"""
+    """Enhanced sidebar with AI-powered recommendations - COMPLETE VERSION"""
     st.sidebar.header("🤖 AI-Powered Migration Configuration v3.0")
     
     render_api_status_sidebar()
@@ -3510,7 +3512,7 @@ def render_enhanced_sidebar_controls():
     # Initialize variables that might be conditionally set
     database_engine = None
     ec2_database_engine = None
-    sql_server_deployment_type = None
+    sql_server_deployment_type = "standalone"  # Default value
     
     # Target Database Selection based on platform
     if target_platform == "rds":
@@ -3560,27 +3562,8 @@ def render_enhanced_sidebar_controls():
                     'always_on': '🔄 SQL Server Always On (3-Node Cluster)'
                 }[x]
             )
-            
-            # Show deployment-specific information
-            if sql_server_deployment_type == "always_on":
-                st.sidebar.info("""
-                **🔄 SQL Server Always On Cluster:**
-                • 3 EC2 instances (Primary + 2 Replicas)
-                • High Availability & Disaster Recovery
-                • Automatic failover capability
-                • Shared storage or storage replication
-                • Higher cost but enterprise-grade reliability
-                """)
-            else:
-                st.sidebar.info("""
-                **🖥️ Standalone SQL Server:**
-                • Single EC2 instance
-                • Standard SQL Server deployment
-                • Cost-effective for non-HA requirements
-                • Manual backup and recovery processes
-                """)
     
-    # Add placeholder database properties for missing UI elements
+    # Add remaining configuration options
     database_size_gb = st.sidebar.number_input("Database Size (GB)", 
                                               min_value=100, max_value=100000, value=1000, step=100)
     
@@ -3669,13 +3652,6 @@ def render_enhanced_sidebar_controls():
     
     st.sidebar.success(f"**Primary Tool:** AWS {primary_tool}")
     
-    # Show migration method info
-    if migration_method == 'backup_restore':
-        st.sidebar.info(f"**Method:** Backup/Restore via DataSync from {backup_storage_type.replace('_', ' ').title()}")
-        st.sidebar.write(f"**Backup Size:** {int(backup_size_multiplier*100)}% of database ({backup_size_multiplier:.1f}x)")
-    else:
-        st.sidebar.info(f"**Method:** Direct replication ({'homogeneous' if is_homogeneous else 'heterogeneous'})")
-    
     number_of_agents = st.sidebar.number_input(
         "Number of Migration Agents",
         min_value=1, max_value=10, value=2, step=1,
@@ -3694,7 +3670,7 @@ def render_enhanced_sidebar_controls():
                 'xlarge': '📦 XLarge (c5.2xlarge) - 2000 Mbps/agent'
             }[x]
         )
-        dms_agent_size = None
+        dms_agent_size = "medium"  # Default value
     else:
         dms_agent_size = st.sidebar.selectbox(
             "DMS Instance Size",
@@ -3708,7 +3684,7 @@ def render_enhanced_sidebar_controls():
                 'xxlarge': '🔄 XXLarge (c5.4xlarge) - 2500 Mbps/agent'
             }[x]
         )
-        datasync_agent_size = None
+        datasync_agent_size = "medium"  # Default value
     
     # AI Configuration
     st.sidebar.subheader("🧠 AI Configuration")
@@ -3717,7 +3693,7 @@ def render_enhanced_sidebar_controls():
     if st.sidebar.button("🔄 Refresh AI Analysis", type="primary"):
         st.rerun()
     
-    # Return the configuration dictionary
+    # Return the COMPLETE configuration dictionary
     return {
         'operating_system': operating_system,
         'server_type': server_type,
@@ -6891,36 +6867,44 @@ def config_has_changed(current_config: Dict, previous_config: Dict) -> bool:
     return False
 
 
-async def main_with_unified_costs():
-    """Enhanced main application with unified cost analysis."""
-    render_enhanced_header()
+# Replace the main application function at the end of your file with this corrected version
+
+async def main():
+    """Main application with all tabs working properly"""
     
-    # Enhanced sidebar controls
-    config = render_enhanced_sidebar_controls()
-    
-    # Initialize session state
-    if 'analysis_data' not in st.session_state:
-        st.session_state.analysis_data = None
-    
+    # Initialize session state for configuration and analysis caching
     if 'last_config' not in st.session_state:
         st.session_state.last_config = None
+    if 'last_analysis' not in st.session_state:
+        st.session_state.last_analysis = None
     
-    # Check if we need to run analysis
-    if (st.session_state.analysis_data is None or 
-        config_has_changed(config, st.session_state.last_config)):
-        
-        with st.spinner("🤖 Running comprehensive AI-powered migration analysis with unified cost calculation..."):
+    # Render header and sidebar
+    render_enhanced_header()
+    config = render_enhanced_sidebar_controls()
+    
+    # Check if configuration has changed
+    needs_analysis = config_has_changed(config, st.session_state.last_config)
+    
+    # Run analysis if needed
+    if needs_analysis or st.session_state.last_analysis is None:
+        with st.spinner("🤖 Running comprehensive AI-powered migration analysis..."):
             try:
-                # Simulate analyzer - replace with actual analyzer initialization
-                analyzer = None  # Replace with: EnhancedMigrationAnalyzer()
+                # Initialize the analyzer
+                analyzer = EnhancedMigrationAnalyzer()
                 
-                # Run the comprehensive analysis with unified costs
-                analysis_data = await run_comprehensive_analysis_with_unified_costs(analyzer, config)
+                # Run comprehensive analysis
+                analysis = await analyzer.comprehensive_ai_migration_analysis(config)
                 
-                st.session_state.analysis_data = analysis_data
+                # Calculate unified costs
+                cost_calculator = UnifiedAWSCostCalculator(analyzer.aws_api)
+                unified_costs = await cost_calculator.calculate_unified_aws_costs(config, analysis)
+                analysis['unified_aws_costs'] = unified_costs
+                
+                # Store in session state
+                st.session_state.last_analysis = analysis
                 st.session_state.last_config = config.copy()
                 
-                st.success("✅ Analysis completed successfully with unified cost calculation!")
+                st.success("✅ Analysis completed successfully!")
                 
             except Exception as e:
                 st.error(f"❌ Analysis failed: {str(e)}")
@@ -6929,18 +6913,18 @@ async def main_with_unified_costs():
     else:
         st.info("📊 Using cached analysis results. Change configuration to trigger re-analysis.")
     
-    analysis_data = st.session_state.analysis_data
+    analysis = st.session_state.last_analysis
     
-    if analysis_data is None:
+    if analysis is None:
         st.warning("⚠️ No analysis data available. Please run the analysis first.")
         return
     
-    # Create tabs for organized display
+    # Create tabs with the corrected render functions
     tab_names = [
         "💰 Total AWS Cost",
-        "🧠 AI Insights & Analysis",
-        "🌐 Network Intelligence", 
-        "💻 OS Performance Analysis",
+        "🧠 AI Insights & Analysis", 
+        "🌐 Network Intelligence",
+        "💻 OS Performance Analysis", 
         "🎯 AWS Sizing & Configuration",
         "🤖 Agent Scaling Analysis",
         "📊 Detailed Cost Breakdown"
@@ -6948,32 +6932,33 @@ async def main_with_unified_costs():
     
     tabs = st.tabs(tab_names)
     
-    # Render each tab
+    # Render each tab with the CORRECT functions
     with tabs[0]:  # Total AWS Cost tab
-        render_total_aws_cost_tab(analysis_data, config)
+        render_total_aws_cost_tab(analysis, config)
     
-    with tabs[1]:  # AI Insights
-        render_placeholder_tab("AI Insights & Analysis")
+    with tabs[1]:  # AI Insights - USE THE ACTUAL FUNCTION
+        render_ai_insights_tab_enhanced(analysis, config)
     
-    with tabs[2]:  # Network Intelligence
-        render_placeholder_tab("Network Intelligence")
+    with tabs[2]:  # Network Intelligence - USE THE ACTUAL FUNCTION  
+        render_network_intelligence_tab(analysis, config)
     
-    with tabs[3]:  # OS Performance
-        render_placeholder_tab("OS Performance Analysis")
+    with tabs[3]:  # OS Performance - USE THE ACTUAL FUNCTION
+        render_os_performance_tab(analysis, config)
     
-    with tabs[4]:  # AWS Sizing
-        render_placeholder_tab("AWS Sizing & Configuration")
+    with tabs[4]:  # AWS Sizing - USE THE ACTUAL FUNCTION
+        render_aws_sizing_tab(analysis, config)
     
-    with tabs[5]:  # Agent Scaling
-        render_placeholder_tab("Agent Scaling Analysis")
+    with tabs[5]:  # Agent Scaling - USE THE ACTUAL FUNCTION
+        render_agent_scaling_tab(analysis, config)
     
-    with tabs[6]:  # Detailed breakdown (using improved version)
-        render_comprehensive_cost_analysis_tab(analysis_data, config)
+    with tabs[6]:  # Detailed breakdown
+        render_comprehensive_cost_analysis_tab(analysis, config)
     
     # Render footer
     render_footer()
 
 
-# Main application entry point
+# Update the main entry point to use the correct main function
 if __name__ == "__main__":
-    asyncio.run(main_with_unified_costs())
+    # Use the corrected main function instead of main_with_unified_costs
+    asyncio.run(main())
