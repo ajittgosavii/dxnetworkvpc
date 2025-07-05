@@ -4931,20 +4931,20 @@ def render_network_intelligence_tab(analysis: Dict, config: Dict):
         st.info("Network appears optimally configured for current requirements")
 
 def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
-    """Render comprehensive AWS cost analysis tab with all services"""
-    st.subheader("💰 Comprehensive AWS Cost Analysis")
+    """Render comprehensive AWS cost analysis tab with all services clearly organized"""
+    st.subheader("💰 Complete AWS Cost Analysis")
     
     # Get comprehensive cost data
     comprehensive_costs = analysis.get('comprehensive_costs', {})
     
     if not comprehensive_costs:
-        st.warning("Comprehensive cost data not available. Please run the analysis first.")
+        st.warning("⚠️ Comprehensive cost data not available. Please run the analysis first.")
         return
     
     # Executive Cost Summary
-    st.markdown("**💸 Executive Cost Summary:**")
+    st.markdown("**📊 Executive Cost Summary**")
     
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         total_monthly = comprehensive_costs.get('total_monthly', 0)
@@ -4967,7 +4967,7 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
         st.metric(
             "📅 3-Year Total",
             f"${three_year_total:,.0f}",
-            delta="Including all costs"
+            delta="All costs included"
         )
     
     with col4:
@@ -4975,42 +4975,269 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
         largest_cost = max(monthly_breakdown.items(), key=lambda x: x[1]) if monthly_breakdown else ('Unknown', 0)
         st.metric(
             "🎯 Largest Cost",
-            largest_cost[0].title(),
+            largest_cost[0].replace('_', ' ').title(),
             delta=f"${largest_cost[1]:,.0f}/mo"
         )
     
-    with col5:
-        optimization_count = len(comprehensive_costs.get('cost_optimization_recommendations', []))
-        st.metric(
-            "💡 Optimization Tips",
-            f"{optimization_count} items",
-            delta="Available"
-        )
+    # AWS Services Cost Breakdown - Clear and Organized
+    st.markdown("---")
+    st.markdown("**🔧 AWS Services Cost Breakdown**")
     
-    # Monthly Cost Breakdown
-    col1, col2 = st.columns(2)
+    # Create a comprehensive service breakdown table
+    service_breakdown_data = []
     
-    with col1:
-        st.markdown("**📊 Monthly Cost Breakdown:**")
+    # Get all cost components
+    compute_costs = comprehensive_costs.get('compute_costs', {})
+    storage_costs = comprehensive_costs.get('storage_costs', {})
+    network_costs = comprehensive_costs.get('network_costs', {})
+    migration_costs = comprehensive_costs.get('migration_costs', {})
+    
+    # Add RDS/EC2 costs
+    if compute_costs.get('service_type') == 'RDS':
+        # RDS Writer
+        writer_cost = compute_costs.get('writer_monthly_cost', 0)
+        if writer_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'RDS Writer Instance',
+                'Service Type': compute_costs.get('primary_instance', 'Unknown'),
+                'Monthly Cost': f"${writer_cost:,.0f}",
+                'Usage': f"{compute_costs.get('writer_instances', 1)} instance(s)",
+                'Category': 'Database Compute'
+            })
         
-        monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
+        # RDS Readers
+        reader_cost = compute_costs.get('reader_monthly_cost', 0)
+        if reader_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'RDS Read Replicas',
+                'Service Type': compute_costs.get('primary_instance', 'Unknown'),
+                'Monthly Cost': f"${reader_cost:,.0f}",
+                'Usage': f"{compute_costs.get('reader_instances', 0)} instance(s)",
+                'Category': 'Database Compute'
+            })
         
-        if monthly_breakdown:
-            # Create pie chart
-            fig_pie = px.pie(
-                values=list(monthly_breakdown.values()),
-                names=[name.replace('_', ' ').title() for name in monthly_breakdown.keys()],
-                title="Monthly Cost Distribution by Service"
-            )
-            st.plotly_chart(fig_pie, use_container_width=True)
+        # Multi-AZ
+        multi_az_cost = compute_costs.get('multi_az_cost', 0)
+        if multi_az_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'RDS Multi-AZ',
+                'Service Type': 'High Availability',
+                'Monthly Cost': f"${multi_az_cost:,.0f}",
+                'Usage': 'Multi-AZ deployment',
+                'Category': 'Database Compute'
+            })
+    
+    else:
+        # EC2 instances
+        instance_cost = compute_costs.get('monthly_instance_cost', 0)
+        if instance_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'EC2 Instances',
+                'Service Type': compute_costs.get('primary_instance', 'Unknown'),
+                'Monthly Cost': f"${instance_cost:,.0f}",
+                'Usage': f"{compute_costs.get('instance_count', 1)} instance(s)",
+                'Category': 'Database Compute'
+            })
+        
+        # OS Licensing
+        os_cost = compute_costs.get('os_licensing_cost', 0)
+        if os_cost > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'OS Licensing',
+                'Service Type': 'Windows Licensing',
+                'Monthly Cost': f"${os_cost:,.0f}",
+                'Usage': f"{compute_costs.get('instance_count', 1)} license(s)",
+                'Category': 'Database Compute'
+            })
+    
+    # EBS Storage
+    primary_storage = storage_costs.get('primary_storage', {})
+    if primary_storage.get('monthly_cost', 0) > 0:
+        service_breakdown_data.append({
+            'AWS Service': 'EBS Storage',
+            'Service Type': primary_storage.get('type', 'gp3').upper(),
+            'Monthly Cost': f"${primary_storage.get('monthly_cost', 0):,.0f}",
+            'Usage': f"{primary_storage.get('size_gb', 0):,.0f} GB",
+            'Category': 'Database Storage'
+        })
+    
+    # S3/FSx Destination Storage
+    destination_storage = storage_costs.get('destination_storage', {})
+    if destination_storage.get('monthly_cost', 0) > 0:
+        service_breakdown_data.append({
+            'AWS Service': destination_storage.get('type', 'S3'),
+            'Service Type': 'Destination Storage',
+            'Monthly Cost': f"${destination_storage.get('monthly_cost', 0):,.0f}",
+            'Usage': f"{destination_storage.get('size_gb', 0):,.0f} GB",
+            'Category': 'Migration Storage'
+        })
+    
+    # Backup Storage (if applicable)
+    backup_storage = storage_costs.get('backup_storage', {})
+    if backup_storage.get('applicable', False) and backup_storage.get('monthly_cost', 0) > 0:
+        service_breakdown_data.append({
+            'AWS Service': 'S3 Backup Storage',
+            'Service Type': 'Migration Backup',
+            'Monthly Cost': f"${backup_storage.get('monthly_cost', 0):,.0f}",
+            'Usage': f"{backup_storage.get('size_gb', 0):,.0f} GB",
+            'Category': 'Migration Storage'
+        })
+    
+    # Direct Connect
+    dx_costs = network_costs.get('direct_connect', {})
+    if dx_costs.get('monthly_cost', 0) > 0:
+        service_breakdown_data.append({
+            'AWS Service': 'Direct Connect',
+            'Service Type': dx_costs.get('capacity', 'Unknown'),
+            'Monthly Cost': f"${dx_costs.get('monthly_cost', 0):,.0f}",
+            'Usage': f"${dx_costs.get('hourly_cost', 0):.2f}/hour",
+            'Category': 'Network'
+        })
+    
+    # Data Transfer
+    transfer_costs = network_costs.get('data_transfer', {})
+    if transfer_costs.get('monthly_cost', 0) > 0:
+        service_breakdown_data.append({
+            'AWS Service': 'Data Transfer Out',
+            'Service Type': 'DX Data Transfer',
+            'Monthly Cost': f"${transfer_costs.get('monthly_cost', 0):,.0f}",
+            'Usage': f"{transfer_costs.get('monthly_gb', 0):,.0f} GB/month",
+            'Category': 'Network'
+        })
+    
+    # VPN (if applicable)
+    vpn_costs = network_costs.get('vpn_backup', {})
+    if vpn_costs.get('monthly_cost', 0) > 0:
+        service_breakdown_data.append({
+            'AWS Service': 'VPN Gateway',
+            'Service Type': 'Backup Connectivity',
+            'Monthly Cost': f"${vpn_costs.get('monthly_cost', 0):,.0f}",
+            'Usage': 'HA/Backup connection',
+            'Category': 'Network'
+        })
+    
+    # Migration Agents (DataSync/DMS)
+    agent_costs = migration_costs.get('agent_costs', {})
+    if agent_costs.get('monthly_cost', 0) > 0:
+        primary_tool = analysis.get('agent_analysis', {}).get('primary_tool', 'DMS')
+        service_breakdown_data.append({
+            'AWS Service': f'{primary_tool} Agents (EC2)',
+            'Service Type': 'Migration Processing',
+            'Monthly Cost': f"${agent_costs.get('monthly_cost', 0):,.0f}",
+            'Usage': f"{agent_costs.get('agent_count', 0)} agent(s)",
+            'Category': 'Migration Services'
+        })
+    
+    # DataSync Usage (if applicable)
+    datasync_costs = migration_costs.get('datasync', {})
+    if datasync_costs.get('applicable', False):
+        if datasync_costs.get('monthly_sync_cost', 0) > 0:
+            service_breakdown_data.append({
+                'AWS Service': 'DataSync Usage',
+                'Service Type': 'Data Transfer Service',
+                'Monthly Cost': f"${datasync_costs.get('monthly_sync_cost', 0):,.0f}",
+                'Usage': f"{datasync_costs.get('data_size_gb', 0):,.0f} GB/month",
+                'Category': 'Migration Services'
+            })
+    
+    # DMS Usage (if applicable)
+    dms_costs = migration_costs.get('dms', {})
+    if dms_costs.get('applicable', False) and dms_costs.get('monthly_cost', 0) > 0:
+        service_breakdown_data.append({
+            'AWS Service': 'DMS Replication',
+            'Service Type': 'Database Migration',
+            'Monthly Cost': f"${dms_costs.get('monthly_cost', 0):,.0f}",
+            'Usage': 'Replication instances',
+            'Category': 'Migration Services'
+        })
+    
+    # Display the comprehensive service breakdown table
+    if service_breakdown_data:
+        st.markdown("**📋 Complete AWS Services Breakdown:**")
+        df_services = pd.DataFrame(service_breakdown_data)
+        
+        # Group by category and show
+        categories = df_services['Category'].unique()
+        
+        for category in categories:
+            category_data = df_services[df_services['Category'] == category]
+            category_total = sum([float(row['Monthly Cost'].replace('$', '').replace(',', '')) for _, row in category_data.iterrows()])
+            
+            with st.expander(f"🔧 {category} - ${category_total:,.0f}/month", expanded=True):
+                # Remove category column for display since it's in the header
+                display_data = category_data.drop('Category', axis=1)
+                st.dataframe(display_data, use_container_width=True, hide_index=True)
+    
+    # One-Time Costs Summary
+    st.markdown("---")
+    st.markdown("**💸 One-Time Migration Costs**")
+    
+    one_time_col1, one_time_col2 = st.columns(2)
+    
+    with one_time_col1:
+        st.info("**Migration Setup Costs**")
+        setup_costs = migration_costs.get('setup_and_professional_services', {})
+        setup_cost = setup_costs.get('one_time_cost', 0)
+        st.write(f"**Professional Services:** ${setup_cost:,.0f}")
+        
+        includes = setup_costs.get('includes', [])
+        if includes:
+            st.write("**Includes:**")
+            for service in includes:
+                st.write(f"• {service}")
+    
+    with one_time_col2:
+        st.success("**Data Transfer Costs**")
+        
+        # DataSync one-time transfer
+        if datasync_costs.get('applicable', False):
+            transfer_cost = datasync_costs.get('one_time_transfer_cost', 0)
+            transfer_size = datasync_costs.get('data_size_gb', 0)
+            st.write(f"**DataSync Transfer:** ${transfer_cost:,.0f}")
+            st.write(f"**Data Size:** {transfer_size:,.0f} GB")
+        
+        # DMS one-time setup
+        if dms_costs.get('applicable', False):
+            dms_setup = dms_costs.get('one_time_setup', 0)
+            st.write(f"**DMS Setup:** ${dms_setup:,.0f}")
+        
+        if not datasync_costs.get('applicable', False) and not dms_costs.get('applicable', False):
+            st.write("**No significant one-time data transfer costs**")
+    
+    # Cost Visualization
+    st.markdown("---")
+    st.markdown("**📊 Cost Analysis & Projections**")
+    
+    viz_col1, viz_col2 = st.columns(2)
+    
+    with viz_col1:
+        st.markdown("**Monthly Cost Distribution**")
+        
+        # Create pie chart for monthly costs by category
+        if service_breakdown_data:
+            category_totals = {}
+            for service in service_breakdown_data:
+                category = service['Category']
+                cost = float(service['Monthly Cost'].replace('$', '').replace(',', ''))
+                category_totals[category] = category_totals.get(category, 0) + cost
+            
+            if category_totals:
+                fig_pie = px.pie(
+                    values=list(category_totals.values()),
+                    names=list(category_totals.keys()),
+                    title="Monthly Costs by Service Category"
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+            else:
+                st.info("Cost breakdown data not available for visualization")
         else:
-            st.info("Monthly breakdown data not available")
+            st.info("Service breakdown data not available")
     
-    with col2:
-        st.markdown("**📈 Cost Projection Over Time:**")
+    with viz_col2:
+        st.markdown("**3-Year Cost Projection**")
         
-        # Create cost projection chart
-        months = [0, 6, 12, 24, 36]
+        # Create cost projection over 3 years
+        months = list(range(0, 37, 6))  # Every 6 months for 3 years
         cumulative_costs = []
         
         for month in months:
@@ -5026,244 +5253,98 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
             projection_data,
             x='Months',
             y='Cumulative Cost ($)',
-            title="Cumulative Cost Projection",
+            title="3-Year Cumulative Cost Projection",
             markers=True
         )
+        fig_line.update_traces(line_color='#3498db', marker_color='#e74c3c')
         st.plotly_chart(fig_line, use_container_width=True)
     
-    # Detailed Service Costs
-    st.markdown("**🔍 Detailed Service Cost Analysis:**")
-    
-    # Compute Costs
-    with st.expander("🖥️ Compute Costs (EC2/RDS)", expanded=True):
-        compute_costs = comprehensive_costs.get('compute_costs', {})
-        
-        comp_col1, comp_col2, comp_col3 = st.columns(3)
-        
-        with comp_col1:
-            st.info("**Primary Configuration**")
-            st.write(f"**Service:** {compute_costs.get('service_type', 'Unknown')}")
-            st.write(f"**Instance:** {compute_costs.get('primary_instance', 'Unknown')}")
-            
-            if compute_costs.get('service_type') == 'RDS':
-                st.write(f"**Writers:** {compute_costs.get('writer_instances', 1)}")
-                st.write(f"**Readers:** {compute_costs.get('reader_instances', 0)}")
-                st.write(f"**Multi-AZ:** {'Yes' if compute_costs.get('multi_az_cost', 0) > 0 else 'No'}")
-            else:
-                st.write(f"**Instance Count:** {compute_costs.get('instance_count', 1)}")
-                st.write(f"**OS Licensing:** ${compute_costs.get('os_licensing_cost', 0):,.0f}/mo")
-        
-        with comp_col2:
-            st.success("**Monthly Costs**")
-            
-            if compute_costs.get('service_type') == 'RDS':
-                st.write(f"**Writer Cost:** ${compute_costs.get('writer_monthly_cost', 0):,.0f}")
-                st.write(f"**Reader Cost:** ${compute_costs.get('reader_monthly_cost', 0):,.0f}")
-                st.write(f"**Multi-AZ Cost:** ${compute_costs.get('multi_az_cost', 0):,.0f}")
-            else:
-                st.write(f"**Instance Cost:** ${compute_costs.get('monthly_instance_cost', 0):,.0f}")
-                st.write(f"**OS Licensing:** ${compute_costs.get('os_licensing_cost', 0):,.0f}")
-            
-            st.write(f"**Total Monthly:** ${compute_costs.get('monthly_total', 0):,.0f}")
-        
-        with comp_col3:
-            st.warning("**Instance Details**")
-            instance_details = compute_costs.get('instance_details', {})
-            
-            if 'primary' in instance_details:
-                primary = instance_details['primary']
-                st.write(f"**Primary:** {primary.get('type', 'Unknown')}")
-                st.write(f"**Cost/Hour:** ${primary.get('cost_per_hour', 0):.4f}")
-                
-                if 'readers' in instance_details:
-                    readers = instance_details['readers']
-                    st.write(f"**Readers:** {readers.get('count', 0)} instances")
-                    st.write(f"**Reader Cost/Hour:** ${readers.get('cost_per_hour', 0):.4f}")
-            elif 'type' in instance_details:
-                st.write(f"**Type:** {instance_details.get('type', 'Unknown')}")
-                st.write(f"**Count:** {instance_details.get('count', 1)}")
-                st.write(f"**Cost/Hour:** ${instance_details.get('cost_per_hour', 0):.4f}")
-    
-    # Storage Costs
-    with st.expander("🗄️ Storage Costs (EBS/S3/FSx)", expanded=True):
-        storage_costs = comprehensive_costs.get('storage_costs', {})
-        
-        stor_col1, stor_col2, stor_col3 = st.columns(3)
-        
-        with stor_col1:
-            st.info("**Primary Database Storage**")
-            primary = storage_costs.get('primary_storage', {})
-            st.write(f"**Size:** {primary.get('size_gb', 0):,.0f} GB")
-            st.write(f"**Type:** {primary.get('type', 'Unknown').upper()}")
-            st.write(f"**Cost/GB:** ${primary.get('cost_per_gb', 0):.3f}")
-            st.write(f"**Monthly Cost:** ${primary.get('monthly_cost', 0):,.0f}")
-        
-        with stor_col2:
-            st.success("**Destination Storage**")
-            destination = storage_costs.get('destination_storage', {})
-            st.write(f"**Type:** {destination.get('type', 'Unknown')}")
-            st.write(f"**Size:** {destination.get('size_gb', 0):,.0f} GB")
-            st.write(f"**Cost/GB:** ${destination.get('cost_per_gb', 0):.3f}")
-            st.write(f"**Monthly Cost:** ${destination.get('monthly_cost', 0):,.0f}")
-        
-        with stor_col3:
-            st.warning("**Backup Storage**")
-            backup = storage_costs.get('backup_storage', {})
-            
-            if backup.get('applicable', False):
-                st.write(f"**Size:** {backup.get('size_gb', 0):,.0f} GB")
-                st.write(f"**Monthly Cost:** ${backup.get('monthly_cost', 0):,.0f}")
-                st.write("**Used for backup/restore migration**")
-            else:
-                st.write("**Not applicable** for direct replication")
-            
-            st.write(f"**Total Storage Monthly:** ${storage_costs.get('monthly_total', 0):,.0f}")
-    
-    # Network Costs
-    with st.expander("🌐 Network Costs (Direct Connect/Data Transfer)", expanded=True):
-        network_costs = comprehensive_costs.get('network_costs', {})
-        
-        net_col1, net_col2, net_col3 = st.columns(3)
-        
-        with net_col1:
-            st.info("**Direct Connect**")
-            dx = network_costs.get('direct_connect', {})
-            st.write(f"**Capacity:** {dx.get('capacity', 'Unknown')}")
-            st.write(f"**Hourly Cost:** ${dx.get('hourly_cost', 0):.2f}")
-            st.write(f"**Monthly Cost:** ${dx.get('monthly_cost', 0):,.0f}")
-        
-        with net_col2:
-            st.success("**Data Transfer**")
-            transfer = network_costs.get('data_transfer', {})
-            st.write(f"**Monthly Data:** {transfer.get('monthly_gb', 0):,.0f} GB")
-            st.write(f"**Cost/GB:** ${transfer.get('cost_per_gb', 0):.3f}")
-            st.write(f"**Monthly Cost:** ${transfer.get('monthly_cost', 0):,.0f}")
-        
-        with net_col3:
-            st.warning("**Additional Services**")
-            vpn = network_costs.get('vpn_backup', {})
-            st.write(f"**VPN Backup:** ${vpn.get('monthly_cost', 0):,.0f}/mo")
-            st.write(f"**Total Network Monthly:** ${network_costs.get('monthly_total', 0):,.0f}")
-    
-    # Migration Service Costs
-    with st.expander("🔄 Migration Service Costs (DataSync/DMS/Agents)", expanded=True):
-        migration_costs = comprehensive_costs.get('migration_costs', {})
-        
-        mig_col1, mig_col2, mig_col3 = st.columns(3)
-        
-        with mig_col1:
-            st.info("**Migration Agents**")
-            agents = migration_costs.get('agent_costs', {})
-            st.write(f"**Agent Count:** {agents.get('agent_count', 0)}")
-            st.write(f"**Cost/Agent:** ${agents.get('cost_per_agent', 0):,.0f}/mo")
-            st.write(f"**Total Agent Cost:** ${agents.get('monthly_cost', 0):,.0f}/mo")
-        
-        with mig_col2:
-            st.success("**DataSync**")
-            datasync = migration_costs.get('datasync', {})
-            
-            if datasync.get('applicable', False):
-                st.write(f"**Data Size:** {datasync.get('data_size_gb', 0):,.0f} GB")
-                st.write(f"**One-time Transfer:** ${datasync.get('one_time_transfer_cost', 0):,.0f}")
-                st.write(f"**Monthly Sync:** ${datasync.get('monthly_sync_cost', 0):,.0f}")
-            else:
-                st.write("**Not applicable** for this migration method")
-        
-        with mig_col3:
-            st.warning("**Setup & Professional Services**")
-            setup = migration_costs.get('setup_and_professional_services', {})
-            st.write(f"**One-time Cost:** ${setup.get('one_time_cost', 0):,.0f}")
-            
-            includes = setup.get('includes', [])
-            st.write("**Includes:**")
-            for service in includes[:3]:
-                st.write(f"• {service}")
-    
     # Cost Optimization Recommendations
-    st.markdown("**💡 Cost Optimization Recommendations:**")
+    st.markdown("---")
+    st.markdown("**💡 Cost Optimization Opportunities**")
     
     recommendations = comprehensive_costs.get('cost_optimization_recommendations', [])
     
     if recommendations:
-        for i, rec in enumerate(recommendations, 1):
-            # Estimate potential savings
-            if 'Reserved Instances' in rec:
-                potential_savings = "20-30%"
-            elif 'Spot Instances' in rec:
-                potential_savings = "60-70%"
-            elif 'lifecycle' in rec.lower():
-                potential_savings = "15-25%"
-            else:
-                potential_savings = "5-15%"
-            
-            with st.expander(f"💰 Recommendation {i}: {rec}", expanded=(i <= 2)):
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.write(f"**Potential Savings:** {potential_savings}")
-                    st.write(f"**Implementation Effort:** {'Low' if i <= 2 else 'Medium'}")
-                
-                with col2:
-                    st.write(f"**Priority:** {'High' if i <= 2 else 'Medium'}")
-                    st.write(f"**Timeline:** {'Immediate' if i <= 2 else '1-3 months'}")
+        opt_col1, opt_col2 = st.columns(2)
+        
+        with opt_col1:
+            st.success("**Immediate Opportunities (0-3 months)**")
+            for i, rec in enumerate(recommendations[:3], 1):
+                potential_savings = "20-30%" if 'Reserved' in rec else "60-70%" if 'Spot' in rec else "10-25%"
+                st.write(f"**{i}.** {rec}")
+                st.write(f"   💰 Potential savings: {potential_savings}")
+                st.write("")
+        
+        with opt_col2:
+            st.info("**Medium-term Opportunities (3-12 months)**")
+            for i, rec in enumerate(recommendations[3:6], 4):
+                potential_savings = "15-25%" if 'lifecycle' in rec.lower() else "5-15%"
+                st.write(f"**{i}.** {rec}")
+                st.write(f"   💰 Potential savings: {potential_savings}")
+                st.write("")
     else:
-        st.info("Current configuration appears cost-optimized. Continue monitoring for further opportunities.")
+        st.info("✅ Current configuration appears well-optimized. Continue monitoring for opportunities.")
     
-    # Real-time Pricing Data Status
-    st.markdown("**📊 Pricing Data Source:**")
+    # Data Source and Summary
+    st.markdown("---")
+    st.markdown("**📊 Analysis Summary & Data Sources**")
     
-    pricing_data = comprehensive_costs.get('pricing_data', {})
-    data_source = pricing_data.get('data_source', 'unknown')
-    last_updated = pricing_data.get('last_updated', 'Unknown')
+    summary_col1, summary_col2 = st.columns(2)
     
-    if data_source == 'aws_api':
-        st.success(f"✅ Using real-time AWS API pricing data (Updated: {last_updated})")
-    else:
-        st.warning("⚠️ Using fallback pricing data - AWS API not available")
+    with summary_col1:
+        st.info("**Cost Summary**")
+        st.write(f"**Monthly Operating Cost:** ${total_monthly:,.0f}")
+        st.write(f"**One-time Migration Cost:** ${total_one_time:,.0f}")
+        st.write(f"**Annual Operating Cost:** ${total_monthly * 12:,.0f}")
+        st.write(f"**3-Year Total Cost:** ${three_year_total:,.0f}")
+        
+        # ROI calculation
+        cost_analysis = analysis.get('cost_analysis', {})
+        estimated_savings = cost_analysis.get('estimated_monthly_savings', 0)
+        if estimated_savings > 0:
+            roi_months = total_one_time / estimated_savings if estimated_savings > 0 else 0
+            st.write(f"**Estimated ROI Period:** {roi_months:.1f} months")
     
-    # Cost Summary Table
-    st.markdown("**📋 Complete Cost Summary:**")
+    with summary_col2:
+        st.success("**Data Sources & Reliability**")
+        
+        pricing_data = comprehensive_costs.get('pricing_data', {})
+        data_source = pricing_data.get('data_source', 'unknown')
+        last_updated = pricing_data.get('last_updated', 'Unknown')
+        
+        if data_source == 'aws_api':
+            st.write("✅ **Pricing Data:** Real-time AWS API")
+            st.write(f"📅 **Last Updated:** {last_updated}")
+            st.write("🎯 **Accuracy:** High (±5%)")
+        else:
+            st.write("⚠️ **Pricing Data:** Fallback estimates")
+            st.write("🎯 **Accuracy:** Moderate (±15%)")
+        
+        st.write(f"🔧 **Services Analyzed:** {len(service_breakdown_data)} AWS services")
+        st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     
-    summary_data = []
-    
-    # Monthly costs
-    monthly_breakdown = comprehensive_costs.get('monthly_breakdown', {})
-    for service, cost in monthly_breakdown.items():
-        summary_data.append({
-            'Cost Category': service.replace('_', ' ').title(),
-            'Type': 'Monthly Recurring',
-            'Amount': f"${cost:,.0f}",
-            'Annual': f"${cost * 12:,.0f}",
-            'Percentage': f"{(cost / total_monthly * 100):.1f}%" if total_monthly > 0 else "0%"
-        })
-    
-    # One-time costs
-    one_time_breakdown = comprehensive_costs.get('one_time_breakdown', {})
-    for service, cost in one_time_breakdown.items():
-        summary_data.append({
-            'Cost Category': service.replace('_', ' ').title(),
-            'Type': 'One-Time',
-            'Amount': f"${cost:,.0f}",
-            'Annual': 'N/A',
-            'Percentage': f"{(cost / total_one_time * 100):.1f}%" if total_one_time > 0 else "0%"
-        })
-    
-    # Add totals
-    summary_data.append({
-        'Cost Category': 'TOTAL MONTHLY',
-        'Type': 'Monthly Total',
-        'Amount': f"${total_monthly:,.0f}",
-        'Annual': f"${total_monthly * 12:,.0f}",
-        'Percentage': '100%'
-    })
-    
-    summary_data.append({
-        'Cost Category': 'TOTAL ONE-TIME',
-        'Type': 'One-Time Total',
-        'Amount': f"${total_one_time:,.0f}",
-        'Annual': 'N/A',
-        'Percentage': '100%'
-    })
+    # Export functionality
+    if st.button("📤 Export Complete Cost Analysis", use_container_width=True):
+        export_data = {
+            'analysis_date': datetime.now().isoformat(),
+            'configuration': config,
+            'cost_summary': {
+                'total_monthly': total_monthly,
+                'total_one_time': total_one_time,
+                'three_year_total': three_year_total
+            },
+            'service_breakdown': service_breakdown_data,
+            'optimization_recommendations': recommendations,
+            'data_source': data_source
+        }
+        
+        st.download_button(
+            label="💾 Download Cost Analysis (JSON)",
+            data=json.dumps(export_data, indent=2),
+            file_name=f"aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+            mime="application/json"
+        )
     
 def render_os_performance_tab(analysis: Dict, config: Dict):
     """Render OS performance analysis tab using native Streamlit components"""
