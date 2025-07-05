@@ -5132,6 +5132,9 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
     aws_sizing = analysis.get('aws_sizing_recommendations', {})
     agent_analysis = analysis.get('agent_analysis', {})
     
+    # FIX: Define monthly_breakdown from validated costs or comprehensive costs
+    monthly_breakdown = comprehensive_costs.get('monthly_breakdown', validated_costs.get('breakdown', {}))
+    
     # Display validation status prominently
     if validated_costs['is_validated']:
         st.success("✅ All cost calculations have been validated and are consistent across tabs")
