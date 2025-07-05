@@ -6577,11 +6577,106 @@ def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
             else:
                 st.info("Detailed AI analysis not available")
 
-
+def render_agent_placement_guide():
+    """Render agent placement best practices guide"""
+    st.markdown("**📍 DataSync Agent Placement Guide**")
+    
+    # Scenario selector
+    scenario = st.selectbox(
+        "Select Migration Scenario",
+        ["backup_restore", "direct_replication", "hybrid_approach", "multi_site"],
+        format_func=lambda x: {
+            'backup_restore': '💾 Backup/Restore Migration',
+            'direct_replication': '🔄 Direct Replication',
+            'hybrid_approach': '🔀 Hybrid Approach',
+            'multi_site': '🌐 Multi-Site Migration'
+        }[x]
+    )
+    
+    # Create visual flow
+    if scenario == "backup_restore":
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        with col1:
+            st.info("**🗄️ On-Premises**\n\nSource Database\n+ Backup Storage\n\n📊 SMB/NFS Protocol")
+        
+        with col2:
+            st.markdown("**→**")
+        
+        with col3:
+            st.success("**🤖 DataSync Agents**\n\n2-4 Agents\nRecommended\n\n⚡ Close to Backup")
+        
+        with col4:
+            st.markdown("**→**")
+        
+        with col5:
+            st.warning("**☁️ AWS Destination**\n\nS3 / FSx for\nWindows / Lustre\n\n🎯 High Performance")
+        
+        st.markdown("**💡 Key Recommendations:**")
+        st.write("• Place agents in same network segment as backup storage")
+        st.write("• SMB3 multichannel for Windows shares, NFS v4.1+ for Linux")
+        st.write("• Account for backup compression (typically 70% of DB size)")
+        
+    elif scenario == "direct_replication":
+        col1, col2, col3, col4, col5 = st.columns(5)
+        
+        with col1:
+            st.info("**🗃️ Source Database**\n\nLive Production\nDatabase\n\n🔴 Minimal Impact")
+        
+        with col2:
+            st.markdown("**→**")
+        
+        with col3:
+            st.success("**🔄 Migration Agents**\n\nDMS/DataSync\nAgents\n\n⚡ Real-time Sync")
+        
+        with col4:
+            st.markdown("**→**")
+        
+        with col5:
+            st.warning("**🎯 Target Database**\n\nRDS or EC2\nDatabase\n\n✅ Live Target")
+        
+        st.markdown("**💡 Key Recommendations:**")
+        st.write("• Place agents close to source database for low latency")
+        st.write("• Use DataSync for homogeneous, DMS for heterogeneous migrations")
+        st.write("• Continuous sync with change data capture")
+        
+    elif scenario == "hybrid_approach":
+        st.info("**🔀 Hybrid Migration Strategy**")
+        st.write("**Phase 1:** DataSync agents transfer bulk backup data")
+        st.write("**Phase 2:** DMS agents handle incremental changes")
+        st.write("**Coordination:** AWS Migration Hub orchestrates both phases")
+        
+    else:  # multi_site
+        st.info("**🌐 Multi-Site Deployment**")
+        st.write("• Deploy agents at each source location")
+        st.write("• Coordinate transfers to avoid network congestion")
+        st.write("• Use staging areas for large datasets")
+        st.write("• Maintain security boundaries between sites")
+    
+    # Quick tips
+    with st.expander("🎯 Quick Placement Tips", expanded=False):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**📍 Location Strategy:**")
+            st.write("• Minimize network hops")
+            st.write("• Consider firewall rules")
+            st.write("• Plan for redundancy")
+            
+        with col2:
+            st.markdown("**⚡ Performance Tips:**")
+            st.write("• Right-size based on data volume")
+            st.write("• Use parallel agents for large datasets")
+            st.write("• Monitor utilization and scale")
 
 def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
     """Render Agent Scaling Optimizer tab with AI recommendations"""
     st.subheader("🤖 DataSync/DMS Agent Scaling Optimizer")
+    
+    # ADD THIS SECTION HERE
+    st.markdown("---")
+    render_agent_placement_guide()
+    st.markdown("---")
     
     # Check if we have agent optimization data
     if 'agent_optimization' not in st.session_state:
@@ -7751,7 +7846,7 @@ async def main():
         analysis = st.session_state['analysis']
         config = st.session_state['config']
         
-       tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Migration Dashboard", 
         "🧠 AI Insights", 
         "🌐 Network Intelligence", 
@@ -7759,8 +7854,7 @@ async def main():
         "💻 OS Performance", 
         "🎯 AWS Sizing",
         "🗄️ FSx Comparisons",
-        "🤖 Agent Scaling Optimizer",
-        "📍 Agent Placement"
+        "🤖 Agent Scaling Optimizer"
     ])
                 
         with tab1:
