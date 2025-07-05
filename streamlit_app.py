@@ -1478,7 +1478,7 @@ class CostValidationManager:
         pass
     
     def get_validated_costs(self, analysis: Dict, config: Dict) -> Dict:
-    """Get validated and standardized costs with unified approach"""
+        """Get validated and standardized costs with unified approach"""
     comprehensive_costs = analysis.get('comprehensive_costs', {})
     basic_costs = analysis.get('cost_analysis', {})
     
