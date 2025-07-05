@@ -1550,47 +1550,46 @@ class CostValidationManager:
             'other': basic_costs.get('management_cost', 200)
         }
 
-    def _validate_cost_consistency_v2(self, comprehensive_costs: Dict, basic_costs: Dict, analysis: Dict, config: Dict) -> Dict:
-        """Enhanced cost consistency validation"""
-        discrepancies = []
-        
-        comp_total = comprehensive_costs.get('total_monthly', 0)
-        basic_total = basic_costs.get('total_monthly_cost', 0)
-        
-        # Allow for unified calculation bypass
+    def get_validated_costs(self, analysis: Dict, config: Dict) -> Dict:
+        """Get validated and standardized costs with unified approach"""
+        comprehensive_costs = analysis.get('comprehensive_costs', {})
+        basic_costs = analysis.get('cost_analysis', {})
+
+        # Prefer unified costs if available
         if comprehensive_costs.get('cost_source') == 'unified_calculation':
-            return {'is_consistent': True, 'discrepancies': [], 'discrepancy_count': 0}
-        
-        # Check total cost consistency
-        if comp_total > 0 and basic_total > 0:
-            diff_pct = abs(comp_total - basic_total) / max(comp_total, basic_total) * 100
-            if diff_pct > 20:  # 20% tolerance
-                discrepancies.append({
-                    'type': 'total_cost_mismatch',
-                    'difference_percent': diff_pct,
-                    'comprehensive': comp_total,
-                    'basic': basic_total,
-                    'recommendation': 'Use unified cost calculation method'
-                })
-        
-        # Check agent cost consistency
-        agent_analysis = analysis.get('agent_analysis', {})
-        agent_cost_1 = agent_analysis.get('monthly_cost', 0)
-        agent_cost_2 = basic_costs.get('agent_cost', 0)
-        
-        if agent_cost_1 > 0 and agent_cost_2 > 0:
-            if abs(agent_cost_1 - agent_cost_2) > min(agent_cost_1, agent_cost_2) * 0.15:  # 15% tolerance
-                discrepancies.append({
-                    'type': 'agent_cost_mismatch',
-                    'agent_analysis': agent_cost_1,
-                    'cost_analysis': agent_cost_2,
-                    'recommendation': 'Use agent analysis as authoritative source'
-                })
-        
+            monthly_total = comprehensive_costs['total_monthly']
+            one_time_total = comprehensive_costs.get('total_one_time', 0)
+            breakdown = comprehensive_costs.get('monthly_breakdown', {})
+            cost_source = 'unified'
+            is_validated = True
+            validation_results = {'is_consistent': True, 'discrepancies': [], 'discrepancy_count': 0}
+            
+        elif comprehensive_costs.get('total_monthly', 0) > 0:
+            # Use comprehensive but validate
+            monthly_total = comprehensive_costs['total_monthly']
+            one_time_total = comprehensive_costs.get('total_one_time', 0)
+            breakdown = comprehensive_costs.get('monthly_breakdown', {})
+            cost_source = 'comprehensive'
+            validation_results = self._validate_cost_consistency_v2(comprehensive_costs, basic_costs, analysis, config)
+            is_validated = validation_results['is_consistent']
+            
+        else:
+            # Fall back to basic costs but validate them
+            monthly_total = self._validate_basic_costs(basic_costs, analysis, config)
+            one_time_total = basic_costs.get('one_time_migration_cost', 0)
+            breakdown = self._create_breakdown_from_basic(basic_costs, analysis, config)
+            cost_source = 'basic_validated'
+            validation_results = {'is_consistent': False, 'discrepancies': [{'type': 'using_fallback_costs'}], 'discrepancy_count': 1}
+            is_validated = False
+
         return {
-            'is_consistent': len(discrepancies) == 0,
-            'discrepancies': discrepancies,
-            'discrepancy_count': len(discrepancies)
+            'total_monthly': monthly_total,
+            'total_one_time': one_time_total,
+            'three_year_total': (monthly_total * 36) + one_time_total,
+            'breakdown': breakdown,
+            'cost_source': cost_source,
+            'validation': validation_results,
+            'is_validated': is_validated
         }
         
     def _create_standardized_breakdown(self, analysis: Dict, config: Dict, 
