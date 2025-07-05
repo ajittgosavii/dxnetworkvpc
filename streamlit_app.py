@@ -456,7 +456,7 @@ class AnthropicAIManager:
             'Use dedicated backup network',
             'Configure SMB compression'
             ]
-        else:  # nas_drive
+        else:  # nas_drive:
             considerations['advantages'] = [
             'High-performance NFS protocol',
             'Better bandwidth utilization',
@@ -1203,7 +1203,7 @@ class ComprehensiveAWSCostCalculator:
                 }
             }
 
-        else:  # EC2
+            else:  # EC2:
             # EC2 instance costs
             if database_size_gb < 1000:
                 instance_type = 't3.large'
@@ -1582,7 +1582,7 @@ class CostValidationManager:
         'is_validated': is_validated
         }
 
-    def _create_standardized_breakdown(self, analysis: Dict, config: Dict,
+    def _create_standardized_breakdown(self, analysis: Dict, config: Dict,:
     cost_source: str, total_monthly: float) -> Dict:
         """Create standardized cost breakdown"""
 
@@ -1669,7 +1669,7 @@ class CostValidationManager:
 
         if comp_total > 0 and basic_total > 0:
             diff_pct = abs(comp_total - basic_total) / max(comp_total, basic_total) * 100
-            if diff_pct > 15:  # 15% tolerance
+            if diff_pct > 15:  # 15% tolerance:
             discrepancies.append({
             'type': 'total_cost_mismatch',
             'difference_percent': diff_pct,
@@ -1682,7 +1682,7 @@ class CostValidationManager:
         agent_cost_2 = analysis.get('cost_analysis', {}).get('agent_cost', 0)
 
         if agent_cost_1 > 0 and agent_cost_2 > 0:
-            if abs(agent_cost_1 - agent_cost_2) > min(agent_cost_1, agent_cost_2) * 0.1:  # 10% tolerance
+            if abs(agent_cost_1 - agent_cost_2) > min(agent_cost_1, agent_cost_2) * 0.1:  # 10% tolerance:
             discrepancies.append({
             'type': 'agent_cost_mismatch',
             'agent_analysis': agent_cost_1,
@@ -2704,7 +2704,7 @@ class OnPremPerformanceAnalyzer:
         'effective_tps': effective_tps
         }
 
-    def _calculate_ai_enhanced_overall_performance(self, cpu_perf: Dict, mem_perf: Dict,
+    def _calculate_ai_enhanced_overall_performance(self, cpu_perf: Dict, mem_perf: Dict,:
     storage_perf: Dict, net_perf: Dict,
     db_perf: Dict, os_impact: Dict, config: Dict) -> Dict:
         """AI-enhanced overall performance calculation"""
@@ -2874,16 +2874,16 @@ class EnhancedMigrationAnalyzer:
             if environment in ['non_production', 'nonprod']:
                 if backup_storage_type == 'windows_share':
                     return "nonprod_sj_windows_share_s3"
-                    else:  # nas_drive
+                else:  # nas_drive:
                     return "nonprod_sj_nas_drive_s3"
                 elif environment == 'production':
                     if backup_storage_type == 'windows_share':
                         return "prod_sa_windows_share_s3"
-                        else:  # nas_drive
+                    else:  # nas_drive:
                 return "prod_sa_nas_drive_s3"
 
 # For direct replication, use original paths
-            else:
+                    else:
                 if environment in ['non_production', 'nonprod']:
                     if destination_storage == 's3':
                         return f"nonprod_sj_{os_type}_nas_s3"
@@ -2926,11 +2926,11 @@ class EnhancedMigrationAnalyzer:
             if backup_storage_type == 'windows_share':
 # SMB has some overhead
                 backup_efficiency = 0.85
-                else:  # nas_drive with NFS
+            else:  # nas_drive with NFS:
                 backup_efficiency = 0.92
 
             effective_throughput = min(total_max_throughput * backup_efficiency, network_bandwidth)
-        else:
+            else:
             effective_throughput = min(total_max_throughput, network_bandwidth)
             backup_efficiency = 1.0
 
@@ -2990,13 +2990,13 @@ class EnhancedMigrationAnalyzer:
 # Backup storage specific factors
             if backup_storage_type == 'windows_share':
                 complexity_factor = 1.2  # SMB protocol overhead
-                else:  # nas_drive
+            else:  # nas_drive:
                 complexity_factor = 1.1  # NFS is more efficient
 
 # Add backup preparation time
             backup_prep_time = 0.5 + (database_size_gb / 10000)  # 0.5-2 hours for backup prep
 
-        else:
+            else:
 # For direct replication, use database size
             data_size_gb = database_size_gb
             base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
@@ -3531,13 +3531,13 @@ class EnhancedMigrationAnalyzer:
 # Backup storage specific factors
             if backup_storage_type == 'windows_share':
                 complexity_factor = 1.2  # SMB protocol overhead
-                else:  # nas_drive
+            else:  # nas_drive:
                 complexity_factor = 1.1  # NFS is more efficient
 
 # Add backup preparation time
             backup_prep_time = 0.5 + (database_size_gb / 10000)  # 0.5-2 hours for backup prep
 
-        else:
+            else:
 # For direct replication, use database size
             data_size_gb = database_size_gb
             base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
@@ -3604,11 +3604,11 @@ class EnhancedMigrationAnalyzer:
             if backup_storage_type == 'windows_share':
 # SMB has some overhead
                 backup_efficiency = 0.85
-                else:  # nas_drive with NFS
+            else:  # nas_drive with NFS:
                 backup_efficiency = 0.92
 
             effective_throughput = min(total_max_throughput * backup_efficiency, network_bandwidth)
-        else:
+            else:
             effective_throughput = min(total_max_throughput, network_bandwidth)
             backup_efficiency = 1.0
 
@@ -3664,16 +3664,16 @@ class EnhancedMigrationAnalyzer:
             if environment in ['non_production', 'nonprod']:
                 if backup_storage_type == 'windows_share':
                     return "nonprod_sj_windows_share_s3"
-                    else:  # nas_drive
+                else:  # nas_drive:
                     return "nonprod_sj_nas_drive_s3"
                 elif environment == 'production':
                     if backup_storage_type == 'windows_share':
                         return "prod_sa_windows_share_s3"
-                        else:  # nas_drive
+                    else:  # nas_drive:
                 return "prod_sa_nas_drive_s3"
 
 # For direct replication, use original paths
-            else:
+                    else:
                 if environment in ['non_production', 'nonprod']:
                     if destination_storage == 's3':
                         return f"nonprod_sj_{os_type}_nas_s3"
@@ -4386,7 +4386,7 @@ def render_enhanced_sidebar_controls():
         }[x]
         )
         ec2_database_engine = None  # Not used for RDS
-        else:  # EC2
+    else:  # EC2:
 # For EC2, show SQL Server prominently if source is SQL Server
         if source_database_engine == "sqlserver":
             database_engine = st.sidebar.selectbox(
@@ -4651,11 +4651,11 @@ def render_bandwidth_waterfall_analysis(analysis, config):
         if backup_storage_type == 'windows_share':
             protocol_efficiency = 0.75  # SMB has more overhead
             protocol_name = "SMB Protocol"
-            else:  # nas_drive
+        else:  # nas_drive:
             protocol_efficiency = 0.88  # NFS is more efficient
             protocol_name = "NFS Protocol"
         after_backup_protocol = after_virtualization * protocol_efficiency
-    else:
+        else:
         protocol_efficiency = 0.82 if 'production' in environment else 0.85
         protocol_name = "Standard Protocol"
         after_backup_protocol = after_virtualization * protocol_efficiency
@@ -4950,7 +4950,7 @@ def render_ai_insights_tab_enhanced(analysis: Dict, config: Dict):
                 st.write("• Familiar SMB protocols")
                 st.write("• Windows authentication support")
                 st.write("• Easy backup verification")
-                else:  # nas_drive
+            else:  # nas_drive:
                 st.write("• High-performance NFS protocol")
                 st.write("• Better bandwidth utilization")
                 st.write("• Lower protocol overhead")
@@ -5079,7 +5079,7 @@ def render_ai_insights_tab_enhanced(analysis: Dict, config: Dict):
                     for risk_type, percentage in list(risk_percentages.items())[:3]:
                         risk_name = risk_type.replace('_', ' ').title()
                         st.write(f"• {risk_name}: {percentage}%")
-                    else:
+                else:
                         st.write("No significant risks identified by AI analysis")
                 st.write("Migration appears to be low-risk with current configuration")
 
@@ -5094,7 +5094,7 @@ def render_ai_insights_tab_enhanced(analysis: Dict, config: Dict):
             if mitigation_strategies:
                 for i, strategy in enumerate(mitigation_strategies[:4], 1):
                     st.write(f"{i}. {strategy}")
-                else:
+            else:
                     st.write("• Continue with standard migration best practices")
                 st.write("• Implement comprehensive testing procedures")
                 st.write("• Monitor performance throughout migration")
@@ -5295,7 +5295,7 @@ def render_network_intelligence_tab(analysis: Dict, config: Dict):
 
                 with col3:
                     st.write(f"**Priority:** {priority}")
-                else:
+                    else:
                     st.info("Network appears optimally configured for current requirements")
 
 def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
@@ -5419,11 +5419,11 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
 
 # Verification
         calculated_total = sum([float(item['Monthly Cost'].replace('$', '').replace(',', ''))
-        for item in service_breakdown_data])
+        for item in service_breakdown_data]):
 
-        if abs(calculated_total - total_monthly) < 5:  # $5 tolerance for rounding
+        if abs(calculated_total - total_monthly) < 5:  # $5 tolerance for rounding:
         st.success(f"✅ **Cost Breakdown Verified:** Total matches ${calculated_total:,.0f} = ${total_monthly:,.0f}")
-    else:
+        else:
         st.warning(f"⚠️ **Cost Breakdown Mismatch:** Sum=${calculated_total:,.0f}, Expected=${total_monthly:,.0f}")
 
 # === MONTHLY COST DISTRIBUTION CHART ===
@@ -6006,7 +6006,7 @@ def render_aws_sizing_tab(analysis: Dict, config: Dict):
                 st.write(f"**Reader Instance Type:** {primary_instance}")
                 st.write(f"**Total Instance Cost:** ${rds_rec.get('monthly_instance_cost', 0) * (1 + readers):,.0f}")
 
-                else:  # EC2 recommendation
+            else:  # EC2 recommendation:
     ec2_rec = aws_sizing.get('ec2_recommendations', {})
 
     col1, col2 = st.columns(2)
@@ -6093,7 +6093,7 @@ def render_aws_sizing_tab(analysis: Dict, config: Dict):
         if reasons:
             for i, reason in enumerate(reasons, 1):
                 st.write(f"{i}. {reason}")
-            else:
+        else:
                 st.write("• Standard configuration based on database size")
             st.write("• Suitable for specified environment")
             st.write("• Meets performance requirements")
@@ -6214,7 +6214,7 @@ def render_migration_dashboard_tab(analysis: Dict, config: Dict):
         st.write(f"**Validation Status:** {validation_text}")
 
 # SQL Server Always On Analysis (if applicable)
-    if (config.get('database_engine') == 'sqlserver' and
+    if (config.get('database_engine') == 'sqlserver' and:
     config.get('target_platform') == 'ec2' and
     config.get('sql_server_deployment_type') == 'always_on'):
 
@@ -6289,7 +6289,7 @@ def render_migration_dashboard_tab(analysis: Dict, config: Dict):
 
         st.markdown("---")  # Add separator
 
-    elif (config.get('database_engine') == 'sqlserver' and
+    elif (config.get('database_engine') == 'sqlserver' and:
     config.get('target_platform') == 'ec2' and
     config.get('sql_server_deployment_type') == 'standalone'):
 
@@ -6372,7 +6372,7 @@ def run_agent_optimization_sync(optimizer, config: Dict, analysis: Dict) -> Dict
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(run_in_thread)
                 return future.result(timeout=120)  # 2 minute timeout
-            else:
+        else:
 # No active loop, safe to run directly
         return asyncio.run(optimizer.analyze_agent_scaling_optimization(config, analysis))
     except RuntimeError:
@@ -6460,7 +6460,7 @@ def render_agent_placement_guide():
         st.write("**Phase 2:** DMS agents handle incremental changes")
         st.write("**Coordination:** AWS Migration Hub orchestrates both phases")
 
-        else:  # multi_site
+    else:  # multi_site:
         st.info("**🌐 Multi-Site Deployment**")
         st.write("• Deploy agents at each source location")
         st.write("• Coordinate transfers to avoid network congestion")
@@ -6621,7 +6621,7 @@ def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
             "Available" if ai_available else "Fallback",
             delta=f"Confidence: {confidence.title()}"
             )
-        else:
+    else:
             st.warning("⚠️ Optimization analysis not available. Please retry the analysis.")
         if st.button("🔄 Retry Analysis", type="primary"):
             if 'agent_optimization' in st.session_state:
@@ -6728,7 +6728,7 @@ def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
                 st.markdown("**🤖 Complete AI Analysis:**")
                 with st.expander("View Full AI Response", expanded=False):
                     st.text(ai_recommendations['raw_ai_response'])
-                else:
+            else:
                     st.info("Detailed AI analysis not available")
 
 def add_cost_validation_to_tab(analysis: Dict, config: Dict):
@@ -6823,7 +6823,7 @@ def render_agent_placement_guide():
         st.write("**Phase 2:** DMS agents handle incremental changes")
         st.write("**Coordination:** AWS Migration Hub orchestrates both phases")
 
-        else:  # multi_site
+    else:  # multi_site:
         st.info("**🌐 Multi-Site Deployment**")
         st.write("• Deploy agents at each source location")
         st.write("• Coordinate transfers to avoid network congestion")
@@ -7002,7 +7002,7 @@ def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
 # Create comparison table
         comparison_data = []
 
-        for config_key, config_data in list(optimal_configs.items())[:5]:  # Top 5
+        for config_key, config_data in list(optimal_configs.items())[:5]:  # Top 5:
         comparison_data.append({
         'Configuration': config_key,
         'Agents': f"{config_data['agent_count']}x {config_data['agent_size']}",
@@ -7098,7 +7098,7 @@ def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
             for option in fallback_options:
                 st.write(f"• {option}")
 
-            else:
+                else:
                 st.warning("🤖 AI analysis not available. Using fallback recommendations:")
         st.write("• Consider scaling based on database size and performance requirements")
         st.write("• Monitor agent utilization and adjust as needed")
@@ -7270,7 +7270,7 @@ def render_agent_scaling_optimizer_tab(analysis: Dict, config: Dict):
                 st.markdown("**🤖 Complete AI Analysis:**")
                 with st.expander("View Full AI Response", expanded=False):
                     st.text(ai_recommendations['raw_ai_response'])
-                else:
+            else:
                     st.info("Detailed AI analysis not available")
 
 
@@ -7374,7 +7374,7 @@ class AgentScalingOptimizer:
                 future = executor.submit(run_async)
                 return future.result(timeout=60)  # 60 second timeout
 
-            except RuntimeError:
+                except RuntimeError:
 # No event loop running, safe to use asyncio.run()
         return asyncio.run(optimizer.analyze_agent_scaling_optimization(config, analysis))
 
