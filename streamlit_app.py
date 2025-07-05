@@ -2866,18 +2866,27 @@ class EnhancedMigrationAnalyzer:
         destination_storage = config.get('destination_storage_type', 'S3')
         migration_method = config.get('migration_method', 'direct_replication')
 
-        # For backup/restore, always use DataSync
+        # Determine the correct tool and agent size based on migration method and database engines
         if migration_method == 'backup_restore':
-            primary_tool = 'datasync'
+            # For backup/restore, always use DataSync regardless of database engine
+            actual_primary_tool = 'datasync'
             agent_size = config.get('datasync_agent_size', 'medium')
             agent_config = self.agent_manager.calculate_agent_configuration('datasync', agent_size, num_agents, destination_storage)
-        elif primary_tool == 'datasync':
-            agent_size = config['datasync_agent_size']
-            agent_config = self.agent_manager.calculate_agent_configuration('datasync', agent_size, num_agents, destination_storage)
         else:
-            agent_size = config['dms_agent_size']
-            agent_config = self.agent_manager.calculate_agent_configuration('dms', agent_size, num_agents, destination_storage)
+            # For direct replication, determine tool based on database engine compatibility
+            is_homogeneous = config['source_database_engine'] == config['database_engine']
+            
+            if is_homogeneous:
+                actual_primary_tool = 'datasync'
+                agent_size = config.get('datasync_agent_size', 'medium')
+                agent_config = self.agent_manager.calculate_agent_configuration('datasync', agent_size, num_agents, destination_storage)
+            else:
+                # Heterogeneous migration - use DMS
+                actual_primary_tool = 'dms'
+                agent_size = config.get('dms_agent_size', 'medium')
+                agent_config = self.agent_manager.calculate_agent_configuration('dms', agent_size, num_agents, destination_storage)
 
+        # Rest of the method logic remains the same...
         total_max_throughput = agent_config['total_max_throughput_mbps']
         network_bandwidth = network_perf['effective_bandwidth_mbps']
 
@@ -2910,7 +2919,7 @@ class EnhancedMigrationAnalyzer:
                 bottleneck = f'{bottleneck} + SMB protocol overhead'
 
         return {
-            'primary_tool': primary_tool,
+            'primary_tool': actual_primary_tool,  # Use the correctly determined tool
             'agent_size': agent_size,
             'number_of_agents': num_agents,
             'destination_storage': destination_storage,
