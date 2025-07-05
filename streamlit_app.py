@@ -4644,205 +4644,205 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
                 'Category': 'Migration Services'
             })
         
-    if service_breakdown_data:
-        st.markdown("**📋 Complete AWS Services Breakdown:**")
-        df_services = pd.DataFrame(service_breakdown_data)
+        if service_breakdown_data:
+            st.markdown("**📋 Complete AWS Services Breakdown:**")
+            df_services = pd.DataFrame(service_breakdown_data)
         
     # Group by category and show
     categories = df_services['Category'].unique()
     
-    for category in categories:
-        category_data = df_services[df_services['Category'] == category]
-        
-        # FIXED: Added missing closing parenthesis and better string cleaning
-        category_total = sum([
-            float(str(row['Monthly Cost']).replace('$', '').replace(',', '').strip()) 
-            for _, row in category_data.iterrows() 
-            if str(row['Monthly Cost']).replace('$', '').replace(',', '').strip().replace('.', '').isdigit()
-        ])  # <-- This closing parenthesis was missing!
-        
-        with st.expander(f"🔧 {category} - ${category_total:,.0f}/month", expanded=True):
-            # Remove category column for display since it's in the header
-            display_data = category_data.drop('Category', axis=1)
-            st.dataframe(display_data, use_container_width=True, hide_index=True)
-    
-    # One-Time Costs Summary
-    st.markdown("---")
-    st.markdown("**💸 One-Time Migration Costs**")
-    
-    one_time_col1, one_time_col2 = st.columns(2)
-    
-    with one_time_col1:
-        st.info("**Migration Setup Costs**")
-        setup_costs = migration_costs.get('setup_and_professional_services', {})
-        setup_cost = setup_costs.get('one_time_cost', 0)
-        st.write(f"**Professional Services:** ${setup_cost:,.0f}")
-        
-        includes = setup_costs.get('includes', [])
-        if includes:
-            st.write("**Includes:**")
-            for service in includes:
-                st.write(f"• {service}")
-    
-    with one_time_col2:
-        st.success("**Data Transfer Costs**")
-        
-        # DataSync one-time transfer
-        if datasync_costs.get('applicable', False):
-            transfer_cost = datasync_costs.get('one_time_transfer_cost', 0)
-            transfer_size = datasync_costs.get('data_size_gb', 0)
-            st.write(f"**DataSync Transfer:** ${transfer_cost:,.0f}")
-            st.write(f"**Data Size:** {transfer_size:,.0f} GB")
-        
-        # DMS one-time setup
-        if dms_costs.get('applicable', False):
-            dms_setup = dms_costs.get('one_time_setup', 0)
-            st.write(f"**DMS Setup:** ${dms_setup:,.0f}")
-        
-        if not datasync_costs.get('applicable', False) and not dms_costs.get('applicable', False):
-            st.write("**No significant one-time data transfer costs**")
-    
-    # Cost Visualization
-    st.markdown("---")
-    st.markdown("**📊 Cost Analysis & Projections**")
-    
-    viz_col1, viz_col2 = st.columns(2)
-    
-    with viz_col1:
-        st.markdown("**Monthly Cost Distribution**")
-        
-        # Create pie chart for monthly costs by category
-        if service_breakdown_data:
-            category_totals = {}
-            for service in service_breakdown_data:
-                category = service['Category']
-                cost = float(service['Monthly Cost'].replace(', '').replace(',', ''))
-                category_totals[category] = category_totals.get(category, 0) + cost
+        for category in categories:
+            category_data = df_services[df_services['Category'] == category]
             
-            if category_totals:
-                fig_pie = px.pie(
-                    values=list(category_totals.values()),
-                    names=list(category_totals.keys()),
-                    title="Monthly Costs by Service Category"
-                )
-                st.plotly_chart(fig_pie, use_container_width=True)
+            # FIXED: Added missing closing parenthesis and better string cleaning
+            category_total = sum([
+                float(str(row['Monthly Cost']).replace('$', '').replace(',', '').strip()) 
+                for _, row in category_data.iterrows() 
+                if str(row['Monthly Cost']).replace('$', '').replace(',', '').strip().replace('.', '').isdigit()
+            ])  # <-- This closing parenthesis was missing!
+            
+            with st.expander(f"🔧 {category} - ${category_total:,.0f}/month", expanded=True):
+                # Remove category column for display since it's in the header
+                display_data = category_data.drop('Category', axis=1)
+                st.dataframe(display_data, use_container_width=True, hide_index=True)
+        
+        # One-Time Costs Summary
+        st.markdown("---")
+        st.markdown("**💸 One-Time Migration Costs**")
+        
+        one_time_col1, one_time_col2 = st.columns(2)
+        
+        with one_time_col1:
+            st.info("**Migration Setup Costs**")
+            setup_costs = migration_costs.get('setup_and_professional_services', {})
+            setup_cost = setup_costs.get('one_time_cost', 0)
+            st.write(f"**Professional Services:** ${setup_cost:,.0f}")
+            
+            includes = setup_costs.get('includes', [])
+            if includes:
+                st.write("**Includes:**")
+                for service in includes:
+                    st.write(f"• {service}")
+        
+        with one_time_col2:
+            st.success("**Data Transfer Costs**")
+            
+            # DataSync one-time transfer
+            if datasync_costs.get('applicable', False):
+                transfer_cost = datasync_costs.get('one_time_transfer_cost', 0)
+                transfer_size = datasync_costs.get('data_size_gb', 0)
+                st.write(f"**DataSync Transfer:** ${transfer_cost:,.0f}")
+                st.write(f"**Data Size:** {transfer_size:,.0f} GB")
+            
+            # DMS one-time setup
+            if dms_costs.get('applicable', False):
+                dms_setup = dms_costs.get('one_time_setup', 0)
+                st.write(f"**DMS Setup:** ${dms_setup:,.0f}")
+            
+            if not datasync_costs.get('applicable', False) and not dms_costs.get('applicable', False):
+                st.write("**No significant one-time data transfer costs**")
+        
+        # Cost Visualization
+        st.markdown("---")
+        st.markdown("**📊 Cost Analysis & Projections**")
+        
+        viz_col1, viz_col2 = st.columns(2)
+        
+        with viz_col1:
+            st.markdown("**Monthly Cost Distribution**")
+            
+            # Create pie chart for monthly costs by category
+            if service_breakdown_data:
+                category_totals = {}
+                for service in service_breakdown_data:
+                    category = service['Category']
+                    cost = float(service['Monthly Cost'].replace(', '').replace(',', ''))
+                    category_totals[category] = category_totals.get(category, 0) + cost
+                
+                if category_totals:
+                    fig_pie = px.pie(
+                        values=list(category_totals.values()),
+                        names=list(category_totals.keys()),
+                        title="Monthly Costs by Service Category"
+                    )
+                    st.plotly_chart(fig_pie, use_container_width=True)
+                else:
+                    st.info("Cost breakdown data not available for visualization")
             else:
-                st.info("Cost breakdown data not available for visualization")
+                st.info("Service breakdown data not available")
+        
+        with viz_col2:
+            st.markdown("**3-Year Cost Projection**")
+            
+            # Create cost projection over 3 years
+            months = list(range(0, 37, 6))  # Every 6 months for 3 years
+            cumulative_costs = []
+            
+            for month in months:
+                cumulative_cost = total_one_time + (total_monthly * month)
+                cumulative_costs.append(cumulative_cost)
+            
+            projection_data = {
+                'Months': months,
+                'Cumulative Cost ($)': cumulative_costs
+            }
+            
+            fig_line = px.line(
+                projection_data,
+                x='Months',
+                y='Cumulative Cost ($)',
+                title="3-Year Cumulative Cost Projection",
+                markers=True
+            )
+            fig_line.update_traces(line_color='#3498db', marker_color='#e74c3c')
+            st.plotly_chart(fig_line, use_container_width=True)
+        
+        # Cost Optimization Recommendations
+        st.markdown("---")
+        st.markdown("**💡 Cost Optimization Opportunities**")
+        
+        recommendations = comprehensive_costs.get('cost_optimization_recommendations', [])
+        
+        if recommendations:
+            opt_col1, opt_col2 = st.columns(2)
+            
+            with opt_col1:
+                st.success("**Immediate Opportunities (0-3 months)**")
+                for i, rec in enumerate(recommendations[:3], 1):
+                    potential_savings = "20-30%" if 'Reserved' in rec else "60-70%" if 'Spot' in rec else "10-25%"
+                    st.write(f"**{i}.** {rec}")
+                    st.write(f"   💰 Potential savings: {potential_savings}")
+                    st.write("")
+            
+            with opt_col2:
+                st.info("**Medium-term Opportunities (3-12 months)**")
+                for i, rec in enumerate(recommendations[3:6], 4):
+                    potential_savings = "15-25%" if 'lifecycle' in rec.lower() else "5-15%"
+                    st.write(f"**{i}.** {rec}")
+                    st.write(f"   💰 Potential savings: {potential_savings}")
+                    st.write("")
         else:
-            st.info("Service breakdown data not available")
-    
-    with viz_col2:
-        st.markdown("**3-Year Cost Projection**")
+            st.info("✅ Current configuration appears well-optimized. Continue monitoring for opportunities.")
         
-        # Create cost projection over 3 years
-        months = list(range(0, 37, 6))  # Every 6 months for 3 years
-        cumulative_costs = []
+        # Data Source and Summary
+        st.markdown("---")
+        st.markdown("**📊 Analysis Summary & Data Sources**")
         
-        for month in months:
-            cumulative_cost = total_one_time + (total_monthly * month)
-            cumulative_costs.append(cumulative_cost)
+        summary_col1, summary_col2 = st.columns(2)
         
-        projection_data = {
-            'Months': months,
-            'Cumulative Cost ($)': cumulative_costs
-        }
+        with summary_col1:
+            st.info("**Cost Summary**")
+            st.write(f"**Monthly Operating Cost:** ${total_monthly:,.0f}")
+            st.write(f"**One-time Migration Cost:** ${total_one_time:,.0f}")
+            st.write(f"**Annual Operating Cost:** ${total_monthly * 12:,.0f}")
+            st.write(f"**3-Year Total Cost:** ${three_year_total:,.0f}")
+            
+            # ROI calculation
+            cost_analysis = analysis.get('cost_analysis', {})
+            estimated_savings = cost_analysis.get('estimated_monthly_savings', 0)
+            if estimated_savings > 0:
+                roi_months = total_one_time / estimated_savings if estimated_savings > 0 else 0
+                st.write(f"**Estimated ROI Period:** {roi_months:.1f} months")
         
-        fig_line = px.line(
-            projection_data,
-            x='Months',
-            y='Cumulative Cost ($)',
-            title="3-Year Cumulative Cost Projection",
-            markers=True
-        )
-        fig_line.update_traces(line_color='#3498db', marker_color='#e74c3c')
-        st.plotly_chart(fig_line, use_container_width=True)
-    
-    # Cost Optimization Recommendations
-    st.markdown("---")
-    st.markdown("**💡 Cost Optimization Opportunities**")
-    
-    recommendations = comprehensive_costs.get('cost_optimization_recommendations', [])
-    
-    if recommendations:
-        opt_col1, opt_col2 = st.columns(2)
+        with summary_col2:
+            st.success("**Data Sources & Reliability**")
+            
+            pricing_data = comprehensive_costs.get('pricing_data', {})
+            data_source = pricing_data.get('data_source', 'unknown')
+            last_updated = pricing_data.get('last_updated', 'Unknown')
+            
+            if data_source == 'aws_api':
+                st.write("✅ **Pricing Data:** Real-time AWS API")
+                st.write(f"📅 **Last Updated:** {last_updated}")
+                st.write("🎯 **Accuracy:** High (±5%)")
+            else:
+                st.write("⚠️ **Pricing Data:** Fallback estimates")
+                st.write("🎯 **Accuracy:** Moderate (±15%)")
+            
+            st.write(f"🔧 **Services Analyzed:** {len(service_breakdown_data)} AWS services")
+            st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
         
-        with opt_col1:
-            st.success("**Immediate Opportunities (0-3 months)**")
-            for i, rec in enumerate(recommendations[:3], 1):
-                potential_savings = "20-30%" if 'Reserved' in rec else "60-70%" if 'Spot' in rec else "10-25%"
-                st.write(f"**{i}.** {rec}")
-                st.write(f"   💰 Potential savings: {potential_savings}")
-                st.write("")
-        
-        with opt_col2:
-            st.info("**Medium-term Opportunities (3-12 months)**")
-            for i, rec in enumerate(recommendations[3:6], 4):
-                potential_savings = "15-25%" if 'lifecycle' in rec.lower() else "5-15%"
-                st.write(f"**{i}.** {rec}")
-                st.write(f"   💰 Potential savings: {potential_savings}")
-                st.write("")
-    else:
-        st.info("✅ Current configuration appears well-optimized. Continue monitoring for opportunities.")
-    
-    # Data Source and Summary
-    st.markdown("---")
-    st.markdown("**📊 Analysis Summary & Data Sources**")
-    
-    summary_col1, summary_col2 = st.columns(2)
-    
-    with summary_col1:
-        st.info("**Cost Summary**")
-        st.write(f"**Monthly Operating Cost:** ${total_monthly:,.0f}")
-        st.write(f"**One-time Migration Cost:** ${total_one_time:,.0f}")
-        st.write(f"**Annual Operating Cost:** ${total_monthly * 12:,.0f}")
-        st.write(f"**3-Year Total Cost:** ${three_year_total:,.0f}")
-        
-        # ROI calculation
-        cost_analysis = analysis.get('cost_analysis', {})
-        estimated_savings = cost_analysis.get('estimated_monthly_savings', 0)
-        if estimated_savings > 0:
-            roi_months = total_one_time / estimated_savings if estimated_savings > 0 else 0
-            st.write(f"**Estimated ROI Period:** {roi_months:.1f} months")
-    
-    with summary_col2:
-        st.success("**Data Sources & Reliability**")
-        
-        pricing_data = comprehensive_costs.get('pricing_data', {})
-        data_source = pricing_data.get('data_source', 'unknown')
-        last_updated = pricing_data.get('last_updated', 'Unknown')
-        
-        if data_source == 'aws_api':
-            st.write("✅ **Pricing Data:** Real-time AWS API")
-            st.write(f"📅 **Last Updated:** {last_updated}")
-            st.write("🎯 **Accuracy:** High (±5%)")
-        else:
-            st.write("⚠️ **Pricing Data:** Fallback estimates")
-            st.write("🎯 **Accuracy:** Moderate (±15%)")
-        
-        st.write(f"🔧 **Services Analyzed:** {len(service_breakdown_data)} AWS services")
-        st.write(f"📊 **Analysis Date:** {datetime.now().strftime('%Y-%m-%d %H:%M')}")
-    
-    # Export functionality
-    if st.button("📤 Export Complete Cost Analysis", use_container_width=True):
-        export_data = {
-            'analysis_date': datetime.now().isoformat(),
-            'configuration': config,
-            'cost_summary': {
-                'total_monthly': total_monthly,
-                'total_one_time': total_one_time,
-                'three_year_total': three_year_total
-            },
-            'service_breakdown': service_breakdown_data,
-            'optimization_recommendations': recommendations,
-            'data_source': data_source
-        }
-        
-        st.download_button(
-            label="💾 Download Cost Analysis (JSON)",
-            data=json.dumps(export_data, indent=2),
-            file_name=f"aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json"
-        )
+        # Export functionality
+        if st.button("📤 Export Complete Cost Analysis", use_container_width=True):
+            export_data = {
+                'analysis_date': datetime.now().isoformat(),
+                'configuration': config,
+                'cost_summary': {
+                    'total_monthly': total_monthly,
+                    'total_one_time': total_one_time,
+                    'three_year_total': three_year_total
+                },
+                'service_breakdown': service_breakdown_data,
+                'optimization_recommendations': recommendations,
+                'data_source': data_source
+            }
+            
+            st.download_button(
+                label="💾 Download Cost Analysis (JSON)",
+                data=json.dumps(export_data, indent=2),
+                file_name=f"aws_cost_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
 
 def render_os_performance_tab(analysis: Dict, config: Dict):
     """Render OS performance analysis tab using native Streamlit components"""
