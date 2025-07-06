@@ -7429,20 +7429,39 @@ def create_backup_restore_topology(fig: go.Figure, config: Dict, agent_analysis:
     destination_storage = config.get('destination_storage_type', 'S3')
     environment = config.get('environment', 'non-production')
     
-    # Define positions for components
+    # Define positions for components with better spacing
+    agent_positions = []
+    if num_agents == 1:
+        agent_positions = [(3, 2.5)]
+    elif num_agents <= 3:
+        # Vertical arrangement for 2-3 agents
+        start_y = 3.5 - (num_agents - 1) * 0.7
+        agent_positions = [(3, start_y + i * 1.4) for i in range(num_agents)]
+    else:
+        # Grid arrangement for 4+ agents
+        cols = 2
+        rows = (num_agents + 1) // 2
+        start_y = 3.5 - (rows - 1) * 0.6
+        for i in range(num_agents):
+            row = i // cols
+            col = i % cols
+            x = 2.7 + col * 0.6
+            y = start_y + row * 1.2
+            agent_positions.append((x, y))
+    
     positions = {
-        'source_db': (1, 4),
-        'backup_storage': (1, 2),
-        'agents': [(3, i) for i in range(1, num_agents + 1)],
-        'network_cloud': (5, 2),
-        'aws_destination': (7, 2)
+        'source_db': (1, 4.2),
+        'backup_storage': (1, 2.2),
+        'agents': agent_positions,
+        'network_cloud': (5.5, 2.8),
+        'aws_destination': (7.5, 2.8)
     }
     
     # 1. Source Database
     add_component_node(fig, positions['source_db'], 
                       '🗄️ Source Database', 
                       f"{config.get('source_database_engine', 'Database').upper()}\n{config.get('database_size_gb', 0):,} GB",
-                      colors['source'], size=60)
+                      colors['source'], size=50)
     
     # 2. Backup Storage
     backup_icon = '🪟' if backup_storage_type == 'windows_share' else '🗄️'
@@ -7451,30 +7470,30 @@ def create_backup_restore_topology(fig: go.Figure, config: Dict, agent_analysis:
     
     add_component_node(fig, positions['backup_storage'],
                       f'{backup_icon} Backup Storage',
-                      f"{backup_storage_type.replace('_', ' ').title()}\n{backup_protocol} Protocol\n{backup_size:,.0f} GB Backup",
-                      colors['backup'], size=55)
+                      f"{backup_storage_type.replace('_', ' ').title()}\n{backup_protocol} Protocol\n{backup_size:,.0f} GB",
+                      colors['backup'], size=45)
     
     # 3. DataSync Agents
     agent_size = config.get('datasync_agent_size', 'medium')
     agent_throughput = agent_analysis.get('total_max_throughput_mbps', 0) / num_agents if num_agents > 0 else 0
     
     for i, pos in enumerate(positions['agents']):
-        agent_label = f"🤖 {primary_tool} Agent {i+1}"
-        agent_details = f"{agent_size.title()} Instance\n{agent_throughput:,.0f} Mbps each\nReads from Backup Storage"
-        add_component_node(fig, pos, agent_label, agent_details, colors['agent'], size=50)
+        agent_label = f"🤖 {primary_tool}\nAgent {i+1}"
+        agent_details = f"{agent_size.title()}\n{agent_throughput:,.0f} Mbps\nFile Reader"
+        add_component_node(fig, pos, agent_label, agent_details, colors['agent'], size=40)
     
     # 4. Network/Internet Cloud
     add_component_node(fig, positions['network_cloud'],
                       '☁️ Network Path',
-                      f"{environment.title()} Environment\nDirect Connect\nto AWS",
-                      colors['network'], size=45)
+                      f"{environment.title()}\nDirect Connect\nto AWS",
+                      colors['network'], size=35)
     
     # 5. AWS Destination
     dest_icon = '☁️' if destination_storage == 'S3' else '🗄️'
     add_component_node(fig, positions['aws_destination'],
-                      f'{dest_icon} AWS Destination',
+                      f'{dest_icon} AWS Target',
                       f"{destination_storage.replace('_', ' ')}\n{config.get('database_engine', 'Target').upper()}\nDatabase",
-                      colors['aws'], size=60)
+                      colors['aws'], size=50)
     
     # Add connections with flow direction
     add_migration_flow_backup_restore(fig, positions, colors, num_agents)
@@ -7497,39 +7516,58 @@ def create_direct_replication_topology(fig: go.Figure, config: Dict, agent_analy
     environment = config.get('environment', 'non-production')
     target_platform = config.get('target_platform', 'rds')
     
-    # Define positions
+    # Define positions with better spacing for agents
+    agent_positions = []
+    if num_agents == 1:
+        agent_positions = [(3, 2.8)]
+    elif num_agents <= 3:
+        # Vertical arrangement
+        start_y = 3.5 - (num_agents - 1) * 0.6
+        agent_positions = [(3, start_y + i * 1.2) for i in range(num_agents)]
+    else:
+        # Grid arrangement for 4+ agents
+        cols = 2
+        rows = (num_agents + 1) // 2
+        start_y = 3.5 - (rows - 1) * 0.5
+        for i in range(num_agents):
+            row = i // cols
+            col = i % cols
+            x = 2.7 + col * 0.6
+            y = start_y + row * 1.0
+            agent_positions.append((x, y))
+    
     positions = {
-        'source_db': (1, 3),
-        'agents': [(3, i + 1.5) for i in range(num_agents)],
-        'network_cloud': (5, 2.5),
-        'aws_destination': (7, 2.5)
+        'source_db': (1, 3.2),
+        'agents': agent_positions,
+        'network_cloud': (5.5, 2.8),
+        'aws_destination': (7.5, 2.8)
     }
     
     # 1. Source Database
     add_component_node(fig, positions['source_db'],
                       '🗄️ Live Source DB',
-                      f"{config.get('source_database_engine', 'Database').upper()}\n{config.get('database_size_gb', 0):,} GB\nProduction System",
-                      colors['source'], size=60)
+                      f"{config.get('source_database_engine', 'Database').upper()}\n{config.get('database_size_gb', 0):,} GB\nProduction",
+                      colors['source'], size=50)
     
-    # 2. Migration Agents (DMS or DataSync)
+    # 2. Migration Agents
     agent_size = config.get('dms_agent_size') or config.get('datasync_agent_size', 'medium')
     agent_throughput = agent_analysis.get('total_max_throughput_mbps', 0) / num_agents if num_agents > 0 else 0
     is_heterogeneous = config.get('source_database_engine') != config.get('database_engine')
     
     for i, pos in enumerate(positions['agents']):
-        agent_label = f"🔄 {primary_tool} Agent {i+1}"
+        agent_label = f"🔄 {primary_tool}\nAgent {i+1}"
         if is_heterogeneous:
-            agent_details = f"{agent_size.title()} Instance\n{agent_throughput:,.0f} Mbps each\nSchema Conversion\nChange Data Capture"
+            agent_details = f"{agent_size.title()}\n{agent_throughput:,.0f} Mbps\nSchema Convert"
         else:
-            agent_details = f"{agent_size.title()} Instance\n{agent_throughput:,.0f} Mbps each\nDirect Data Sync\nReal-time Replication"
+            agent_details = f"{agent_size.title()}\n{agent_throughput:,.0f} Mbps\nDirect Sync"
         
-        add_component_node(fig, pos, agent_label, agent_details, colors['agent'], size=50)
+        add_component_node(fig, pos, agent_label, agent_details, colors['agent'], size=40)
     
     # 3. Network Path
     add_component_node(fig, positions['network_cloud'],
                       '🌐 Network Path',
-                      f"{environment.title()} Environment\nDirect Connect\nLow Latency Path",
-                      colors['network'], size=45)
+                      f"{environment.title()}\nDirect Connect\nLow Latency",
+                      colors['network'], size=35)
     
     # 4. AWS Target
     platform_icon = '☁️' if target_platform == 'rds' else '🖥️'
@@ -7537,8 +7575,8 @@ def create_direct_replication_topology(fig: go.Figure, config: Dict, agent_analy
     
     add_component_node(fig, positions['aws_destination'],
                       f'{platform_icon} AWS {platform_name}',
-                      f"{config.get('database_engine', 'Target').upper()}\nDatabase\n{platform_name} Platform",
-                      colors['aws'], size=60)
+                      f"{config.get('database_engine', 'Target').upper()}\nDatabase\n{platform_name}",
+                      colors['aws'], size=50)
     
     # Add connections with real-time flow
     add_migration_flow_direct_replication(fig, positions, colors, num_agents)
@@ -7560,35 +7598,55 @@ def add_component_node(fig: go.Figure, position: tuple, label: str, details: str
     # Create hover text
     hover_text = f"<b>{label}</b><br>{details.replace(chr(10), '<br>')}"
     
+    # Add the main node (marker only, no text)
     fig.add_trace(go.Scatter(
         x=[x],
         y=[y],
-        mode='markers+text',
+        mode='markers',
         marker=dict(
             size=size,
             color=color,
             line=dict(width=3, color='white'),
             opacity=0.9
         ),
-        text=label,
-        textposition='bottom center',
-        textfont=dict(size=11, color='black', family='Arial Black'),
         hovertext=hover_text,
         hoverinfo='text',
         showlegend=False
     ))
     
-    # Add details text below the node
+    # Add label above the node with better spacing
     fig.add_annotation(
         x=x,
-        y=y - 0.6,
-        text=details,
+        y=y + 0.45,  # Position above the node
+        text=f"<b>{label}</b>",
         showarrow=False,
-        font=dict(size=9, color='darkslategray'),
-        bgcolor='rgba(255,255,255,0.8)',
+        font=dict(size=10, color='black', family='Arial Bold'),
+        bgcolor='rgba(255,255,255,0.95)',
+        bordercolor='darkgray',
+        borderwidth=1,
+        borderpad=3,
+        xanchor='center',
+        yanchor='bottom'
+    )
+    
+    # Add details text below the node with better spacing and formatting
+    # Split details into lines for better formatting
+    detail_lines = details.split('\n')
+    formatted_details = '<br>'.join([line.strip() for line in detail_lines if line.strip()])
+    
+    fig.add_annotation(
+        x=x,
+        y=y - 0.55,  # Position below the node
+        text=formatted_details,
+        showarrow=False,
+        font=dict(size=8, color='darkslategray', family='Arial'),
+        bgcolor='rgba(248,249,250,0.95)',
         bordercolor='lightgray',
         borderwidth=1,
-        borderpad=4
+        borderpad=4,
+        xanchor='center',
+        yanchor='top',
+        width=120  # Constrain width to prevent overlap
     )
 
 
@@ -7597,39 +7655,72 @@ def add_migration_flow_backup_restore(fig: go.Figure, positions: Dict, colors: D
     
     # 1. Database to Backup Storage (Backup Creation)
     add_flow_arrow(fig, positions['source_db'], positions['backup_storage'], 
-                   colors['connection'], "📦 Backup Creation", dash='dot')
+                   colors['connection'], "📦 Backup", dash='dot')
     
-    # 2. Backup Storage to Agents (File Reading)
-    for agent_pos in positions['agents']:
-        add_flow_arrow(fig, positions['backup_storage'], agent_pos,
-                       colors['agent'], "📂 File Read", thickness=3)
+    # 2. Backup Storage to Agents (File Reading) - handle multiple agents
+    for i, agent_pos in enumerate(positions['agents']):
+        # Slightly offset connection points for multiple agents to prevent overlap
+        backup_pos = positions['backup_storage']
+        if num_agents > 1:
+            # Offset backup connection point for multiple agents
+            offset_x = 0.1 * (i - (num_agents - 1) / 2)
+            backup_connection = (backup_pos[0] + offset_x, backup_pos[1])
+        else:
+            backup_connection = backup_pos
+            
+        add_flow_arrow(fig, backup_connection, agent_pos,
+                       colors['agent'], f"📂 Read {i+1}", thickness=2)
     
-    # 3. Agents to Network Cloud (Data Transfer)
-    for agent_pos in positions['agents']:
-        add_flow_arrow(fig, agent_pos, positions['network_cloud'],
-                       colors['network'], "🚀 Transfer", thickness=4)
+    # 3. Agents to Network Cloud (Data Transfer) - handle multiple agents
+    for i, agent_pos in enumerate(positions['agents']):
+        network_pos = positions['network_cloud']
+        if num_agents > 1:
+            # Offset network connection point for multiple agents
+            offset_y = 0.15 * (i - (num_agents - 1) / 2)
+            network_connection = (network_pos[0], network_pos[1] + offset_y)
+        else:
+            network_connection = network_pos
+            
+        add_flow_arrow(fig, agent_pos, network_connection,
+                       colors['network'], f"🚀 Transfer", thickness=3)
     
     # 4. Network to AWS Destination (Final Delivery)
     add_flow_arrow(fig, positions['network_cloud'], positions['aws_destination'],
-                   colors['aws'], "☁️ AWS Delivery", thickness=5)
+                   colors['aws'], "☁️ AWS", thickness=4)
 
 
 def add_migration_flow_direct_replication(fig: go.Figure, positions: Dict, colors: Dict, num_agents: int):
     """Add data flow arrows for direct replication method"""
     
-    # 1. Database to Agents (Live Replication)
-    for agent_pos in positions['agents']:
-        add_flow_arrow(fig, positions['source_db'], agent_pos,
-                       colors['agent'], "⚡ Live Sync", thickness=4)
+    # 1. Database to Agents (Live Replication) - handle multiple agents
+    for i, agent_pos in enumerate(positions['agents']):
+        source_pos = positions['source_db']
+        if num_agents > 1:
+            # Offset source connection point for multiple agents
+            offset_y = 0.1 * (i - (num_agents - 1) / 2)
+            source_connection = (source_pos[0], source_pos[1] + offset_y)
+        else:
+            source_connection = source_pos
+            
+        add_flow_arrow(fig, source_connection, agent_pos,
+                       colors['agent'], f"⚡ CDC {i+1}", thickness=3)
     
-    # 2. Agents to Network Cloud (Real-time Transfer)
-    for agent_pos in positions['agents']:
-        add_flow_arrow(fig, agent_pos, positions['network_cloud'],
-                       colors['network'], "🌐 Real-time", thickness=4)
+    # 2. Agents to Network Cloud (Real-time Transfer) - handle multiple agents
+    for i, agent_pos in enumerate(positions['agents']):
+        network_pos = positions['network_cloud']
+        if num_agents > 1:
+            # Offset network connection point for multiple agents
+            offset_y = 0.15 * (i - (num_agents - 1) / 2)
+            network_connection = (network_pos[0], network_pos[1] + offset_y)
+        else:
+            network_connection = network_pos
+            
+        add_flow_arrow(fig, agent_pos, network_connection,
+                       colors['network'], f"🌐 Stream", thickness=3)
     
     # 3. Network to AWS Target (Live Replication)
     add_flow_arrow(fig, positions['network_cloud'], positions['aws_destination'],
-                   colors['aws'], "🎯 Live Target", thickness=5)
+                   colors['aws'], "🎯 Live", thickness=4)
 
 
 def add_flow_arrow(fig: go.Figure, start_pos: tuple, end_pos: tuple, color: str, 
@@ -7643,8 +7734,11 @@ def add_flow_arrow(fig: go.Figure, start_pos: tuple, end_pos: tuple, color: str,
     dy = y2 - y1
     length = (dx**2 + dy**2)**0.5
     
+    if length == 0:
+        return  # Avoid division by zero
+    
     # Adjust start and end points to not overlap with nodes
-    offset = 0.4
+    offset = 0.5  # Increased offset to avoid node overlap
     start_x = x1 + (dx/length) * offset
     start_y = y1 + (dy/length) * offset
     end_x = x2 - (dx/length) * offset
@@ -7660,27 +7754,38 @@ def add_flow_arrow(fig: go.Figure, start_pos: tuple, end_pos: tuple, color: str,
             color=color,
             dash=dash
         ),
-        hovertext=label,
+        hovertext=f"<b>{label}</b><br>Data Flow Connection",
         hoverinfo='text',
         showlegend=False
     ))
     
     # Add arrow head
-    add_arrow_head(fig, end_x, end_y, dx/length, dy/length, color, size=0.15)
+    add_arrow_head(fig, end_x, end_y, dx/length, dy/length, color, size=0.12)
     
-    # Add flow label
+    # Add flow label with better positioning to avoid overlap
     mid_x = (start_x + end_x) / 2
     mid_y = (start_y + end_y) / 2
     
+    # Offset label position based on arrow direction to avoid overlap
+    if abs(dx) > abs(dy):  # More horizontal
+        label_offset_y = 0.25 if dy >= 0 else -0.25
+        label_offset_x = 0
+    else:  # More vertical  
+        label_offset_x = 0.3 if dx >= 0 else -0.3
+        label_offset_y = 0
+    
     fig.add_annotation(
-        x=mid_x,
-        y=mid_y + 0.2,
-        text=label,
+        x=mid_x + label_offset_x,
+        y=mid_y + label_offset_y,
+        text=f"<b>{label}</b>",
         showarrow=False,
         font=dict(size=8, color=color, family='Arial Bold'),
-        bgcolor='rgba(255,255,255,0.8)',
+        bgcolor='rgba(255,255,255,0.9)',
         bordercolor=color,
-        borderwidth=1
+        borderwidth=1,
+        borderpad=2,
+        xanchor='center',
+        yanchor='middle'
     )
 
 
@@ -7712,94 +7817,110 @@ def add_arrow_head(fig: go.Figure, x: float, y: float, dx: float, dy: float,
 def add_backup_restore_annotations(fig: go.Figure, config: Dict, agent_analysis: Dict):
     """Add specific annotations for backup/restore method"""
     
-    # Migration method info
+    # Migration method info - positioned at top
     fig.add_annotation(
-        x=4, y=4.5,
+        x=4, y=5.2,
         text="📦 BACKUP/RESTORE MIGRATION",
         showarrow=False,
-        font=dict(size=14, color='darkblue', family='Arial Bold'),
-        bgcolor='rgba(173,216,230,0.8)',
+        font=dict(size=12, color='darkblue', family='Arial Bold'),
+        bgcolor='rgba(173,216,230,0.9)',
         bordercolor='darkblue',
         borderwidth=2,
-        borderpad=8
+        borderpad=6,
+        xanchor='center',
+        yanchor='middle'
     )
     
-    # Agent placement rationale
+    # Agent placement rationale - left side
     backup_storage_type = config.get('backup_storage_type', 'nas_drive')
     protocol = 'SMB' if backup_storage_type == 'windows_share' else 'NFS'
     
     fig.add_annotation(
-        x=1, y=0.5,
-        text=f"💡 Agent Placement Strategy:\n• Agents placed close to backup storage\n• {protocol} protocol optimization\n• Parallel file processing\n• Minimal production DB impact",
+        x=0.5, y=0.8,
+        text=f"💡 <b>Agent Strategy:</b><br>• Close to backup storage<br>• {protocol} protocol optimized<br>• Parallel file processing<br>• Minimal DB impact",
         showarrow=False,
-        font=dict(size=10, color='darkgreen'),
-        bgcolor='rgba(144,238,144,0.8)',
+        font=dict(size=9, color='darkgreen', family='Arial'),
+        bgcolor='rgba(144,238,144,0.9)',
         bordercolor='darkgreen',
         borderwidth=1,
-        align='left'
+        align='left',
+        xanchor='left',
+        yanchor='top',
+        width=140
     )
     
-    # Performance metrics
+    # Performance metrics - right side
     total_throughput = agent_analysis.get('total_effective_throughput', 0)
     migration_time = calculate_backup_migration_time(config, total_throughput)
     
     fig.add_annotation(
-        x=7, y=0.5,
-        text=f"📊 Performance Metrics:\n• Total Throughput: {total_throughput:,.0f} Mbps\n• Est. Migration Time: {migration_time:.1f} hours\n• Protocol Efficiency: {agent_analysis.get('backup_efficiency', 1.0)*100:.1f}%",
+        x=7.5, y=0.8,
+        text=f"📊 <b>Performance:</b><br>• Throughput: {total_throughput:,.0f} Mbps<br>• Est. Time: {migration_time:.1f}h<br>• Efficiency: {agent_analysis.get('backup_efficiency', 1.0)*100:.1f}%",
         showarrow=False,
-        font=dict(size=10, color='darkred'),
-        bgcolor='rgba(255,182,193,0.8)',
+        font=dict(size=9, color='darkred', family='Arial'),
+        bgcolor='rgba(255,182,193,0.9)',
         bordercolor='darkred',
         borderwidth=1,
-        align='left'
+        align='left',
+        xanchor='right',
+        yanchor='top',
+        width=140
     )
 
 
 def add_direct_replication_annotations(fig: go.Figure, config: Dict, agent_analysis: Dict):
     """Add specific annotations for direct replication method"""
     
-    # Migration method info
+    # Migration method info - positioned at top
     is_heterogeneous = config.get('source_database_engine') != config.get('database_engine')
     method_type = "HETEROGENEOUS" if is_heterogeneous else "HOMOGENEOUS"
     
     fig.add_annotation(
-        x=4, y=4.5,
+        x=4, y=5.2,
         text=f"🔄 DIRECT REPLICATION ({method_type})",
         showarrow=False,
-        font=dict(size=14, color='darkblue', family='Arial Bold'),
-        bgcolor='rgba(173,216,230,0.8)',
+        font=dict(size=12, color='darkblue', family='Arial Bold'),
+        bgcolor='rgba(173,216,230,0.9)',
         bordercolor='darkblue',
         borderwidth=2,
-        borderpad=8
+        borderpad=6,
+        xanchor='center',
+        yanchor='middle'
     )
     
-    # Agent placement rationale
+    # Agent placement rationale - left side
     primary_tool = agent_analysis.get('primary_tool', 'DMS')
     
     fig.add_annotation(
-        x=1, y=0.5,
-        text=f"💡 Agent Placement Strategy:\n• {primary_tool} agents near source DB\n• Minimize replication lag\n• Change Data Capture (CDC)\n• Real-time synchronization",
+        x=0.5, y=0.8,
+        text=f"💡 <b>Agent Strategy:</b><br>• {primary_tool} near source DB<br>• Minimize replication lag<br>• Change Data Capture<br>• Real-time sync",
         showarrow=False,
-        font=dict(size=10, color='darkgreen'),
-        bgcolor='rgba(144,238,144,0.8)',
+        font=dict(size=9, color='darkgreen', family='Arial'),
+        bgcolor='rgba(144,238,144,0.9)',
         bordercolor='darkgreen',
         borderwidth=1,
-        align='left'
+        align='left',
+        xanchor='left',
+        yanchor='top',
+        width=140
     )
     
-    # Performance metrics
+    # Performance metrics - right side
     total_throughput = agent_analysis.get('total_effective_throughput', 0)
     migration_time = calculate_direct_migration_time(config, total_throughput)
     
     fig.add_annotation(
-        x=7, y=0.5,
-        text=f"📊 Performance Metrics:\n• Total Throughput: {total_throughput:,.0f} Mbps\n• Est. Migration Time: {migration_time:.1f} hours\n• Replication Lag: <5 seconds",
+        x=7.5, y=0.8,
+        text=f"📊 <b>Performance:</b><br>• Throughput: {total_throughput:,.0f} Mbps<br>• Est. Time: {migration_time:.1f}h<br>• Replication Lag: <5s",
         showarrow=False,
-        font=dict(size=10, color='darkred'),
-        bgcolor='rgba(255,182,193,0.8)',
+        font=dict(size=9, color='darkred', family='Arial'),
+        bgcolor='rgba(255,182,193,0.9)',
         bordercolor='darkred',
         borderwidth=1,
-        align='left'
+        align='left',
+        xanchor='right',
+        yanchor='top',
+        width=140
     )
 
 
@@ -7835,26 +7956,28 @@ def configure_agent_diagram_layout(fig: go.Figure, title: str):
         title=dict(
             text=title,
             x=0.5,
-            font=dict(size=16, color='darkslategray', family='Arial Bold')
+            y=0.95,  # Move title higher
+            font=dict(size=14, color='darkslategray', family='Arial Bold')
         ),
         xaxis=dict(
             showgrid=False,
             zeroline=False,
             showticklabels=False,
-            range=[0, 8]
+            range=[-0.5, 8.5]  # Wider range for better spacing
         ),
         yaxis=dict(
             showgrid=False,
             zeroline=False,
             showticklabels=False,
-            range=[0, 5]
+            range=[-0.5, 6]  # Taller range for better vertical spacing
         ),
         showlegend=False,
-        height=600,
+        height=650,  # Increased height to prevent overlap
         plot_bgcolor='rgba(248,249,250,0.9)',
         paper_bgcolor='white',
-        margin=dict(l=20, r=20, t=80, b=100),
-        hovermode='closest'
+        margin=dict(l=30, r=30, t=80, b=120),  # Increased margins
+        hovermode='closest',
+        font=dict(size=10)  # Set base font size
     )
 
 
