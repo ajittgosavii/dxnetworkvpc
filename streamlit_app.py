@@ -7993,6 +7993,592 @@ class AgentScalingOptimizer:
             ]
         }
 
+def create_agent_placement_diagram(analysis: Dict, config: Dict) -> go.Figure:
+    """Create a clear visual diagram showing DataSync/DMS agent placement in migration topology"""
+    
+    # Get configuration details
+    migration_method = config.get('migration_method', 'direct_replication')
+    backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+    agent_analysis = analysis.get('agent_analysis', {})
+    num_agents = config.get('number_of_agents', 1)
+    primary_tool = agent_analysis.get('primary_tool', 'DMS').upper()
+    environment = config.get('environment', 'non-production')
+    destination_storage = config.get('destination_storage_type', 'S3')
+    
+    fig = go.Figure()
+    
+    # Define colors for different components
+    colors = {
+        'source': '#FF6B6B',      # Red for source
+        'agent': '#4ECDC4',       # Teal for agents  
+        'backup': '#FFE66D',      # Yellow for backup storage
+        'network': '#95E1D3',     # Light green for network
+        'aws': '#3498DB',         # Blue for AWS
+        'connection': '#BDC3C7'   # Gray for connections
+    }
+    
+    # Create the topology based on migration method
+    if migration_method == 'backup_restore':
+        return create_backup_restore_topology(fig, config, agent_analysis, colors)
+    else:
+        return create_direct_replication_topology(fig, config, agent_analysis, colors)
+
+
+def create_backup_restore_topology(fig: go.Figure, config: Dict, agent_analysis: Dict, colors: Dict) -> go.Figure:
+    """Create topology diagram for backup/restore migration method"""
+    
+    backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+    num_agents = config.get('number_of_agents', 1)
+    primary_tool = agent_analysis.get('primary_tool', 'DataSync').upper()
+    destination_storage = config.get('destination_storage_type', 'S3')
+    environment = config.get('environment', 'non-production')
+    
+    # Define positions for components
+    positions = {
+        'source_db': (1, 4),
+        'backup_storage': (1, 2),
+        'agents': [(3, i) for i in range(1, num_agents + 1)],
+        'network_cloud': (5, 2),
+        'aws_destination': (7, 2)
+    }
+    
+    # 1. Source Database
+    add_component_node(fig, positions['source_db'], 
+                      '🗄️ Source Database', 
+                      f"{config.get('source_database_engine', 'Database').upper()}\n{config.get('database_size_gb', 0):,} GB",
+                      colors['source'], size=60)
+    
+    # 2. Backup Storage
+    backup_icon = '🪟' if backup_storage_type == 'windows_share' else '🗄️'
+    backup_protocol = 'SMB' if backup_storage_type == 'windows_share' else 'NFS'
+    backup_size = config.get('database_size_gb', 0) * config.get('backup_size_multiplier', 0.7)
+    
+    add_component_node(fig, positions['backup_storage'],
+                      f'{backup_icon} Backup Storage',
+                      f"{backup_storage_type.replace('_', ' ').title()}\n{backup_protocol} Protocol\n{backup_size:,.0f} GB Backup",
+                      colors['backup'], size=55)
+    
+    # 3. DataSync Agents
+    agent_size = config.get('datasync_agent_size', 'medium')
+    agent_throughput = agent_analysis.get('total_max_throughput_mbps', 0) / num_agents if num_agents > 0 else 0
+    
+    for i, pos in enumerate(positions['agents']):
+        agent_label = f"🤖 {primary_tool} Agent {i+1}"
+        agent_details = f"{agent_size.title()} Instance\n{agent_throughput:,.0f} Mbps each\nReads from Backup Storage"
+        add_component_node(fig, pos, agent_label, agent_details, colors['agent'], size=50)
+    
+    # 4. Network/Internet Cloud
+    add_component_node(fig, positions['network_cloud'],
+                      '☁️ Network Path',
+                      f"{environment.title()} Environment\nDirect Connect\nto AWS",
+                      colors['network'], size=45)
+    
+    # 5. AWS Destination
+    dest_icon = '☁️' if destination_storage == 'S3' else '🗄️'
+    add_component_node(fig, positions['aws_destination'],
+                      f'{dest_icon} AWS Destination',
+                      f"{destination_storage.replace('_', ' ')}\n{config.get('database_engine', 'Target').upper()}\nDatabase",
+                      colors['aws'], size=60)
+    
+    # Add connections with flow direction
+    add_migration_flow_backup_restore(fig, positions, colors, num_agents)
+    
+    # Add detailed annotations
+    add_backup_restore_annotations(fig, config, agent_analysis)
+    
+    # Configure layout
+    configure_agent_diagram_layout(fig, "Backup/Restore Migration: Agent Placement & Data Flow")
+    
+    return fig
+
+
+def create_direct_replication_topology(fig: go.Figure, config: Dict, agent_analysis: Dict, colors: Dict) -> go.Figure:
+    """Create topology diagram for direct replication migration method"""
+    
+    num_agents = config.get('number_of_agents', 1)
+    primary_tool = agent_analysis.get('primary_tool', 'DMS').upper()
+    destination_storage = config.get('destination_storage_type', 'S3')
+    environment = config.get('environment', 'non-production')
+    target_platform = config.get('target_platform', 'rds')
+    
+    # Define positions
+    positions = {
+        'source_db': (1, 3),
+        'agents': [(3, i + 1.5) for i in range(num_agents)],
+        'network_cloud': (5, 2.5),
+        'aws_destination': (7, 2.5)
+    }
+    
+    # 1. Source Database
+    add_component_node(fig, positions['source_db'],
+                      '🗄️ Live Source DB',
+                      f"{config.get('source_database_engine', 'Database').upper()}\n{config.get('database_size_gb', 0):,} GB\nProduction System",
+                      colors['source'], size=60)
+    
+    # 2. Migration Agents (DMS or DataSync)
+    agent_size = config.get('dms_agent_size') or config.get('datasync_agent_size', 'medium')
+    agent_throughput = agent_analysis.get('total_max_throughput_mbps', 0) / num_agents if num_agents > 0 else 0
+    is_heterogeneous = config.get('source_database_engine') != config.get('database_engine')
+    
+    for i, pos in enumerate(positions['agents']):
+        agent_label = f"🔄 {primary_tool} Agent {i+1}"
+        if is_heterogeneous:
+            agent_details = f"{agent_size.title()} Instance\n{agent_throughput:,.0f} Mbps each\nSchema Conversion\nChange Data Capture"
+        else:
+            agent_details = f"{agent_size.title()} Instance\n{agent_throughput:,.0f} Mbps each\nDirect Data Sync\nReal-time Replication"
+        
+        add_component_node(fig, pos, agent_label, agent_details, colors['agent'], size=50)
+    
+    # 3. Network Path
+    add_component_node(fig, positions['network_cloud'],
+                      '🌐 Network Path',
+                      f"{environment.title()} Environment\nDirect Connect\nLow Latency Path",
+                      colors['network'], size=45)
+    
+    # 4. AWS Target
+    platform_icon = '☁️' if target_platform == 'rds' else '🖥️'
+    platform_name = 'RDS' if target_platform == 'rds' else 'EC2'
+    
+    add_component_node(fig, positions['aws_destination'],
+                      f'{platform_icon} AWS {platform_name}',
+                      f"{config.get('database_engine', 'Target').upper()}\nDatabase\n{platform_name} Platform",
+                      colors['aws'], size=60)
+    
+    # Add connections with real-time flow
+    add_migration_flow_direct_replication(fig, positions, colors, num_agents)
+    
+    # Add detailed annotations
+    add_direct_replication_annotations(fig, config, agent_analysis)
+    
+    # Configure layout
+    configure_agent_diagram_layout(fig, "Direct Replication Migration: Agent Placement & Data Flow")
+    
+    return fig
+
+
+def add_component_node(fig: go.Figure, position: tuple, label: str, details: str, 
+                      color: str, size: int = 50):
+    """Add a component node to the diagram"""
+    x, y = position
+    
+    # Create hover text
+    hover_text = f"<b>{label}</b><br>{details.replace(chr(10), '<br>')}"
+    
+    fig.add_trace(go.Scatter(
+        x=[x],
+        y=[y],
+        mode='markers+text',
+        marker=dict(
+            size=size,
+            color=color,
+            line=dict(width=3, color='white'),
+            opacity=0.9
+        ),
+        text=label,
+        textposition='bottom center',
+        textfont=dict(size=11, color='black', family='Arial Black'),
+        hovertext=hover_text,
+        hoverinfo='text',
+        showlegend=False
+    ))
+    
+    # Add details text below the node
+    fig.add_annotation(
+        x=x,
+        y=y - 0.6,
+        text=details,
+        showarrow=False,
+        font=dict(size=9, color='darkslategray'),
+        bgcolor='rgba(255,255,255,0.8)',
+        bordercolor='lightgray',
+        borderwidth=1,
+        borderpad=4
+    )
+
+
+def add_migration_flow_backup_restore(fig: go.Figure, positions: Dict, colors: Dict, num_agents: int):
+    """Add data flow arrows for backup/restore method"""
+    
+    # 1. Database to Backup Storage (Backup Creation)
+    add_flow_arrow(fig, positions['source_db'], positions['backup_storage'], 
+                   colors['connection'], "📦 Backup Creation", dash='dot')
+    
+    # 2. Backup Storage to Agents (File Reading)
+    for agent_pos in positions['agents']:
+        add_flow_arrow(fig, positions['backup_storage'], agent_pos,
+                       colors['agent'], "📂 File Read", thickness=3)
+    
+    # 3. Agents to Network Cloud (Data Transfer)
+    for agent_pos in positions['agents']:
+        add_flow_arrow(fig, agent_pos, positions['network_cloud'],
+                       colors['network'], "🚀 Transfer", thickness=4)
+    
+    # 4. Network to AWS Destination (Final Delivery)
+    add_flow_arrow(fig, positions['network_cloud'], positions['aws_destination'],
+                   colors['aws'], "☁️ AWS Delivery", thickness=5)
+
+
+def add_migration_flow_direct_replication(fig: go.Figure, positions: Dict, colors: Dict, num_agents: int):
+    """Add data flow arrows for direct replication method"""
+    
+    # 1. Database to Agents (Live Replication)
+    for agent_pos in positions['agents']:
+        add_flow_arrow(fig, positions['source_db'], agent_pos,
+                       colors['agent'], "⚡ Live Sync", thickness=4)
+    
+    # 2. Agents to Network Cloud (Real-time Transfer)
+    for agent_pos in positions['agents']:
+        add_flow_arrow(fig, agent_pos, positions['network_cloud'],
+                       colors['network'], "🌐 Real-time", thickness=4)
+    
+    # 3. Network to AWS Target (Live Replication)
+    add_flow_arrow(fig, positions['network_cloud'], positions['aws_destination'],
+                   colors['aws'], "🎯 Live Target", thickness=5)
+
+
+def add_flow_arrow(fig: go.Figure, start_pos: tuple, end_pos: tuple, color: str, 
+                   label: str, thickness: int = 3, dash: str = 'solid'):
+    """Add a flow arrow between two positions"""
+    x1, y1 = start_pos
+    x2, y2 = end_pos
+    
+    # Calculate arrow direction and position
+    dx = x2 - x1
+    dy = y2 - y1
+    length = (dx**2 + dy**2)**0.5
+    
+    # Adjust start and end points to not overlap with nodes
+    offset = 0.4
+    start_x = x1 + (dx/length) * offset
+    start_y = y1 + (dy/length) * offset
+    end_x = x2 - (dx/length) * offset
+    end_y = y2 - (dy/length) * offset
+    
+    # Add the connection line
+    fig.add_trace(go.Scatter(
+        x=[start_x, end_x],
+        y=[start_y, end_y],
+        mode='lines',
+        line=dict(
+            width=thickness,
+            color=color,
+            dash=dash
+        ),
+        hovertext=label,
+        hoverinfo='text',
+        showlegend=False
+    ))
+    
+    # Add arrow head
+    add_arrow_head(fig, end_x, end_y, dx/length, dy/length, color, size=0.15)
+    
+    # Add flow label
+    mid_x = (start_x + end_x) / 2
+    mid_y = (start_y + end_y) / 2
+    
+    fig.add_annotation(
+        x=mid_x,
+        y=mid_y + 0.2,
+        text=label,
+        showarrow=False,
+        font=dict(size=8, color=color, family='Arial Bold'),
+        bgcolor='rgba(255,255,255,0.8)',
+        bordercolor=color,
+        borderwidth=1
+    )
+
+
+def add_arrow_head(fig: go.Figure, x: float, y: float, dx: float, dy: float, 
+                   color: str, size: float = 0.1):
+    """Add an arrow head at the specified position"""
+    # Calculate arrow head points
+    arrow_length = size
+    arrow_width = size * 0.6
+    
+    # Arrow head points
+    head_x1 = x - arrow_length * dx - arrow_width * dy
+    head_y1 = y - arrow_length * dy + arrow_width * dx
+    head_x2 = x - arrow_length * dx + arrow_width * dy
+    head_y2 = y - arrow_length * dy - arrow_width * dx
+    
+    fig.add_trace(go.Scatter(
+        x=[head_x1, x, head_x2, head_x1],
+        y=[head_y1, y, head_y2, head_y1],
+        mode='lines',
+        fill='toself',
+        fillcolor=color,
+        line=dict(color=color, width=2),
+        showlegend=False,
+        hoverinfo='skip'
+    ))
+
+
+def add_backup_restore_annotations(fig: go.Figure, config: Dict, agent_analysis: Dict):
+    """Add specific annotations for backup/restore method"""
+    
+    # Migration method info
+    fig.add_annotation(
+        x=4, y=4.5,
+        text="📦 BACKUP/RESTORE MIGRATION",
+        showarrow=False,
+        font=dict(size=14, color='darkblue', family='Arial Bold'),
+        bgcolor='rgba(173,216,230,0.8)',
+        bordercolor='darkblue',
+        borderwidth=2,
+        borderpad=8
+    )
+    
+    # Agent placement rationale
+    backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+    protocol = 'SMB' if backup_storage_type == 'windows_share' else 'NFS'
+    
+    fig.add_annotation(
+        x=1, y=0.5,
+        text=f"💡 Agent Placement Strategy:\n• Agents placed close to backup storage\n• {protocol} protocol optimization\n• Parallel file processing\n• Minimal production DB impact",
+        showarrow=False,
+        font=dict(size=10, color='darkgreen'),
+        bgcolor='rgba(144,238,144,0.8)',
+        bordercolor='darkgreen',
+        borderwidth=1,
+        align='left'
+    )
+    
+    # Performance metrics
+    total_throughput = agent_analysis.get('total_effective_throughput', 0)
+    migration_time = calculate_backup_migration_time(config, total_throughput)
+    
+    fig.add_annotation(
+        x=7, y=0.5,
+        text=f"📊 Performance Metrics:\n• Total Throughput: {total_throughput:,.0f} Mbps\n• Est. Migration Time: {migration_time:.1f} hours\n• Protocol Efficiency: {agent_analysis.get('backup_efficiency', 1.0)*100:.1f}%",
+        showarrow=False,
+        font=dict(size=10, color='darkred'),
+        bgcolor='rgba(255,182,193,0.8)',
+        bordercolor='darkred',
+        borderwidth=1,
+        align='left'
+    )
+
+
+def add_direct_replication_annotations(fig: go.Figure, config: Dict, agent_analysis: Dict):
+    """Add specific annotations for direct replication method"""
+    
+    # Migration method info
+    is_heterogeneous = config.get('source_database_engine') != config.get('database_engine')
+    method_type = "HETEROGENEOUS" if is_heterogeneous else "HOMOGENEOUS"
+    
+    fig.add_annotation(
+        x=4, y=4.5,
+        text=f"🔄 DIRECT REPLICATION ({method_type})",
+        showarrow=False,
+        font=dict(size=14, color='darkblue', family='Arial Bold'),
+        bgcolor='rgba(173,216,230,0.8)',
+        bordercolor='darkblue',
+        borderwidth=2,
+        borderpad=8
+    )
+    
+    # Agent placement rationale
+    primary_tool = agent_analysis.get('primary_tool', 'DMS')
+    
+    fig.add_annotation(
+        x=1, y=0.5,
+        text=f"💡 Agent Placement Strategy:\n• {primary_tool} agents near source DB\n• Minimize replication lag\n• Change Data Capture (CDC)\n• Real-time synchronization",
+        showarrow=False,
+        font=dict(size=10, color='darkgreen'),
+        bgcolor='rgba(144,238,144,0.8)',
+        bordercolor='darkgreen',
+        borderwidth=1,
+        align='left'
+    )
+    
+    # Performance metrics
+    total_throughput = agent_analysis.get('total_effective_throughput', 0)
+    migration_time = calculate_direct_migration_time(config, total_throughput)
+    
+    fig.add_annotation(
+        x=7, y=0.5,
+        text=f"📊 Performance Metrics:\n• Total Throughput: {total_throughput:,.0f} Mbps\n• Est. Migration Time: {migration_time:.1f} hours\n• Replication Lag: <5 seconds",
+        showarrow=False,
+        font=dict(size=10, color='darkred'),
+        bgcolor='rgba(255,182,193,0.8)',
+        bordercolor='darkred',
+        borderwidth=1,
+        align='left'
+    )
+
+
+def calculate_backup_migration_time(config: Dict, throughput_mbps: float) -> float:
+    """Calculate estimated migration time for backup/restore method"""
+    if throughput_mbps <= 0:
+        return 0
+    
+    db_size_gb = config.get('database_size_gb', 0)
+    backup_multiplier = config.get('backup_size_multiplier', 0.7)
+    backup_size_gb = db_size_gb * backup_multiplier
+    
+    # Convert GB to bits, then calculate hours
+    size_bits = backup_size_gb * 8 * 1000 * 1000 * 1000
+    throughput_bps = throughput_mbps * 1000 * 1000
+    return size_bits / throughput_bps / 3600
+
+
+def calculate_direct_migration_time(config: Dict, throughput_mbps: float) -> float:
+    """Calculate estimated migration time for direct replication method"""
+    if throughput_mbps <= 0:
+        return 0
+    
+    db_size_gb = config.get('database_size_gb', 0)
+    size_bits = db_size_gb * 8 * 1000 * 1000 * 1000
+    throughput_bps = throughput_mbps * 1000 * 1000
+    return size_bits / throughput_bps / 3600
+
+
+def configure_agent_diagram_layout(fig: go.Figure, title: str):
+    """Configure the layout for the agent placement diagram"""
+    fig.update_layout(
+        title=dict(
+            text=title,
+            x=0.5,
+            font=dict(size=16, color='darkslategray', family='Arial Bold')
+        ),
+        xaxis=dict(
+            showgrid=False,
+            zeroline=False,
+            showticklabels=False,
+            range=[0, 8]
+        ),
+        yaxis=dict(
+            showgrid=False,
+            zeroline=False,
+            showticklabels=False,
+            range=[0, 5]
+        ),
+        showlegend=False,
+        height=600,
+        plot_bgcolor='rgba(248,249,250,0.9)',
+        paper_bgcolor='white',
+        margin=dict(l=20, r=20, t=80, b=100),
+        hovermode='closest'
+    )
+
+
+def render_network_intelligence_tab(analysis: Dict, config: Dict):
+    """Enhanced network intelligence tab with clear agent placement diagram"""
+    
+    # ADD VALIDATION AT THE START
+    validated_costs = add_cost_validation_to_tab(analysis, config)
+    st.subheader("🌐 Network Intelligence & Agent Placement Analysis")
+
+    network_perf = analysis.get('network_performance', {})
+
+    # Network Overview Dashboard
+    st.markdown("**📊 Network Performance Overview:**")
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    with col1:
+        st.metric(
+            "🎯 Network Quality",
+            f"{network_perf.get('network_quality_score', 0):.1f}/100",
+            delta=f"AI Enhanced: {network_perf.get('ai_enhanced_quality_score', 0):.1f}"
+        )
+
+    with col2:
+        st.metric(
+            "🌐 Network Capacity",
+            f"{network_perf.get('effective_bandwidth_mbps', 0):,.0f} Mbps",
+            delta="Raw network limit"
+        )
+
+    with col3:
+        st.metric(
+            "🕐 Total Latency",
+            f"{network_perf.get('total_latency_ms', 0):.1f} ms",
+            delta=f"Reliability: {network_perf.get('total_reliability', 0)*100:.2f}%"
+        )
+
+    with col4:
+        st.metric(
+            "🗄️ Destination Storage",
+            network_perf.get('destination_storage', 'S3'),
+            delta=f"Bonus: +{network_perf.get('storage_performance_bonus', 0)}%"
+        )
+
+    with col5:
+        ai_optimization = network_perf.get('ai_optimization_potential', 0)
+        st.metric(
+            "🤖 AI Optimization",
+            f"{ai_optimization:.1f}%",
+            delta="Improvement potential"
+        )
+
+    # NEW: Agent Placement Visualization
+    st.markdown("---")
+    st.markdown("**🤖 DataSync/DMS Agent Placement & Migration Flow:**")
+    
+    try:
+        agent_diagram = create_agent_placement_diagram(analysis, config)
+        st.plotly_chart(agent_diagram, use_container_width=True, key=f"agent_placement_{int(time.time() * 1000000)}")
+        
+        # Add explanation of the diagram
+        migration_method = config.get('migration_method', 'direct_replication')
+        if migration_method == 'backup_restore':
+            st.info("""
+            📦 **Backup/Restore Migration Flow:**
+            1. **Database** creates backup files on backup storage
+            2. **DataSync Agents** read backup files using SMB/NFS protocols
+            3. **Agents** transfer data through network path to AWS
+            4. **AWS** receives and restores data to target database
+            
+            **Key Advantage:** Minimal impact on production database during transfer
+            """)
+        else:
+            st.info("""
+            🔄 **Direct Replication Migration Flow:**
+            1. **DMS/DataSync Agents** connect directly to source database
+            2. **Agents** perform real-time Change Data Capture (CDC)
+            3. **Live data** flows through network path to AWS target
+            4. **Target database** stays synchronized in real-time
+            
+            **Key Advantage:** Minimal downtime with continuous synchronization
+            """)
+            
+    except Exception as e:
+        st.warning(f"Agent placement diagram could not be rendered: {str(e)}")
+        
+        # Fallback: Show agent placement summary
+        st.info("📍 **Agent Placement Summary:**")
+        
+        agent_analysis = analysis.get('agent_analysis', {})
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write(f"**Migration Method:** {config.get('migration_method', 'direct_replication').replace('_', ' ').title()}")
+            st.write(f"**Primary Tool:** {agent_analysis.get('primary_tool', 'DMS').upper()}")
+            st.write(f"**Number of Agents:** {config.get('number_of_agents', 1)}")
+            st.write(f"**Agent Size:** {config.get('datasync_agent_size') or config.get('dms_agent_size', 'medium').title()}")
+        
+        with col2:
+            st.write(f"**Total Throughput:** {agent_analysis.get('total_effective_throughput', 0):,.0f} Mbps")
+            st.write(f"**Monthly Cost:** ${agent_analysis.get('monthly_cost', 0):,.0f}")
+            st.write(f"**Scaling Efficiency:** {agent_analysis.get('scaling_efficiency', 1.0)*100:.1f}%")
+            st.write(f"**Bottleneck:** {agent_analysis.get('bottleneck', 'Unknown')}")
+
+    # Continue with existing bandwidth waterfall analysis
+    st.markdown("---")
+    render_bandwidth_waterfall_analysis(analysis, config)
+
+    # Keep your existing Network Path Visualization section
+    st.markdown("**🗺️ Network Path Visualization:**")
+    if network_perf.get('segments'):
+        try:
+            network_diagram = create_network_path_diagram(network_perf)
+            st.plotly_chart(network_diagram, use_container_width=True, key=f"network_{int(time.time() * 1000000)}")
+        except Exception as e:
+            st.warning(f"Network diagram could not be rendered: {str(e)}")
+            # Your existing fallback code here...
+
+
+
 async def main():
     """Main Streamlit application"""
 
