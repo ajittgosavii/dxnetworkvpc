@@ -54,3 +54,6 @@ pyyaml
 matplotlib
 seaborn
 
+firebase-admin>=6.2.0
+google-cloud-firestore>=2.11.1
+google-auth>=2.17.0
