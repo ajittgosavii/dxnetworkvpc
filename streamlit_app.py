@@ -26,6 +26,10 @@ import seaborn as sns
 import concurrent.futures
 import threading
 import uuid
+import firebase_admin
+from firebase_admin import credentials, auth, firestore
+
+
 
 
 # Configure logging
@@ -139,6 +143,495 @@ box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 </style>
 """, unsafe_allow_html=True)
+
+# Firebase Authentication Manager
+class FirebaseAuthManager:
+    def __init__(self):
+        self.db = None
+        self.initialize_firebase()
+    
+    def initialize_firebase(self):
+        """Initialize Firebase Admin SDK"""
+        try:
+            # Check if Firebase is already initialized
+            if not firebase_admin._apps:
+                # Load Firebase credentials from Streamlit secrets
+                firebase_config = st.secrets.get("firebase", {})
+                
+                if firebase_config:
+                    # Create credentials from secrets
+                    cred_dict = {
+                        "type": firebase_config.get("type"),
+                        "project_id": firebase_config.get("project_id"),
+                        "private_key_id": firebase_config.get("private_key_id"),
+                        "private_key": firebase_config.get("private_key").replace('\\n', '\n'),
+                        "client_email": firebase_config.get("client_email"),
+                        "client_id": firebase_config.get("client_id"),
+                        "auth_uri": firebase_config.get("auth_uri"),
+                        "token_uri": firebase_config.get("token_uri"),
+                        "auth_provider_x509_cert_url": firebase_config.get("auth_provider_x509_cert_url"),
+                        "client_x509_cert_url": firebase_config.get("client_x509_cert_url")
+                    }
+                    
+                    cred = credentials.Certificate(cred_dict)
+                    firebase_admin.initialize_app(cred)
+                    self.db = firestore.client()
+                    logger.info("Firebase initialized successfully")
+                else:
+                    logger.error("Firebase configuration not found in secrets")
+                    st.error("Firebase configuration not found. Please check your secrets configuration.")
+            else:
+                # Firebase already initialized
+                self.db = firestore.client()
+                
+        except Exception as e:
+            logger.error(f"Firebase initialization failed: {e}")
+            st.error(f"Firebase initialization failed: {str(e)}")
+    
+    def create_user(self, email: str, password: str, display_name: str, role: str = "user") -> Dict:
+        """Create a new user with email/password"""
+        try:
+            # Create user in Firebase Auth
+            user = auth.create_user(
+                email=email,
+                password=password,
+                display_name=display_name
+            )
+            
+            # Store additional user data in Firestore
+            user_data = {
+                'uid': user.uid,
+                'email': email,
+                'display_name': display_name,
+                'role': role,
+                'created_at': datetime.now(),
+                'last_login': None,
+                'is_active': True,
+                'created_by': st.session_state.get('user_email', 'system')
+            }
+            
+            if self.db:
+                self.db.collection('users').document(user.uid).set(user_data)
+            
+            return {
+                'success': True,
+                'user_id': user.uid,
+                'message': f'User {email} created successfully'
+            }
+            
+        except Exception as e:
+            logger.error(f"User creation failed: {e}")
+            return {
+                'success': False,
+                'message': f'Failed to create user: {str(e)}'
+            }
+    
+    def verify_user_credentials(self, email: str, password: str) -> Dict:
+        """Verify user credentials using Firebase Auth REST API"""
+        try:
+            # Firebase Web API key (you'll need to add this to your secrets)
+            api_key = st.secrets.get("firebase", {}).get("web_api_key")
+            
+            if not api_key:
+                return {'success': False, 'message': 'Firebase Web API key not configured'}
+            
+            # Firebase Auth REST API endpoint
+            url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
+            
+            payload = {
+                "email": email,
+                "password": password,
+                "returnSecureToken": True
+            }
+            
+            response = requests.post(url, json=payload)
+            
+            if response.status_code == 200:
+                data = response.json()
+                user_id = data.get('localId')
+                
+                # Update last login in Firestore
+                if self.db and user_id:
+                    self.db.collection('users').document(user_id).update({
+                        'last_login': datetime.now()
+                    })
+                    
+                    # Get user data from Firestore
+                    user_doc = self.db.collection('users').document(user_id).get()
+                    if user_doc.exists:
+                        user_data = user_doc.to_dict()
+                        
+                        # Check if user is active
+                        if not user_data.get('is_active', True):
+                            return {'success': False, 'message': 'User account is deactivated'}
+                        
+                        return {
+                            'success': True,
+                            'user_id': user_id,
+                            'email': email,
+                            'display_name': user_data.get('display_name', email),
+                            'role': user_data.get('role', 'user'),
+                            'id_token': data.get('idToken')
+                        }
+                
+                return {
+                    'success': True,
+                    'user_id': user_id,
+                    'email': email,
+                    'display_name': email,
+                    'role': 'user',
+                    'id_token': data.get('idToken')
+                }
+            else:
+                error_data = response.json()
+                error_message = error_data.get('error', {}).get('message', 'Authentication failed')
+                return {'success': False, 'message': error_message}
+                
+        except Exception as e:
+            logger.error(f"Authentication failed: {e}")
+            return {'success': False, 'message': f'Authentication error: {str(e)}'}
+    
+    def get_all_users(self) -> List[Dict]:
+        """Get all users from Firestore"""
+        try:
+            if not self.db:
+                return []
+            
+            users_ref = self.db.collection('users')
+            docs = users_ref.stream()
+            
+            users = []
+            for doc in docs:
+                user_data = doc.to_dict()
+                users.append(user_data)
+            
+            return users
+        except Exception as e:
+            logger.error(f"Failed to get users: {e}")
+            return []
+    
+    def update_user_status(self, user_id: str, is_active: bool) -> bool:
+        """Update user active status"""
+        try:
+            if self.db:
+                self.db.collection('users').document(user_id).update({
+                    'is_active': is_active,
+                    'updated_at': datetime.now()
+                })
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Failed to update user status: {e}")
+            return False
+    
+    def delete_user(self, user_id: str) -> bool:
+        """Delete user from Firebase Auth and Firestore"""
+        try:
+            # Delete from Firebase Auth
+            auth.delete_user(user_id)
+            
+            # Delete from Firestore
+            if self.db:
+                self.db.collection('users').document(user_id).delete()
+            
+            return True
+        except Exception as e:
+            logger.error(f"Failed to delete user: {e}")
+            return False
+
+# Authentication UI Components
+def render_login_page():
+    """Render the login page"""
+    st.markdown("""
+    <div style="text-align: center; padding: 2rem;">
+        <h1>🔐 AWS Migration Analyzer</h1>
+        <h3>Enterprise Authentication Portal</h3>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Center the login form
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        st.markdown("### 🔑 Sign In")
+        
+        with st.form("login_form"):
+            email = st.text_input("📧 Email Address", placeholder="user@company.com")
+            password = st.text_input("🔒 Password", type="password", placeholder="Enter your password")
+            
+            col1, col2 = st.columns(2)
+            with col1:
+                login_button = st.form_submit_button("🚀 Sign In", use_container_width=True)
+            
+            if login_button:
+                if email and password:
+                    auth_manager = FirebaseAuthManager()
+                    result = auth_manager.verify_user_credentials(email, password)
+                    
+                    if result['success']:
+                        # Store user info in session state
+                        st.session_state['authenticated'] = True
+                        st.session_state['user_id'] = result['user_id']
+                        st.session_state['user_email'] = result['email']
+                        st.session_state['user_name'] = result['display_name']
+                        st.session_state['user_role'] = result['role']
+                        st.session_state['login_time'] = datetime.now()
+                        
+                        st.success(f"Welcome back, {result['display_name']}!")
+                        st.rerun()
+                    else:
+                        st.error(f"❌ Login failed: {result['message']}")
+                else:
+                    st.error("Please enter both email and password")
+        
+        # Admin section
+        st.markdown("---")
+        st.markdown("### 👤 Administrator?")
+        if st.button("🛠️ Admin Panel", use_container_width=True):
+            st.session_state['show_admin'] = True
+            st.rerun()
+
+def render_admin_panel():
+    """Render the admin panel for user management"""
+    st.markdown("## 🛠️ Administrator Panel")
+    
+    # Back button
+    if st.button("← Back to Login"):
+        st.session_state['show_admin'] = False
+        st.rerun()
+    
+    # Admin authentication
+    if not st.session_state.get('admin_authenticated', False):
+        st.markdown("### 🔐 Admin Authentication")
+        
+        with st.form("admin_login"):
+            admin_email = st.text_input("Admin Email")
+            admin_password = st.text_input("Admin Password", type="password")
+            admin_key = st.text_input("Admin Key", type="password", help="Special admin key")
+            
+            if st.form_submit_button("Authenticate as Admin"):
+                # Check admin credentials (you should configure this in secrets)
+                expected_admin_email = st.secrets.get("admin", {}).get("email", "admin@company.com")
+                expected_admin_password = st.secrets.get("admin", {}).get("password", "admin123")
+                expected_admin_key = st.secrets.get("admin", {}).get("key", "admin_key_123")
+                
+                if (admin_email == expected_admin_email and 
+                    admin_password == expected_admin_password and 
+                    admin_key == expected_admin_key):
+                    st.session_state['admin_authenticated'] = True
+                    st.session_state['admin_email'] = admin_email
+                    st.success("Admin authenticated successfully!")
+                    st.rerun()
+                else:
+                    st.error("Invalid admin credentials")
+        
+        return
+    
+    # Admin is authenticated, show user management
+    st.success(f"Logged in as Admin: {st.session_state.get('admin_email')}")
+    
+    # User management tabs
+    tab1, tab2, tab3 = st.tabs(["👥 Manage Users", "➕ Create User", "📊 User Analytics"])
+    
+    auth_manager = FirebaseAuthManager()
+    
+    with tab1:
+        st.markdown("### 👥 User Management")
+        
+        users = auth_manager.get_all_users()
+        
+        if users:
+            # Create users dataframe
+            users_data = []
+            for user in users:
+                users_data.append({
+                    'Email': user.get('email', ''),
+                    'Name': user.get('display_name', ''),
+                    'Role': user.get('role', 'user'),
+                    'Status': 'Active' if user.get('is_active', True) else 'Inactive',
+                    'Created': user.get('created_at', '').strftime('%Y-%m-%d') if user.get('created_at') else '',
+                    'Last Login': user.get('last_login', '').strftime('%Y-%m-%d %H:%M') if user.get('last_login') else 'Never',
+                    'UID': user.get('uid', '')
+                })
+            
+            df_users = pd.DataFrame(users_data)
+            
+            # Display users table
+            st.dataframe(df_users[['Email', 'Name', 'Role', 'Status', 'Created', 'Last Login']], 
+                        use_container_width=True)
+            
+            # User actions
+            st.markdown("### User Actions")
+            
+            selected_user = st.selectbox("Select User", 
+                                       options=[f"{user['Email']} ({user['Name']})" for user in users_data],
+                                       index=0 if users_data else None)
+            
+            if selected_user and users_data:
+                selected_uid = None
+                for user in users_data:
+                    if f"{user['Email']} ({user['Name']})" == selected_user:
+                        selected_uid = user['UID']
+                        selected_status = user['Status'] == 'Active'
+                        break
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    if st.button("🔄 Toggle Status"):
+                        if auth_manager.update_user_status(selected_uid, not selected_status):
+                            st.success("User status updated!")
+                            st.rerun()
+                        else:
+                            st.error("Failed to update user status")
+                
+                with col2:
+                    if st.button("🗑️ Delete User", type="secondary"):
+                        if st.session_state.get('confirm_delete'):
+                            if auth_manager.delete_user(selected_uid):
+                                st.success("User deleted successfully!")
+                                st.session_state['confirm_delete'] = False
+                                st.rerun()
+                            else:
+                                st.error("Failed to delete user")
+                        else:
+                            st.session_state['confirm_delete'] = True
+                            st.warning("Click again to confirm deletion")
+                
+                with col3:
+                    if st.button("📧 Reset Password"):
+                        st.info("Password reset functionality would be implemented here")
+        else:
+            st.info("No users found")
+    
+    with tab2:
+        st.markdown("### ➕ Create New User")
+        
+        with st.form("create_user_form"):
+            new_email = st.text_input("Email Address*")
+            new_name = st.text_input("Full Name*")
+            new_password = st.text_input("Password*", type="password", 
+                                       help="Minimum 6 characters")
+            new_role = st.selectbox("Role", ["user", "admin", "analyst"], index=0)
+            
+            if st.form_submit_button("Create User"):
+                if new_email and new_name and new_password:
+                    if len(new_password) >= 6:
+                        result = auth_manager.create_user(
+                            email=new_email,
+                            password=new_password,
+                            display_name=new_name,
+                            role=new_role
+                        )
+                        
+                        if result['success']:
+                            st.success(f"✅ User created successfully: {new_email}")
+                            # Clear form by rerunning
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"❌ {result['message']}")
+                    else:
+                        st.error("Password must be at least 6 characters")
+                else:
+                    st.error("Please fill in all required fields")
+    
+    with tab3:
+        st.markdown("### 📊 User Analytics")
+        
+        users = auth_manager.get_all_users()
+        
+        if users:
+            # User statistics
+            total_users = len(users)
+            active_users = len([u for u in users if u.get('is_active', True)])
+            inactive_users = total_users - active_users
+            
+            # Recent logins (last 7 days)
+            week_ago = datetime.now() - timedelta(days=7)
+            recent_logins = len([
+                u for u in users 
+                if u.get('last_login') and u.get('last_login') > week_ago
+            ])
+            
+            # Display metrics
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                st.metric("Total Users", total_users)
+            
+            with col2:
+                st.metric("Active Users", active_users)
+            
+            with col3:
+                st.metric("Inactive Users", inactive_users)
+            
+            with col4:
+                st.metric("Recent Logins (7d)", recent_logins)
+            
+            # User creation over time (if you have enough data)
+            st.markdown("### User Registration Trend")
+            
+            # Create sample chart
+            creation_dates = [u.get('created_at') for u in users if u.get('created_at')]
+            if creation_dates:
+                df_dates = pd.DataFrame({'date': creation_dates})
+                df_dates['date'] = pd.to_datetime(df_dates['date'])
+                df_dates['month'] = df_dates['date'].dt.to_period('M')
+                monthly_counts = df_dates.groupby('month').size().reset_index(name='count')
+                monthly_counts['month'] = monthly_counts['month'].astype(str)
+                
+                fig = px.line(monthly_counts, x='month', y='count', 
+                            title='User Registrations by Month')
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No registration data available for chart")
+        else:
+            st.info("No user data available for analytics")
+
+def render_logout_section():
+    """Render logout section in sidebar"""
+    with st.sidebar:
+        st.markdown("---")
+        st.markdown("### 👤 User Info")
+        st.write(f"**Name:** {st.session_state.get('user_name', 'Unknown')}")
+        st.write(f"**Email:** {st.session_state.get('user_email', 'Unknown')}")
+        st.write(f"**Role:** {st.session_state.get('user_role', 'user').title()}")
+        
+        login_time = st.session_state.get('login_time')
+        if login_time:
+            duration = datetime.now() - login_time
+            hours = int(duration.total_seconds() // 3600)
+            minutes = int((duration.total_seconds() % 3600) // 60)
+            st.write(f"**Session:** {hours}h {minutes}m")
+        
+        st.markdown("---")
+        
+        if st.button("🚪 Logout", use_container_width=True):
+            # Clear all session state
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.success("Logged out successfully!")
+            st.rerun()
+
+def check_authentication():
+    """Check if user is authenticated and session is valid"""
+    if not st.session_state.get('authenticated', False):
+        return False
+    
+    # Check session timeout (24 hours)
+    login_time = st.session_state.get('login_time')
+    if login_time:
+        session_duration = datetime.now() - login_time
+        if session_duration > timedelta(hours=24):
+            # Session expired
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.error("Session expired. Please login again.")
+            return False
+    
+    return True
+
 
 @dataclass
 class APIStatus:
@@ -3667,26 +4160,28 @@ class EnhancedMigrationAnalyzer:
     
 # Helper functions for rendering
 def render_enhanced_header():
-    """Enhanced header with professional styling"""
+    """Enhanced header with user info"""
     ai_manager = AnthropicAIManager()
     aws_api = AWSAPIManager()
 
     ai_status = "🟢" if ai_manager.connected else "🔴"
     aws_status = "🟢" if aws_api.connected else "🔴"
+    
+    # Get user info
+    user_name = st.session_state.get('user_name', 'User')
+    user_role = st.session_state.get('user_role', 'user')
 
     st.markdown(f"""
     <div class="main-header">
     <h1>🤖 AWS Enterprise Database Migration Analyzer AI v3.0</h1>
     <p style="font-size: 1.2rem; margin-top: 0.5rem;">
-    Professional-Grade Migration Analysis • AI-Powered Insights • Real-time AWS Integration • Agent Scaling Optimization • FSx Destination Analysis • Backup Storage Support
+    Professional-Grade Migration Analysis • AI-Powered Insights • Real-time AWS Integration
     </p>
     <div style="margin-top: 1rem; font-size: 0.8rem;">
     <span style="margin-right: 20px;">{ai_status} Anthropic Claude AI</span>
     <span style="margin-right: 20px;">{aws_status} AWS Pricing APIs</span>
-    <span style="margin-right: 20px;">🟢 Network Intelligence Engine</span>
-    <span style="margin-right: 20px;">🟢 Agent Scaling Optimizer</span>
-    <span style="margin-right: 20px;">🟢 FSx Destination Analysis</span>
-    <span>🟢 Backup Storage Migration</span>
+    <span style="margin-right: 20px;">👤 Welcome, {user_name} ({user_role.title()})</span>
+    <span>🔐 Secure Enterprise Access</span>
     </div>
     </div>
     """, unsafe_allow_html=True)
@@ -8778,44 +9273,96 @@ class AgentScalingOptimizer:
         }
 
 async def main():
-    """Main Streamlit application"""
-
-    # Render enhanced header
-    render_enhanced_header()
-
-    # Enhanced sidebar controls
+    """Main Streamlit application with authentication"""
+    
+    # Page configuration
+    st.set_page_config(
+        page_title="AWS Enterprise Database Migration Analyzer AI v3.0",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    
+    # Your existing CSS styles
+    st.markdown("""
+    <style>
+    .main-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #1d4ed8 100%);
+    padding: 2rem;
+    border-radius: 8px;
+    color: white;
+    text-align: center;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(30,58,138,0.1);
+    border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .main-header h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2.2rem;
+    font-weight: 600;
+    }
+    /* Add your other CSS styles here */
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Check authentication
+    if not check_authentication():
+        # Show admin panel if requested
+        if st.session_state.get('show_admin', False):
+            render_admin_panel()
+        else:
+            render_login_page()
+        return
+    
+    # User is authenticated, show the application
+    render_logout_section()
+    
+    # Your existing header
+    st.markdown(f"""
+    <div class="main-header">
+    <h1>🤖 AWS Enterprise Database Migration Analyzer AI v3.0</h1>
+    <p style="font-size: 1.2rem; margin-top: 0.5rem;">
+    Professional-Grade Migration Analysis • AI-Powered Insights • Real-time AWS Integration
+    </p>
+    <p style="font-size: 0.9rem; margin-top: 1rem;">
+    Welcome back, {st.session_state.get('user_name', 'User')} • Secure Enterprise Access
+    </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Your existing sidebar controls
     config = render_enhanced_sidebar_controls()
-
+    
     # Run analysis when configuration is set
     if st.button("🚀 Run Enhanced AI Migration Analysis", type="primary", use_container_width=True):
-
         with st.spinner("🤖 Running comprehensive AI migration analysis..."):
             try:
                 # Initialize analyzer
                 analyzer = EnhancedMigrationAnalyzer()
-
+                
                 # Run comprehensive analysis
                 analysis = await analyzer.comprehensive_ai_migration_analysis(config)
-
+                
                 # Store analysis in session state
                 st.session_state['analysis'] = analysis
                 st.session_state['config'] = config
-
+                
                 st.success("✅ AI Analysis Complete!")
-
+                
             except Exception as e:
                 st.error(f"❌ Analysis failed: {str(e)}")
                 logger.error(f"Analysis error: {e}")
                 return
-
+    
     # Display results if analysis is available
     if 'analysis' in st.session_state and 'config' in st.session_state:
         analysis = st.session_state['analysis']
         config = st.session_state['config']
-
+        
         tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "📊 Migration Dashboard",
-            "🧠 AI Insights",
+            "🧠 AI Insights", 
             "🌐 Network Intelligence",
             "💰 Complete Cost Analysis",
             "💻 OS Performance",
@@ -8823,39 +9370,36 @@ async def main():
             "🗄️ FSx Comparisons",
             "🤖 Agent Scaling Optimizer"
         ])
-
+        
         with tab1:
             render_migration_dashboard_tab(analysis, config)
-
+        
         with tab2:
             render_ai_insights_tab_enhanced(analysis, config)
-
+        
         with tab3:
             render_network_intelligence_tab(analysis, config)
-
+        
         with tab4:
             render_comprehensive_cost_analysis_tab(analysis, config)
-
+        
         with tab5:
             render_os_performance_tab(analysis, config)
-
+        
         with tab6:
             render_aws_sizing_tab(analysis, config)
-
+        
         with tab7:
             render_fsx_comparisons_tab(analysis, config)
-
+        
         with tab8:
             render_agent_scaling_optimizer_tab(analysis, config)
-
-    # Professional footer with backup storage capabilities
+    
+    # Footer
     st.markdown("""
-    <div class="enterprise-footer">
+    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: white; border-radius: 6px; margin-top: 2rem;">
     <h4>🚀 AWS Enterprise Database Migration Analyzer AI v3.0</h4>
-    <p>Powered by Anthropic Claude AI • Real-time AWS Integration • Professional Migration Analysis • Advanced Agent Scaling • FSx Destination Analysis • Backup Storage Migration Support</p>
-    <p style="font-size: 0.9rem; margin-top: 1rem;">
-    🔬 Advanced Network Intelligence • 🎯 AI-Driven Recommendations • 📊 Executive Reporting • 🤖 Multi-Agent Optimization • 🗄️ S3/FSx Comparisons • 💾 SMB/NFS Backup Support
-    </p>
+    <p>Secured with Firebase Authentication • Enterprise User Management • Professional Migration Analysis</p>
     </div>
     """, unsafe_allow_html=True)
 
