@@ -444,13 +444,42 @@ def render_admin_panel():
             # Create users dataframe
             users_data = []
             for user in users:
+                # Handle datetime formatting safely
+                created_date = user.get('created_at', '')
+                if created_date:
+                    try:
+                        if isinstance(created_date, str):
+                            created_formatted = created_date[:10]  # Just the date part
+                        elif hasattr(created_date, 'strftime'):
+                            created_formatted = created_date.strftime('%Y-%m-%d')
+                        else:
+                            created_formatted = str(created_date)[:10]
+                    except:
+                        created_formatted = 'Unknown'
+                else:
+                    created_formatted = 'Unknown'
+
+                last_login = user.get('last_login', '')
+                if last_login:
+                    try:
+                        if isinstance(last_login, str):
+                            last_login_formatted = last_login[:16].replace('T', ' ')  # Date and time
+                        elif hasattr(last_login, 'strftime'):
+                            last_login_formatted = last_login.strftime('%Y-%m-%d %H:%M')
+                        else:
+                            last_login_formatted = str(last_login)[:16]
+                    except:
+                        last_login_formatted = 'Never'
+                else:
+                    last_login_formatted = 'Never'
+
                 users_data.append({
                     'Email': user.get('email', ''),
                     'Name': user.get('display_name', ''),
                     'Role': user.get('role', 'user'),
                     'Status': 'Active' if user.get('is_active', True) else 'Inactive',
-                    'Created': user.get('created_at', '').strftime('%Y-%m-%d') if user.get('created_at') else '',
-                    'Last Login': user.get('last_login', '').strftime('%Y-%m-%d %H:%M') if user.get('last_login') else 'Never',
+                    'Created': created_formatted,
+                    'Last Login': last_login_formatted,
                     'UID': user.get('uid', '')
                 })
             
@@ -548,11 +577,31 @@ def render_admin_panel():
             inactive_users = total_users - active_users
             
             # Recent logins (last 7 days)
+            # Recent logins (last 7 days)
             week_ago = datetime.now() - timedelta(days=7)
-            recent_logins = len([
-                u for u in users 
-                if u.get('last_login') and u.get('last_login') > week_ago
-            ])
+            recent_logins = 0
+            for u in users:
+                last_login = u.get('last_login')
+                if last_login:
+                    try:
+                        # Handle different datetime formats from Firebase
+                        if isinstance(last_login, str):
+                            # Try to parse string datetime
+                            last_login_dt = datetime.fromisoformat(last_login.replace('Z', '+00:00'))
+                        elif hasattr(last_login, 'timestamp'):
+                            # Handle Firebase timestamp
+                            last_login_dt = last_login.to_datetime()
+                        elif isinstance(last_login, datetime):
+                            # Already a datetime object
+                            last_login_dt = last_login
+                        else:
+                            continue
+                        
+                        if last_login_dt > week_ago:
+                            recent_logins += 1
+                    except (ValueError, AttributeError):
+                        # Skip if we can't parse the datetime
+                        continue
             
             # Display metrics
             col1, col2, col3, col4 = st.columns(4)
@@ -573,10 +622,28 @@ def render_admin_panel():
             st.markdown("### User Registration Trend")
             
             # Create sample chart
-            creation_dates = [u.get('created_at') for u in users if u.get('created_at')]
+            # Create sample chart with safe datetime handling
+            creation_dates = []
+            for u in users:
+                created_at = u.get('created_at')
+                if created_at:
+                    try:
+                        if isinstance(created_at, str):
+                            # Try to parse string datetime
+                            dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                            creation_dates.append(dt)
+                        elif hasattr(created_at, 'to_datetime'):
+                            # Handle Firebase timestamp
+                            creation_dates.append(created_at.to_datetime())
+                        elif isinstance(created_at, datetime):
+                            # Already a datetime object
+                            creation_dates.append(created_at)
+                    except (ValueError, AttributeError):
+                        # Skip if we can't parse the datetime
+                        continue
+
             if creation_dates:
                 df_dates = pd.DataFrame({'date': creation_dates})
-                df_dates['date'] = pd.to_datetime(df_dates['date'])
                 df_dates['month'] = df_dates['date'].dt.to_period('M')
                 monthly_counts = df_dates.groupby('month').size().reset_index(name='count')
                 monthly_counts['month'] = monthly_counts['month'].astype(str)
@@ -9272,7 +9339,7 @@ class AgentScalingOptimizer:
             ]
         }
 
-async def main():
+def main():
     """Main Streamlit application with authentication"""
     
     # Page configuration
@@ -9342,7 +9409,33 @@ async def main():
                 analyzer = EnhancedMigrationAnalyzer()
                 
                 # Run comprehensive analysis
-                analysis = await analyzer.comprehensive_ai_migration_analysis(config)
+                # Run comprehensive analysis (using a wrapper for async code)
+                import asyncio
+
+                # Check if we're in an event loop
+                try:
+                    loop = asyncio.get_running_loop()
+                    # We're in Streamlit's event loop, run in thread
+                    import concurrent.futures
+                    
+                    def run_analysis():
+                        # Create a new event loop for this thread
+                        new_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(new_loop)
+                        try:
+                            return new_loop.run_until_complete(
+                                analyzer.comprehensive_ai_migration_analysis(config)
+                            )
+                        finally:
+                            new_loop.close()
+                    
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(run_analysis)
+                        analysis = future.result(timeout=120)  # 2 minute timeout
+                        
+                except RuntimeError:
+                    # No event loop, safe to use asyncio.run()
+                    analysis = asyncio.run(analyzer.comprehensive_ai_migration_analysis(config))
                 
                 # Store analysis in session state
                 st.session_state['analysis'] = analysis
@@ -9405,5 +9498,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
