@@ -29,6 +29,43 @@ import uuid
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
 
+def safe_float(value, default=0.0):
+    """Safely convert a value to float, returning default if None or invalid"""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_int(value, default=0):
+    """Safely convert a value to int, returning default if None or invalid"""
+    if value is None:
+        return default
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return default
+
+def safe_subtract(a, b, default_a=0, default_b=0):
+    """Safely subtract two values, handling None cases"""
+    safe_a = safe_float(a, default_a)
+    safe_b = safe_float(b, default_b)
+    return safe_a - safe_b
+
+def safe_multiply(a, b, default_a=0, default_b=1):
+    """Safely multiply two values, handling None cases"""
+    safe_a = safe_float(a, default_a)
+    safe_b = safe_float(b, default_b)
+    return safe_a * safe_b
+
+def safe_divide(a, b, default_a=0, default_b=1):
+    """Safely divide two values, handling None and zero cases"""
+    safe_a = safe_float(a, default_a)
+    safe_b = safe_float(b, default_b)
+    if safe_b == 0:
+        return 0
+    return safe_a / safe_b
 
 
 
@@ -1565,77 +1602,77 @@ class ComprehensiveAWSCostCalculator:
         self.aws_api = aws_api_manager
 
     async def calculate_unified_migration_costs(self, config: Dict, analysis: Dict) -> Dict:
-        """Single unified cost calculation to eliminate discrepancies"""
+    """Single unified cost calculation to eliminate discrepancies"""
 
-# Get components from their authoritative sources
-        aws_sizing = analysis.get('aws_sizing_recommendations', {})
-        agent_analysis = analysis.get('agent_analysis', {})
+    # Get components from their authoritative sources
+    aws_sizing = analysis.get('aws_sizing_recommendations', {})
+    agent_analysis = analysis.get('agent_analysis', {})
 
-# AWS Infrastructure Costs (from sizing recommendations)
-        target_platform = config.get('target_platform', 'rds')
-        if target_platform == 'rds':
-            aws_compute_monthly = aws_sizing.get('rds_recommendations', {}).get('monthly_instance_cost', 0)
-            aws_storage_monthly = aws_sizing.get('rds_recommendations', {}).get('monthly_storage_cost', 0)
-        else:
-            aws_compute_monthly = aws_sizing.get('ec2_recommendations', {}).get('monthly_instance_cost', 0)
-            aws_storage_monthly = aws_sizing.get('ec2_recommendations', {}).get('monthly_storage_cost', 0)
+    # AWS Infrastructure Costs (from sizing recommendations)
+    target_platform = config.get('target_platform', 'rds')
+    if target_platform == 'rds':
+        aws_compute_monthly = safe_float(aws_sizing.get('rds_recommendations', {}).get('monthly_instance_cost', 0))
+        aws_storage_monthly = safe_float(aws_sizing.get('rds_recommendations', {}).get('monthly_storage_cost', 0))
+    else:
+        aws_compute_monthly = safe_float(aws_sizing.get('ec2_recommendations', {}).get('monthly_instance_cost', 0))
+        aws_storage_monthly = safe_float(aws_sizing.get('ec2_recommendations', {}).get('monthly_storage_cost', 0))
 
-# Agent Costs (from agent analysis - single source of truth)
-        agent_monthly = agent_analysis.get('monthly_cost', 0)
+    # Agent Costs (from agent analysis - single source of truth)
+    agent_monthly = safe_float(agent_analysis.get('monthly_cost', 0))
 
-# Additional Storage Costs (destination and backup)
-        additional_storage = await self._calculate_additional_storage_costs_unified(config)
+    # Additional Storage Costs (destination and backup)
+    additional_storage = await self._calculate_additional_storage_costs_unified(config)
 
-# Network Costs
-        network_monthly = await self._calculate_network_costs_unified(config)
+    # Network Costs
+    network_monthly = await self._calculate_network_costs_unified(config)
 
-# Total monthly cost
-        total_monthly = (
+    # Total monthly cost
+    total_monthly = (
         aws_compute_monthly +
         aws_storage_monthly +
         agent_monthly +
-        additional_storage['total'] +
+        safe_float(additional_storage.get('total', 0)) +
         network_monthly
-        )
+    )
 
-# One-time costs
-        setup_cost = 2000 + (config.get('number_of_agents', 1) * 500)
-        migration_method = config.get('migration_method', 'direct_replication')
-        if migration_method == 'backup_restore':
-            setup_cost += 1000  # Additional DataSync setup
+    # One-time costs
+    setup_cost = 2000 + (safe_int(config.get('number_of_agents', 1)) * 500)
+    migration_method = config.get('migration_method', 'direct_replication')
+    if migration_method == 'backup_restore':
+        setup_cost += 1000  # Additional DataSync setup
 
-        return {
-        'total_monthly': total_monthly,
-        'total_one_time': setup_cost,
-        'three_year_total': (total_monthly * 36) + setup_cost,
+    return {
+        'total_monthly': max(0, total_monthly),
+        'total_one_time': max(0, setup_cost),
+        'three_year_total': max(0, (total_monthly * 36) + setup_cost),
         'detailed_breakdown': {
-        'aws_compute': aws_compute_monthly,
-        'aws_storage': aws_storage_monthly,
-        'migration_agents': agent_monthly,
-        'additional_storage': additional_storage['total'],
-        'network': network_monthly
+            'aws_compute': aws_compute_monthly,
+            'aws_storage': aws_storage_monthly,
+            'migration_agents': agent_monthly,
+            'additional_storage': safe_float(additional_storage.get('total', 0)),
+            'network': network_monthly
         },
         'monthly_breakdown': {
-        'compute': aws_compute_monthly,
-        'storage': aws_storage_monthly,
-        'agents': agent_monthly,
-        'destination_storage': additional_storage.get('destination', 0),
-        'backup_storage': additional_storage.get('backup', 0),
-        'network': network_monthly
+            'compute': aws_compute_monthly,
+            'storage': aws_storage_monthly,
+            'agents': agent_monthly,
+            'destination_storage': safe_float(additional_storage.get('destination', 0)),
+            'backup_storage': safe_float(additional_storage.get('backup', 0)),
+            'network': network_monthly
         },
         'cost_source': 'unified_calculation',
         'calculation_timestamp': datetime.now().isoformat()
-        }
+    }
 
     async def _calculate_additional_storage_costs_unified(self, config: Dict) -> Dict:
         """Calculate additional storage costs (destination and backup)"""
-        database_size_gb = config.get('database_size_gb', 1000)
+        database_size_gb = safe_float(config.get('database_size_gb', 1000))
         destination_storage = config.get('destination_storage_type', 'S3')
         migration_method = config.get('migration_method', 'direct_replication')
 
         costs = {'destination': 0, 'backup': 0, 'total': 0}
 
-# Destination storage (only if not S3 - FSx adds costs)
+        # Destination storage (only if not S3 - FSx adds costs)
         if destination_storage == 'FSx_Windows':
             dest_size = database_size_gb * 0.3  # Migration staging only
             costs['destination'] = dest_size * 0.13
@@ -1643,9 +1680,9 @@ class ComprehensiveAWSCostCalculator:
             dest_size = database_size_gb * 0.3  # Migration staging only
             costs['destination'] = dest_size * 0.14
 
-# Backup storage (only for backup/restore method)
+        # Backup storage (only for backup/restore method)
         if migration_method == 'backup_restore':
-            backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+            backup_size_multiplier = safe_float(config.get('backup_size_multiplier', 0.7))
             backup_size = database_size_gb * backup_size_multiplier
             costs['backup'] = backup_size * 0.023  # S3 Standard
 
@@ -1653,20 +1690,20 @@ class ComprehensiveAWSCostCalculator:
         return costs
 
     async def _calculate_network_costs_unified(self, config: Dict) -> float:
-        """Calculate unified network costs"""
-        environment = config.get('environment', 'non-production')
-        database_size = config.get('database_size_gb', 1000)
+    """Calculate unified network costs"""
+    environment = config.get('environment', 'non-production')
+    database_size = safe_float(config.get('database_size_gb', 1000))
 
-# Direct Connect
-        if environment == 'production':
-            dx_monthly = 2.25 * 24 * 30  # 10Gbps DX
-            data_transfer = database_size * 0.1 * 0.02  # 10% monthly transfer
-            vpn_backup = 45
-            return dx_monthly + data_transfer + vpn_backup
-        else:
-            dx_monthly = 0.30 * 24 * 30  # 1Gbps DX
-            data_transfer = database_size * 0.05 * 0.02  # 5% monthly transfer
-            return dx_monthly + data_transfer
+    # Direct Connect
+    if environment == 'production':
+        dx_monthly = 2.25 * 24 * 30  # 10Gbps DX
+        data_transfer = database_size * 0.1 * 0.02  # 10% monthly transfer
+        vpn_backup = 45
+        return dx_monthly + data_transfer + vpn_backup
+    else:
+        dx_monthly = 0.30 * 24 * 30  # 1Gbps DX
+        data_transfer = database_size * 0.05 * 0.02  # 5% monthly transfer
+        return dx_monthly + data_transfer
 
     async def calculate_comprehensive_migration_costs(self, config: Dict, analysis: Dict) -> Dict:
         """Calculate comprehensive costs for all AWS services"""
@@ -3867,23 +3904,27 @@ class EnhancedMigrationAnalyzer:
         }
 
     async def _calculate_ai_migration_time_with_agents(self, config: Dict, migration_throughput: float,
-                                                      onprem_performance: Dict, agent_analysis: Dict) -> float:
+                                                    onprem_performance: Dict, agent_analysis: Dict) -> float:
         """AI-enhanced migration time calculation with backup storage considerations"""
 
-        database_size_gb = config['database_size_gb']
-        num_agents = config.get('number_of_agents', 1)
+        database_size_gb = safe_float(config.get('database_size_gb', 1000))
+        num_agents = safe_int(config.get('number_of_agents', 1))
         destination_storage = config.get('destination_storage_type', 'S3')
         migration_method = config.get('migration_method', 'direct_replication')
 
         # Calculate data size to transfer
         if migration_method == 'backup_restore':
             # For backup/restore, calculate backup file size
-            backup_size_multiplier = config.get('backup_size_multiplier', 0.7)
+            backup_size_multiplier = safe_float(config.get('backup_size_multiplier', 0.7))
             data_size_gb = database_size_gb * backup_size_multiplier
             backup_storage_type = config.get('backup_storage_type', 'nas_drive')
 
             # Base calculation for file transfer
-            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
+            migration_throughput_safe = safe_float(migration_throughput, 100)  # Default 100 Mbps
+            if migration_throughput_safe > 0:
+                base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput_safe * 3600)
+            else:
+                base_time_hours = 24  # Default 24 hours if no throughput
 
             # Backup storage specific factors
             if backup_storage_type == 'windows_share':
@@ -3897,19 +3938,23 @@ class EnhancedMigrationAnalyzer:
         else:
             # For direct replication, use database size
             data_size_gb = database_size_gb
-            base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput * 3600)
+            migration_throughput_safe = safe_float(migration_throughput, 100)
+            if migration_throughput_safe > 0:
+                base_time_hours = (data_size_gb * 8 * 1000) / (migration_throughput_safe * 3600)
+            else:
+                base_time_hours = 48  # Default 48 hours if no throughput
             complexity_factor = 1.0
             backup_prep_time = 0
 
         # Database engine complexity
-        if config['source_database_engine'] != config['database_engine']:
+        if config.get('source_database_engine') != config.get('database_engine'):
             complexity_factor *= 1.3
 
         # OS and platform factors
-        if 'windows' in config['operating_system']:
+        if 'windows' in config.get('operating_system', ''):
             complexity_factor *= 1.1
 
-        if config['server_type'] == 'vmware':
+        if config.get('server_type') == 'vmware':
             complexity_factor *= 1.05
 
         # Destination storage adjustments
@@ -3919,8 +3964,8 @@ class EnhancedMigrationAnalyzer:
             complexity_factor *= 0.7
 
         # Agent scaling adjustments
-        scaling_efficiency = agent_analysis.get('scaling_efficiency', 1.0)
-        storage_multiplier = agent_analysis.get('storage_performance_multiplier', 1.0)
+        scaling_efficiency = safe_float(agent_analysis.get('scaling_efficiency', 1.0))
+        storage_multiplier = safe_float(agent_analysis.get('storage_performance_multiplier', 1.0))
 
         if num_agents > 1:
             agent_time_factor = (1 / min(num_agents * scaling_efficiency * storage_multiplier, 6.0))
@@ -3931,7 +3976,7 @@ class EnhancedMigrationAnalyzer:
 
         total_time = base_time_hours * complexity_factor + backup_prep_time
 
-        return total_time
+        return max(0.1, total_time)  # Ensure minimum 0.1 hours
 
     async def _ai_enhanced_aws_sizing(self, config: Dict) -> Dict:
         """AI-enhanced AWS sizing"""
