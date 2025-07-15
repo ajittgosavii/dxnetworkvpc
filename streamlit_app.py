@@ -2583,6 +2583,8 @@ class EnhancedNetworkIntelligenceManager:
         'recommended_improvements': ['Implement NFS over VPN', 'Add backup staging area']
         }
         },
+              
+        
 # Original paths for direct replication (EXISTING)
         'nonprod_sj_linux_nas_s3': {
         'name': 'Non-Prod: San Jose Linux NAS → AWS S3 (Direct Replication)',
@@ -2738,6 +2740,365 @@ class EnhancedNetworkIntelligenceManager:
         }
         }
         }
+        self.get_complete_network_paths()
+    
+        def get_complete_network_paths(self):
+            """Complete network_paths dictionary with missing Windows direct replication paths"""
+            
+            # Add missing network paths
+            additional_paths = {
+                # Windows Direct Replication Paths (missing from original)
+                'nonprod_sj_windows_nas_s3': {
+                    'name': 'Non-Prod: San Jose Windows NAS → AWS S3 (Direct Replication)',
+                    'destination_storage': 'S3',
+                    'source': 'San Jose',
+                    'destination': 'AWS US-West-2 S3',
+                    'environment': 'non-production',
+                    'os_type': 'windows',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'Windows NAS to Windows Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 2,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.93
+                        },
+                        {
+                            'name': 'Windows Jump Server to AWS S3 (DX)',
+                            'bandwidth_mbps': 2000,
+                            'latency_ms': 18,
+                            'reliability': 0.998,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 2.0,
+                            'ai_optimization_potential': 0.90
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Windows protocol overhead', 'DX connection sharing'],
+                        'optimization_opportunities': ['Windows performance tuning', 'DX bandwidth upgrade'],
+                        'risk_factors': ['Single DX connection dependency', 'Windows update cycles'],
+                        'recommended_improvements': ['Implement Windows caching', 'Configure QoS on DX']
+                    }
+                },
+                
+                'prod_sa_windows_nas_s3': {
+                    'name': 'Prod: San Antonio Windows NAS → San Jose → AWS Production VPC S3',
+                    'destination_storage': 'S3',
+                    'source': 'San Antonio',
+                    'destination': 'AWS US-West-2 Production VPC S3',
+                    'environment': 'production',
+                    'os_type': 'windows',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'San Antonio Windows NAS to Windows Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 2,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.95
+                        },
+                        {
+                            'name': 'San Antonio to San Jose (Private Line)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 15,
+                            'reliability': 0.9995,
+                            'connection_type': 'private_line',
+                            'cost_factor': 3.0,
+                            'ai_optimization_potential': 0.92
+                        },
+                        {
+                            'name': 'San Jose to AWS Production VPC S3 (DX)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 10,
+                            'reliability': 0.9999,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 4.0,
+                            'ai_optimization_potential': 0.94
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Cross-site Windows latency', 'Multiple hop complexity'],
+                        'optimization_opportunities': ['End-to-end Windows optimization', 'Compression algorithms'],
+                        'risk_factors': ['Multiple failure points', 'Windows authentication across sites'],
+                        'recommended_improvements': ['Implement WAN optimization', 'Add redundant paths']
+                    }
+                },
+                
+                # Production FSx paths for completeness
+                'prod_sa_linux_nas_fsx_windows': {
+                    'name': 'Prod: San Antonio Linux NAS → San Jose → AWS FSx for Windows',
+                    'destination_storage': 'FSx_Windows',
+                    'source': 'San Antonio',
+                    'destination': 'AWS US-West-2 FSx for Windows',
+                    'environment': 'production',
+                    'os_type': 'linux',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'San Antonio Linux NAS to Linux Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 1,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.97
+                        },
+                        {
+                            'name': 'San Antonio to San Jose (Private Line)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 12,
+                            'reliability': 0.9995,
+                            'connection_type': 'private_line',
+                            'cost_factor': 3.0,
+                            'ai_optimization_potential': 0.94
+                        },
+                        {
+                            'name': 'San Jose to AWS FSx Windows (DX)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 6,
+                            'reliability': 0.9999,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 4.5,
+                            'ai_optimization_potential': 0.96
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Linux to Windows protocol conversion', 'Cross-site latency'],
+                        'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
+                        'risk_factors': ['Cross-platform compatibility', 'Multiple failure points'],
+                        'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
+                    }
+                },
+                
+                'prod_sa_linux_nas_fsx_lustre': {
+                    'name': 'Prod: San Antonio Linux NAS → San Jose → AWS FSx for Lustre',
+                    'destination_storage': 'FSx_Lustre',
+                    'source': 'San Antonio',
+                    'destination': 'AWS US-West-2 FSx for Lustre',
+                    'environment': 'production',
+                    'os_type': 'linux',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'San Antonio Linux NAS to Linux Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 1,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.97
+                        },
+                        {
+                            'name': 'San Antonio to San Jose (Private Line)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 12,
+                            'reliability': 0.9995,
+                            'connection_type': 'private_line',
+                            'cost_factor': 3.0,
+                            'ai_optimization_potential': 0.94
+                        },
+                        {
+                            'name': 'San Jose to AWS FSx Lustre (DX)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 4,
+                            'reliability': 0.9999,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 5.0,
+                            'ai_optimization_potential': 0.98
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Lustre client configuration', 'Cross-site coordination'],
+                        'optimization_opportunities': ['Lustre striping optimization', 'Parallel I/O tuning'],
+                        'risk_factors': ['Lustre complexity', 'Multiple failure points'],
+                        'recommended_improvements': ['Optimize Lustre striping patterns', 'Configure parallel data transfer']
+                    }
+                },
+                
+                # Add nonprod Windows FSx paths for completeness
+                'nonprod_sj_windows_nas_fsx_windows': {
+                    'name': 'Non-Prod: San Jose Windows NAS → AWS FSx for Windows',
+                    'destination_storage': 'FSx_Windows',
+                    'source': 'San Jose',
+                    'destination': 'AWS US-West-2 FSx for Windows',
+                    'environment': 'non-production',
+                    'os_type': 'windows',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'Windows NAS to Windows Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 2,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.93
+                        },
+                        {
+                            'name': 'Windows Jump Server to AWS FSx Windows (DX)',
+                            'bandwidth_mbps': 2000,
+                            'latency_ms': 12,
+                            'reliability': 0.999,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 2.5,
+                            'ai_optimization_potential': 0.94
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Windows to Windows protocol optimization', 'SMB overhead'],
+                        'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
+                        'risk_factors': ['Cross-platform compatibility', 'SMB version negotiation'],
+                        'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
+                    }
+                },
+                
+                'nonprod_sj_windows_nas_fsx_lustre': {
+                    'name': 'Non-Prod: San Jose Windows NAS → AWS FSx for Lustre',
+                    'destination_storage': 'FSx_Lustre',
+                    'source': 'San Jose',
+                    'destination': 'AWS US-West-2 FSx for Lustre',
+                    'environment': 'non-production',
+                    'os_type': 'windows',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'Windows NAS to Windows Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 2,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.93
+                        },
+                        {
+                            'name': 'Windows Jump Server to AWS FSx Lustre (DX)',
+                            'bandwidth_mbps': 2000,
+                            'latency_ms': 8,
+                            'reliability': 0.9995,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 3.0,
+                            'ai_optimization_potential': 0.95
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Windows Lustre client setup', 'Protocol conversion overhead'],
+                        'optimization_opportunities': ['Lustre client optimization', 'Parallel I/O tuning'],
+                        'risk_factors': ['Windows Lustre compatibility', 'Client complexity'],
+                        'recommended_improvements': ['Optimize Windows Lustre client', 'Configure parallel data transfer']
+                    }
+                },
+                
+                # Production Windows FSx paths
+                'prod_sa_windows_nas_fsx_windows': {
+                    'name': 'Prod: San Antonio Windows NAS → San Jose → AWS FSx for Windows',
+                    'destination_storage': 'FSx_Windows',
+                    'source': 'San Antonio',
+                    'destination': 'AWS US-West-2 FSx for Windows',
+                    'environment': 'production',
+                    'os_type': 'windows',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'San Antonio Windows NAS to Windows Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 2,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.95
+                        },
+                        {
+                            'name': 'San Antonio to San Jose (Private Line)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 15,
+                            'reliability': 0.9995,
+                            'connection_type': 'private_line',
+                            'cost_factor': 3.0,
+                            'ai_optimization_potential': 0.92
+                        },
+                        {
+                            'name': 'San Jose to AWS FSx Windows (DX)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 6,
+                            'reliability': 0.9999,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 4.5,
+                            'ai_optimization_potential': 0.96
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Windows SMB over WAN', 'Multi-hop complexity'],
+                        'optimization_opportunities': ['WAN optimization', 'SMB3 multichannel'],
+                        'risk_factors': ['Cross-site Windows dependencies', 'SMB over WAN reliability'],
+                        'recommended_improvements': ['Implement WAN acceleration', 'Configure SMB3 multichannel']
+                    }
+                },
+                
+                'prod_sa_windows_nas_fsx_lustre': {
+                    'name': 'Prod: San Antonio Windows NAS → San Jose → AWS FSx for Lustre',
+                    'destination_storage': 'FSx_Lustre',
+                    'source': 'San Antonio',
+                    'destination': 'AWS US-West-2 FSx for Lustre',
+                    'environment': 'production',
+                    'os_type': 'windows',
+                    'storage_type': 'nas',
+                    'migration_type': 'direct_replication',
+                    'segments': [
+                        {
+                            'name': 'San Antonio Windows NAS to Windows Jump Server',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 2,
+                            'reliability': 0.999,
+                            'connection_type': 'internal_lan',
+                            'cost_factor': 0.0,
+                            'ai_optimization_potential': 0.95
+                        },
+                        {
+                            'name': 'San Antonio to San Jose (Private Line)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 15,
+                            'reliability': 0.9995,
+                            'connection_type': 'private_line',
+                            'cost_factor': 3.0,
+                            'ai_optimization_potential': 0.92
+                        },
+                        {
+                            'name': 'San Jose to AWS FSx Lustre (DX)',
+                            'bandwidth_mbps': 10000,
+                            'latency_ms': 4,
+                            'reliability': 0.9999,
+                            'connection_type': 'direct_connect',
+                            'cost_factor': 5.0,
+                            'ai_optimization_potential': 0.98
+                        }
+                    ],
+                    'ai_insights': {
+                        'performance_bottlenecks': ['Windows Lustre complexity', 'Cross-site latency'],
+                        'optimization_opportunities': ['Lustre optimization', 'End-to-end tuning'],
+                        'risk_factors': ['Windows Lustre support', 'Multiple failure points'],
+                        'recommended_improvements': ['Optimize Windows Lustre setup', 'Add redundant paths']
+                    }
+                }
+            }
+            
+            # Merge with existing network_paths
+            self.network_paths.update(additional_paths)
+            
+            return self.network_paths
+        
+        
 
     def calculate_ai_enhanced_path_performance(self, path_key: str, time_of_day: int = None) -> Dict:
         """AI-enhanced network path performance calculation"""
@@ -3373,51 +3734,82 @@ class EnhancedMigrationAnalyzer:
             'ai_overall_assessment': ai_overall_assessment
         }
 
-    def _get_network_path_key(self, config: Dict) -> str:
-        """Get network path key based on migration method and backup storage"""
-        os_lower = config.get('operating_system', '').lower()
-        if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel']):
-            os_type = 'linux'
+    
+    
+    
+    # In the EnhancedMigrationAnalyzer class (around line 1464), replace the _get_network_path_key method:
+
+def _get_network_path_key(self, config: Dict) -> str:
+    """Get network path key based on migration method and backup storage with error handling"""
+    os_lower = config.get('operating_system', '').lower()
+    if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel']):
+        os_type = 'linux'
+    else:
+        os_type = 'windows'
+
+    environment = config.get('environment', 'non-production').replace('-', '_').lower()
+    destination_storage = config.get('destination_storage_type', 'S3').lower()
+    migration_method = config.get('migration_method', 'direct_replication')
+    backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+
+    # For backup/restore method, use backup storage paths
+    if migration_method == 'backup_restore':
+        if environment in ['non_production', 'nonprod']:
+            if backup_storage_type == 'windows_share':
+                return "nonprod_sj_windows_share_s3"
+            else:  # nas_drive
+                return "nonprod_sj_nas_drive_s3"
+        elif environment == 'production':
+            if backup_storage_type == 'windows_share':
+                return "prod_sa_windows_share_s3"
+            else:  # nas_drive
+                return "prod_sa_nas_drive_s3"
         else:
-            os_type = 'windows'
-
-        environment = config.get('environment', 'non-production').replace('-', '_').lower()
-        destination_storage = config.get('destination_storage_type', 'S3').lower()
-        migration_method = config.get('migration_method', 'direct_replication')
-        backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-
-        # For backup/restore method, use backup storage paths
-        if migration_method == 'backup_restore':
-            if environment in ['non_production', 'nonprod']:
-                if backup_storage_type == 'windows_share':
-                    return "nonprod_sj_windows_share_s3"
-                else:  # nas_drive
-                    return "nonprod_sj_nas_drive_s3"
-            elif environment == 'production':
-                if backup_storage_type == 'windows_share':
-                    return "prod_sa_windows_share_s3"
-                else:  # nas_drive
-                    return "prod_sa_nas_drive_s3"
-        
-        # For direct replication, use original paths
+            return "nonprod_sj_nas_drive_s3"  # Default fallback
+    
+    # For direct replication, use original paths
+    else:
+        if environment in ['non_production', 'nonprod']:
+            if destination_storage == 's3':
+                key = f"nonprod_sj_{os_type}_nas_s3"
+            elif destination_storage == 'fsx_windows':
+                key = f"nonprod_sj_{os_type}_nas_fsx_windows"
+            elif destination_storage == 'fsx_lustre':
+                key = f"nonprod_sj_{os_type}_nas_fsx_lustre"
+            else:
+                key = f"nonprod_sj_{os_type}_nas_s3"
+        elif environment == 'production':
+            if destination_storage == 's3':
+                key = f"prod_sa_{os_type}_nas_s3"
+            elif destination_storage == 'fsx_windows':
+                key = f"prod_sa_{os_type}_nas_fsx_windows"
+            elif destination_storage == 'fsx_lustre':
+                key = f"prod_sa_{os_type}_nas_fsx_lustre"
+            else:
+                key = f"prod_sa_{os_type}_nas_s3"
         else:
-            if environment in ['non_production', 'nonprod']:
-                if destination_storage == 's3':
-                    return f"nonprod_sj_{os_type}_nas_s3"
-                elif destination_storage == 'fsx_windows':
-                    return f"nonprod_sj_{os_type}_nas_fsx_windows"
-                elif destination_storage == 'fsx_lustre':
-                    return f"nonprod_sj_{os_type}_nas_fsx_lustre"
-            elif environment == 'production':
-                if destination_storage == 's3':
-                    return f"prod_sa_{os_type}_nas_s3"
-                elif destination_storage == 'fsx_windows':
-                    return f"prod_sa_{os_type}_nas_fsx_windows"
-                elif destination_storage == 'fsx_lustre':
-                    return f"prod_sa_{os_type}_nas_fsx_lustre"
+            key = f"nonprod_sj_{os_type}_nas_s3"  # Default fallback
 
-        # Default fallback for direct replication
-        return f"nonprod_sj_{os_type}_nas_s3"
+        # Check if the key exists in network_paths, if not, use fallback
+        if hasattr(self.network_manager, 'network_paths') and key in self.network_manager.network_paths:
+            return key
+        else:
+            # Use fallback logic
+            if os_type == 'windows':
+                fallback_key = key.replace('windows', 'linux')
+                if hasattr(self.network_manager, 'network_paths') and fallback_key in self.network_manager.network_paths:
+                    return fallback_key
+            
+            if 'prod_sa' in key:
+                fallback_key = key.replace('prod_sa', 'nonprod_sj')
+                if hasattr(self.network_manager, 'network_paths') and fallback_key in self.network_manager.network_paths:
+                    return fallback_key
+            
+            # Ultimate fallback to a known working path
+            return "nonprod_sj_linux_nas_s3"
+
+    # Default fallback for backup/restore if nothing matches
+    return "nonprod_sj_nas_drive_s3"
 
     async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
         """Enhanced migration agent analysis with scaling support and backup storage considerations"""
