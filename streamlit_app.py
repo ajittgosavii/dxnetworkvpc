@@ -3714,74 +3714,77 @@ class EnhancedMigrationAnalyzer:
     
     # In the EnhancedMigrationAnalyzer class (around line 1464), replace the _get_network_path_key method:
 
-def _get_network_path_key(self, config: Dict) -> str:
-    """Get network path key based on migration method and backup storage with error handling"""
-    os_lower = config.get('operating_system', '').lower()
-    if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel']):
-        os_type = 'linux'
-    else:
-        os_type = 'windows'
-
-    environment = config.get('environment', 'non-production').replace('-', '_').lower()
-    destination_storage = config.get('destination_storage_type', 'S3').lower()
-    migration_method = config.get('migration_method', 'direct_replication')
-    backup_storage_type = config.get('backup_storage_type', 'nas_drive')
-
-    # For backup/restore method, use backup storage paths
-    if migration_method == 'backup_restore':
-        if environment in ['non_production', 'nonprod']:
-            if backup_storage_type == 'windows_share':
-                return "nonprod_sj_windows_share_s3"
-            else:  # nas_drive
-                return "nonprod_sj_nas_drive_s3"
-        elif environment == 'production':
-            if backup_storage_type == 'windows_share':
-                return "prod_sa_windows_share_s3"
-            else:  # nas_drive
-                return "prod_sa_nas_drive_s3"
-        else:
-            return "nonprod_sj_nas_drive_s3"  # Default fallback
-    
-    # For direct replication, use original paths
-    else:
-        if environment in ['non_production', 'nonprod']:
-            if destination_storage == 's3':
-                key = f"nonprod_sj_{os_type}_nas_s3"
-            elif destination_storage == 'fsx_windows':
-                key = f"nonprod_sj_{os_type}_nas_fsx_windows"
-            elif destination_storage == 'fsx_lustre':
-                key = f"nonprod_sj_{os_type}_nas_fsx_lustre"
+    def _get_network_path_key(self, config: Dict) -> str:
+            """Get network path key based on migration method and backup storage with error handling"""
+            os_lower = config.get('operating_system', '').lower()
+            if any(os_name in os_lower for os_name in ['linux', 'ubuntu', 'rhel']):
+                os_type = 'linux'
             else:
-                key = f"nonprod_sj_{os_type}_nas_s3"
-        elif environment == 'production':
-            if destination_storage == 's3':
-                key = f"prod_sa_{os_type}_nas_s3"
-            elif destination_storage == 'fsx_windows':
-                key = f"prod_sa_{os_type}_nas_fsx_windows"
-            elif destination_storage == 'fsx_lustre':
-                key = f"prod_sa_{os_type}_nas_fsx_lustre"
-            else:
-                key = f"prod_sa_{os_type}_nas_s3"
-        else:
-            key = f"nonprod_sj_{os_type}_nas_s3"  # Default fallback
+                os_type = 'windows'
 
-        # Check if the key exists in network_paths, if not, use fallback
-        if hasattr(self.network_manager, 'network_paths') and key in self.network_manager.network_paths:
-            return key
-        else:
-            # Use fallback logic
-            if os_type == 'windows':
-                fallback_key = key.replace('windows', 'linux')
-                if hasattr(self.network_manager, 'network_paths') and fallback_key in self.network_manager.network_paths:
-                    return fallback_key
+            environment = config.get('environment', 'non-production').replace('-', '_').lower()
+            destination_storage = config.get('destination_storage_type', 'S3').lower()
+            migration_method = config.get('migration_method', 'direct_replication')
+            backup_storage_type = config.get('backup_storage_type', 'nas_drive')
+
+            # For backup/restore method, use backup storage paths
+            if migration_method == 'backup_restore':
+                if environment in ['non_production', 'nonprod']:
+                    if backup_storage_type == 'windows_share':
+                        return "nonprod_sj_windows_share_s3"
+                    else:  # nas_drive
+                        return "nonprod_sj_nas_drive_s3"
+                elif environment == 'production':
+                    if backup_storage_type == 'windows_share':
+                        return "prod_sa_windows_share_s3"
+                    else:  # nas_drive
+                        return "prod_sa_nas_drive_s3"
+                else:
+                    return "nonprod_sj_nas_drive_s3"  # Default fallback
             
-            if 'prod_sa' in key:
-                fallback_key = key.replace('prod_sa', 'nonprod_sj')
-                if hasattr(self.network_manager, 'network_paths') and fallback_key in self.network_manager.network_paths:
-                    return fallback_key
-            
-            # Ultimate fallback to a known working path
-            return "nonprod_sj_linux_nas_s3"
+            # For direct replication, use original paths
+            else:
+                if environment in ['non_production', 'nonprod']:
+                    if destination_storage == 's3':
+                        key = f"nonprod_sj_{os_type}_nas_s3"
+                    elif destination_storage == 'fsx_windows':
+                        key = f"nonprod_sj_{os_type}_nas_fsx_windows"
+                    elif destination_storage == 'fsx_lustre':
+                        key = f"nonprod_sj_{os_type}_nas_fsx_lustre"
+                    else:
+                        key = f"nonprod_sj_{os_type}_nas_s3"
+                elif environment == 'production':
+                    if destination_storage == 's3':
+                        key = f"prod_sa_{os_type}_nas_s3"
+                    elif destination_storage == 'fsx_windows':
+                        key = f"prod_sa_{os_type}_nas_fsx_windows"
+                    elif destination_storage == 'fsx_lustre':
+                        key = f"prod_sa_{os_type}_nas_fsx_lustre"
+                    else:
+                        key = f"prod_sa_{os_type}_nas_s3"
+                else:
+                    key = f"nonprod_sj_{os_type}_nas_s3"  # Default fallback
+
+                # Check if the key exists in network_paths, if not, use fallback
+                if hasattr(self.network_manager, 'network_paths') and key in self.network_manager.network_paths:
+                    return key
+                else:
+                    # Use fallback logic
+                    if os_type == 'windows':
+                        fallback_key = key.replace('windows', 'linux')
+                        if hasattr(self.network_manager, 'network_paths') and fallback_key in self.network_manager.network_paths:
+                            return fallback_key
+                    
+                    if 'prod_sa' in key:
+                        fallback_key = key.replace('prod_sa', 'nonprod_sj')
+                        if hasattr(self.network_manager, 'network_paths') and fallback_key in self.network_manager.network_paths:
+                            return fallback_key
+                    
+                    # Ultimate fallback to a known working path
+                    return "nonprod_sj_linux_nas_s3"
+
+            # Default fallback for backup/restore if nothing matches
+            return "nonprod_sj_nas_drive_s3"
 
     # Default fallback for backup/restore if nothing matches
     return "nonprod_sj_nas_drive_s3"
