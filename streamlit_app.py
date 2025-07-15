@@ -1602,67 +1602,67 @@ class ComprehensiveAWSCostCalculator:
         self.aws_api = aws_api_manager
 
     async def calculate_unified_migration_costs(self, config: Dict, analysis: Dict) -> Dict:
-    """Single unified cost calculation to eliminate discrepancies"""
+        """Single unified cost calculation to eliminate discrepancies"""
 
-    # Get components from their authoritative sources
-    aws_sizing = analysis.get('aws_sizing_recommendations', {})
-    agent_analysis = analysis.get('agent_analysis', {})
+        # Get components from their authoritative sources
+        aws_sizing = analysis.get('aws_sizing_recommendations', {})
+        agent_analysis = analysis.get('agent_analysis', {})
 
-    # AWS Infrastructure Costs (from sizing recommendations)
-    target_platform = config.get('target_platform', 'rds')
-    if target_platform == 'rds':
-        aws_compute_monthly = safe_float(aws_sizing.get('rds_recommendations', {}).get('monthly_instance_cost', 0))
-        aws_storage_monthly = safe_float(aws_sizing.get('rds_recommendations', {}).get('monthly_storage_cost', 0))
-    else:
-        aws_compute_monthly = safe_float(aws_sizing.get('ec2_recommendations', {}).get('monthly_instance_cost', 0))
-        aws_storage_monthly = safe_float(aws_sizing.get('ec2_recommendations', {}).get('monthly_storage_cost', 0))
+        # AWS Infrastructure Costs (from sizing recommendations)
+        target_platform = config.get('target_platform', 'rds')
+        if target_platform == 'rds':
+            aws_compute_monthly = safe_float(aws_sizing.get('rds_recommendations', {}).get('monthly_instance_cost', 0))
+            aws_storage_monthly = safe_float(aws_sizing.get('rds_recommendations', {}).get('monthly_storage_cost', 0))
+        else:
+            aws_compute_monthly = safe_float(aws_sizing.get('ec2_recommendations', {}).get('monthly_instance_cost', 0))
+            aws_storage_monthly = safe_float(aws_sizing.get('ec2_recommendations', {}).get('monthly_storage_cost', 0))
 
-    # Agent Costs (from agent analysis - single source of truth)
-    agent_monthly = safe_float(agent_analysis.get('monthly_cost', 0))
+        # Agent Costs (from agent analysis - single source of truth)
+        agent_monthly = safe_float(agent_analysis.get('monthly_cost', 0))
 
-    # Additional Storage Costs (destination and backup)
-    additional_storage = await self._calculate_additional_storage_costs_unified(config)
+        # Additional Storage Costs (destination and backup)
+        additional_storage = await self._calculate_additional_storage_costs_unified(config)
 
-    # Network Costs
-    network_monthly = await self._calculate_network_costs_unified(config)
+        # Network Costs
+        network_monthly = await self._calculate_network_costs_unified(config)
 
-    # Total monthly cost
-    total_monthly = (
-        aws_compute_monthly +
-        aws_storage_monthly +
-        agent_monthly +
-        safe_float(additional_storage.get('total', 0)) +
-        network_monthly
-    )
+        # Total monthly cost
+        total_monthly = (
+            aws_compute_monthly +
+            aws_storage_monthly +
+            agent_monthly +
+            safe_float(additional_storage.get('total', 0)) +
+            network_monthly
+        )
 
-    # One-time costs
-    setup_cost = 2000 + (safe_int(config.get('number_of_agents', 1)) * 500)
-    migration_method = config.get('migration_method', 'direct_replication')
-    if migration_method == 'backup_restore':
-        setup_cost += 1000  # Additional DataSync setup
+        # One-time costs
+        setup_cost = 2000 + (safe_int(config.get('number_of_agents', 1)) * 500)
+        migration_method = config.get('migration_method', 'direct_replication')
+        if migration_method == 'backup_restore':
+            setup_cost += 1000  # Additional DataSync setup
 
-    return {
-        'total_monthly': max(0, total_monthly),
-        'total_one_time': max(0, setup_cost),
-        'three_year_total': max(0, (total_monthly * 36) + setup_cost),
-        'detailed_breakdown': {
-            'aws_compute': aws_compute_monthly,
-            'aws_storage': aws_storage_monthly,
-            'migration_agents': agent_monthly,
-            'additional_storage': safe_float(additional_storage.get('total', 0)),
-            'network': network_monthly
-        },
-        'monthly_breakdown': {
-            'compute': aws_compute_monthly,
-            'storage': aws_storage_monthly,
-            'agents': agent_monthly,
-            'destination_storage': safe_float(additional_storage.get('destination', 0)),
-            'backup_storage': safe_float(additional_storage.get('backup', 0)),
-            'network': network_monthly
-        },
-        'cost_source': 'unified_calculation',
-        'calculation_timestamp': datetime.now().isoformat()
-    }
+        return {
+            'total_monthly': max(0, total_monthly),
+            'total_one_time': max(0, setup_cost),
+            'three_year_total': max(0, (total_monthly * 36) + setup_cost),
+            'detailed_breakdown': {
+                'aws_compute': aws_compute_monthly,
+                'aws_storage': aws_storage_monthly,
+                'migration_agents': agent_monthly,
+                'additional_storage': safe_float(additional_storage.get('total', 0)),
+                'network': network_monthly
+            },
+            'monthly_breakdown': {
+                'compute': aws_compute_monthly,
+                'storage': aws_storage_monthly,
+                'agents': agent_monthly,
+                'destination_storage': safe_float(additional_storage.get('destination', 0)),
+                'backup_storage': safe_float(additional_storage.get('backup', 0)),
+                'network': network_monthly
+            },
+            'cost_source': 'unified_calculation',
+            'calculation_timestamp': datetime.now().isoformat()
+        }
 
     async def _calculate_additional_storage_costs_unified(self, config: Dict) -> Dict:
         """Calculate additional storage costs (destination and backup)"""
@@ -1690,20 +1690,20 @@ class ComprehensiveAWSCostCalculator:
         return costs
 
     async def _calculate_network_costs_unified(self, config: Dict) -> float:
-    """Calculate unified network costs"""
-    environment = config.get('environment', 'non-production')
-    database_size = safe_float(config.get('database_size_gb', 1000))
+        """Calculate unified network costs"""
+        environment = config.get('environment', 'non-production')
+        database_size = safe_float(config.get('database_size_gb', 1000))
 
-    # Direct Connect
-    if environment == 'production':
-        dx_monthly = 2.25 * 24 * 30  # 10Gbps DX
-        data_transfer = database_size * 0.1 * 0.02  # 10% monthly transfer
-        vpn_backup = 45
-        return dx_monthly + data_transfer + vpn_backup
-    else:
-        dx_monthly = 0.30 * 24 * 30  # 1Gbps DX
-        data_transfer = database_size * 0.05 * 0.02  # 5% monthly transfer
-        return dx_monthly + data_transfer
+        # Direct Connect
+        if environment == 'production':
+            dx_monthly = 2.25 * 24 * 30  # 10Gbps DX
+            data_transfer = database_size * 0.1 * 0.02  # 10% monthly transfer
+            vpn_backup = 45
+            return dx_monthly + data_transfer + vpn_backup
+        else:
+            dx_monthly = 0.30 * 24 * 30  # 1Gbps DX
+            data_transfer = database_size * 0.05 * 0.02  # 5% monthly transfer
+            return dx_monthly + data_transfer
 
     async def calculate_comprehensive_migration_costs(self, config: Dict, analysis: Dict) -> Dict:
         """Calculate comprehensive costs for all AWS services"""
