@@ -3785,9 +3785,7 @@ class EnhancedMigrationAnalyzer:
 
             # Default fallback for backup/restore if nothing matches
             return "nonprod_sj_nas_drive_s3"
-
-    # Default fallback for backup/restore if nothing matches
-    return "nonprod_sj_nas_drive_s3"
+     
 
     async def _analyze_ai_migration_agents_with_scaling(self, config: Dict, primary_tool: str, network_perf: Dict) -> Dict:
         """Enhanced migration agent analysis with scaling support and backup storage considerations"""
