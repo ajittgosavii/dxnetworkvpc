@@ -2420,685 +2420,660 @@ class EnhancedNetworkIntelligenceManager:
 
     def __init__(self):
         self.network_paths = {
-# Backup Storage to S3 Paths (NEW)
-        'nonprod_sj_windows_share_s3': {
-        'name': 'Non-Prod: San Jose Windows Share → AWS S3 (DataSync)',
-        'destination_storage': 'S3',
-        'source': 'San Jose Windows Share',
-        'destination': 'AWS US-West-2 S3',
-        'environment': 'non-production',
-        'os_type': 'windows',
-        'storage_type': 'windows_share',
-        'migration_type': 'backup_restore',
-        'segments': [
-        {
-        'name': 'Windows Share to DataSync Agent',
-        'bandwidth_mbps': 1000,
-        'latency_ms': 3,
-        'reliability': 0.998,
-        'connection_type': 'smb_share',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.92
-        },
-        {
-        'name': 'DataSync Agent to AWS S3 (DX)',
-        'bandwidth_mbps': 2000,
-        'latency_ms': 15,
-        'reliability': 0.998,
-        'connection_type': 'direct_connect',
-        'cost_factor': 2.0,
-        'ai_optimization_potential': 0.94
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['SMB protocol overhead', 'Windows Share I/O'],
-        'optimization_opportunities': ['SMB3 multichannel', 'DataSync bandwidth optimization'],
-        'risk_factors': ['Windows Share availability', 'SMB authentication'],
-        'recommended_improvements': ['Enable SMB3 multichannel', 'Pre-stage backup files']
-        }
-        },
-        'nonprod_sj_nas_drive_s3': {
-        'name': 'Non-Prod: San Jose NAS Drive → AWS S3 (DataSync)',
-        'destination_storage': 'S3',
-        'source': 'San Jose NAS Drive',
-        'destination': 'AWS US-West-2 S3',
-        'environment': 'non-production',
-        'os_type': 'linux',
-        'storage_type': 'nas_drive',
-        'migration_type': 'backup_restore',
-        'segments': [
-        {
-        'name': 'NAS Drive to DataSync Agent',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 2,
-        'reliability': 0.999,
-        'connection_type': 'nfs_share',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.96
-        },
-        {
-        'name': 'DataSync Agent to AWS S3 (DX)',
-        'bandwidth_mbps': 2000,
-        'latency_ms': 12,
-        'reliability': 0.998,
-        'connection_type': 'direct_connect',
-        'cost_factor': 2.0,
-        'ai_optimization_potential': 0.95
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['NAS internal bandwidth', 'DX connection sharing'],
-        'optimization_opportunities': ['NFS performance tuning', 'Parallel file transfers'],
-        'risk_factors': ['NAS hardware limitations', 'NFS connection stability'],
-        'recommended_improvements': ['Optimize NFS mount options', 'Configure DataSync parallelism']
-        }
-        },
-        'prod_sa_windows_share_s3': {
-        'name': 'Prod: San Antonio Windows Share → San Jose → AWS Production VPC S3',
-        'destination_storage': 'S3',
-        'source': 'San Antonio Windows Share',
-        'destination': 'AWS US-West-2 Production VPC S3',
-        'environment': 'production',
-        'os_type': 'windows',
-        'storage_type': 'windows_share',
-        'migration_type': 'backup_restore',
-        'segments': [
-        {
-        'name': 'Windows Share to DataSync Agent',
-        'bandwidth_mbps': 1000,
-        'latency_ms': 2,
-        'reliability': 0.999,
-        'connection_type': 'smb_share',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.93
-        },
-        {
-        'name': 'San Antonio to San Jose (Private Line)',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 12,
-        'reliability': 0.9995,
-        'connection_type': 'private_line',
-        'cost_factor': 3.0,
-        'ai_optimization_potential': 0.94
-        },
-        {
-        'name': 'San Jose to AWS Production VPC S3 (DX)',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 8,
-        'reliability': 0.9999,
-        'connection_type': 'direct_connect',
-        'cost_factor': 4.0,
-        'ai_optimization_potential': 0.96
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['SMB over WAN latency', 'Multi-hop complexity'],
-        'optimization_opportunities': ['WAN optimization', 'Backup file pre-staging'],
-        'risk_factors': ['Cross-site dependencies', 'SMB over WAN reliability'],
-        'recommended_improvements': ['Implement WAN acceleration', 'Stage backups closer to transfer point']
-        }
-        },
-        'prod_sa_nas_drive_s3': {
-        'name': 'Prod: San Antonio NAS Drive → San Jose → AWS Production VPC S3',
-        'destination_storage': 'S3',
-        'source': 'San Antonio NAS Drive',
-        'destination': 'AWS US-West-2 Production VPC S3',
-        'environment': 'production',
-        'os_type': 'linux',
-        'storage_type': 'nas_drive',
-        'migration_type': 'backup_restore',
-        'segments': [
-        {
-        'name': 'NAS Drive to DataSync Agent',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 1,
-        'reliability': 0.999,
-        'connection_type': 'nfs_share',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.97
-        },
-        {
-        'name': 'San Antonio to San Jose (Private Line)',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 12,
-        'reliability': 0.9995,
-        'connection_type': 'private_line',
-        'cost_factor': 3.0,
-        'ai_optimization_potential': 0.94
-        },
-        {
-        'name': 'San Jose to AWS Production VPC S3 (DX)',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 8,
-        'reliability': 0.9999,
-        'connection_type': 'direct_connect',
-        'cost_factor': 4.0,
-        'ai_optimization_potential': 0.96
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['Cross-site latency accumulation', 'NFS over WAN'],
-        'optimization_opportunities': ['End-to-end optimization', 'NFS tuning'],
-        'risk_factors': ['Multiple failure points', 'NFS over WAN complexity'],
-        'recommended_improvements': ['Implement NFS over VPN', 'Add backup staging area']
-        }
-        },
-              
-        
-# Original paths for direct replication (EXISTING)
-        'nonprod_sj_linux_nas_s3': {
-        'name': 'Non-Prod: San Jose Linux NAS → AWS S3 (Direct Replication)',
-        'destination_storage': 'S3',
-        'source': 'San Jose',
-        'destination': 'AWS US-West-2 S3',
-        'environment': 'non-production',
-        'os_type': 'linux',
-        'storage_type': 'nas',
-        'migration_type': 'direct_replication',
-        'segments': [
-        {
-        'name': 'Linux NAS to Linux Jump Server',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 2,
-        'reliability': 0.999,
-        'connection_type': 'internal_lan',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.95
-        },
-        {
-        'name': 'Linux Jump Server to AWS S3 (DX)',
-        'bandwidth_mbps': 2000,
-        'latency_ms': 15,
-        'reliability': 0.998,
-        'connection_type': 'direct_connect',
-        'cost_factor': 2.0,
-        'ai_optimization_potential': 0.92
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['Linux NAS internal bandwidth', 'DX connection sharing'],
-        'optimization_opportunities': ['NAS performance tuning', 'DX bandwidth upgrade'],
-        'risk_factors': ['Single DX connection dependency', 'NAS hardware limitations'],
-        'recommended_improvements': ['Implement NAS caching', 'Configure QoS on DX']
-        }
-        },
-        'nonprod_sj_linux_nas_fsx_windows': {
-        'name': 'Non-Prod: San Jose Linux NAS → AWS FSx for Windows',
-        'destination_storage': 'FSx_Windows',
-        'source': 'San Jose',
-        'destination': 'AWS US-West-2 FSx for Windows',
-        'environment': 'non-production',
-        'os_type': 'linux',
-        'storage_type': 'nas',
-        'migration_type': 'direct_replication',
-        'segments': [
-        {
-        'name': 'Linux NAS to Linux Jump Server',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 2,
-        'reliability': 0.999,
-        'connection_type': 'internal_lan',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.95
-        },
-        {
-        'name': 'Linux Jump Server to AWS FSx Windows (DX)',
-        'bandwidth_mbps': 2000,
-        'latency_ms': 12,
-        'reliability': 0.999,
-        'connection_type': 'direct_connect',
-        'cost_factor': 2.5,
-        'ai_optimization_potential': 0.94
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['Linux to Windows protocol conversion', 'SMB overhead'],
-        'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
-        'risk_factors': ['Cross-platform compatibility', 'SMB version negotiation'],
-        'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
-        }
-        },
-        'nonprod_sj_linux_nas_fsx_lustre': {
-        'name': 'Non-Prod: San Jose Linux NAS → AWS FSx for Lustre',
-        'destination_storage': 'FSx_Lustre',
-        'source': 'San Jose',
-        'destination': 'AWS US-West-2 FSx for Lustre',
-        'environment': 'non-production',
-        'os_type': 'linux',
-        'storage_type': 'nas',
-        'migration_type': 'direct_replication',
-        'segments': [
-        {
-        'name': 'Linux NAS to Linux Jump Server',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 2,
-        'reliability': 0.999,
-        'connection_type': 'internal_lan',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.95
-        },
-        {
-        'name': 'Linux Jump Server to AWS FSx Lustre (DX)',
-        'bandwidth_mbps': 2000,
-        'latency_ms': 8,
-        'reliability': 0.9995,
-        'connection_type': 'direct_connect',
-        'cost_factor': 3.0,
-        'ai_optimization_potential': 0.97
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['Lustre client configuration', 'Parallel processing coordination'],
-        'optimization_opportunities': ['Lustre striping optimization', 'Parallel I/O tuning'],
-        'risk_factors': ['Lustre complexity', 'Client compatibility'],
-        'recommended_improvements': ['Optimize Lustre striping patterns', 'Configure parallel data transfer']
-        }
-        },
-        'prod_sa_linux_nas_s3': {
-        'name': 'Prod: San Antonio Linux NAS → San Jose → AWS Production VPC S3',
-        'destination_storage': 'S3',
-        'source': 'San Antonio',
-        'destination': 'AWS US-West-2 Production VPC S3',
-        'environment': 'production',
-        'os_type': 'linux',
-        'storage_type': 'nas',
-        'migration_type': 'direct_replication',
-        'segments': [
-        {
-        'name': 'San Antonio Linux NAS to Linux Jump Server',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 1,
-        'reliability': 0.999,
-        'connection_type': 'internal_lan',
-        'cost_factor': 0.0,
-        'ai_optimization_potential': 0.97
-        },
-        {
-        'name': 'San Antonio to San Jose (Private Line)',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 12,
-        'reliability': 0.9995,
-        'connection_type': 'private_line',
-        'cost_factor': 3.0,
-        'ai_optimization_potential': 0.94
-        },
-        {
-        'name': 'San Jose to AWS Production VPC S3 (DX)',
-        'bandwidth_mbps': 10000,
-        'latency_ms': 8,
-        'reliability': 0.9999,
-        'connection_type': 'direct_connect',
-        'cost_factor': 4.0,
-        'ai_optimization_potential': 0.96
-        }
-        ],
-        'ai_insights': {
-        'performance_bottlenecks': ['Cross-site latency accumulation', 'Multiple hop complexity'],
-        'optimization_opportunities': ['End-to-end optimization', 'Compression algorithms'],
-        'risk_factors': ['Multiple failure points', 'Complex troubleshooting'],
-        'recommended_improvements': ['Implement WAN optimization', 'Add redundant paths']
-        }
-        }
-        }
-        self.get_complete_network_paths()
-    
-        def get_complete_network_paths(self):
-            """Complete network_paths dictionary with missing Windows direct replication paths"""
-            
-            # Add missing network paths
-            additional_paths = {
-                # Windows Direct Replication Paths (missing from original)
-                'nonprod_sj_windows_nas_s3': {
-                    'name': 'Non-Prod: San Jose Windows NAS → AWS S3 (Direct Replication)',
-                    'destination_storage': 'S3',
-                    'source': 'San Jose',
-                    'destination': 'AWS US-West-2 S3',
-                    'environment': 'non-production',
-                    'os_type': 'windows',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'Windows NAS to Windows Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 2,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.93
-                        },
-                        {
-                            'name': 'Windows Jump Server to AWS S3 (DX)',
-                            'bandwidth_mbps': 2000,
-                            'latency_ms': 18,
-                            'reliability': 0.998,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 2.0,
-                            'ai_optimization_potential': 0.90
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Windows protocol overhead', 'DX connection sharing'],
-                        'optimization_opportunities': ['Windows performance tuning', 'DX bandwidth upgrade'],
-                        'risk_factors': ['Single DX connection dependency', 'Windows update cycles'],
-                        'recommended_improvements': ['Implement Windows caching', 'Configure QoS on DX']
+            # Backup Storage to S3 Paths (for backup_restore migration method)
+            'nonprod_sj_windows_share_s3': {
+                'name': 'Non-Prod: San Jose Windows Share → AWS S3 (DataSync)',
+                'destination_storage': 'S3',
+                'source': 'San Jose Windows Share',
+                'destination': 'AWS US-West-2 S3',
+                'environment': 'non-production',
+                'os_type': 'windows',
+                'storage_type': 'windows_share',
+                'migration_type': 'backup_restore',
+                'segments': [
+                    {
+                        'name': 'Windows Share to DataSync Agent',
+                        'bandwidth_mbps': 1000,
+                        'latency_ms': 3,
+                        'reliability': 0.998,
+                        'connection_type': 'smb_share',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.92
+                    },
+                    {
+                        'name': 'DataSync Agent to AWS S3 (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 15,
+                        'reliability': 0.998,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.0,
+                        'ai_optimization_potential': 0.94
                     }
-                },
-                
-                'prod_sa_windows_nas_s3': {
-                    'name': 'Prod: San Antonio Windows NAS → San Jose → AWS Production VPC S3',
-                    'destination_storage': 'S3',
-                    'source': 'San Antonio',
-                    'destination': 'AWS US-West-2 Production VPC S3',
-                    'environment': 'production',
-                    'os_type': 'windows',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'San Antonio Windows NAS to Windows Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 2,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.95
-                        },
-                        {
-                            'name': 'San Antonio to San Jose (Private Line)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 15,
-                            'reliability': 0.9995,
-                            'connection_type': 'private_line',
-                            'cost_factor': 3.0,
-                            'ai_optimization_potential': 0.92
-                        },
-                        {
-                            'name': 'San Jose to AWS Production VPC S3 (DX)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 10,
-                            'reliability': 0.9999,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 4.0,
-                            'ai_optimization_potential': 0.94
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Cross-site Windows latency', 'Multiple hop complexity'],
-                        'optimization_opportunities': ['End-to-end Windows optimization', 'Compression algorithms'],
-                        'risk_factors': ['Multiple failure points', 'Windows authentication across sites'],
-                        'recommended_improvements': ['Implement WAN optimization', 'Add redundant paths']
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['SMB protocol overhead', 'Windows Share I/O'],
+                    'optimization_opportunities': ['SMB3 multichannel', 'DataSync bandwidth optimization'],
+                    'risk_factors': ['Windows Share availability', 'SMB authentication'],
+                    'recommended_improvements': ['Enable SMB3 multichannel', 'Pre-stage backup files']
+                }
+            },
+            'nonprod_sj_nas_drive_s3': {
+                'name': 'Non-Prod: San Jose NAS Drive → AWS S3 (DataSync)',
+                'destination_storage': 'S3',
+                'source': 'San Jose NAS Drive',
+                'destination': 'AWS US-West-2 S3',
+                'environment': 'non-production',
+                'os_type': 'linux',
+                'storage_type': 'nas_drive',
+                'migration_type': 'backup_restore',
+                'segments': [
+                    {
+                        'name': 'NAS Drive to DataSync Agent',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'nfs_share',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.96
+                    },
+                    {
+                        'name': 'DataSync Agent to AWS S3 (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 12,
+                        'reliability': 0.998,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.0,
+                        'ai_optimization_potential': 0.95
                     }
-                },
-                
-                # Production FSx paths for completeness
-                'prod_sa_linux_nas_fsx_windows': {
-                    'name': 'Prod: San Antonio Linux NAS → San Jose → AWS FSx for Windows',
-                    'destination_storage': 'FSx_Windows',
-                    'source': 'San Antonio',
-                    'destination': 'AWS US-West-2 FSx for Windows',
-                    'environment': 'production',
-                    'os_type': 'linux',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'San Antonio Linux NAS to Linux Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 1,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.97
-                        },
-                        {
-                            'name': 'San Antonio to San Jose (Private Line)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 12,
-                            'reliability': 0.9995,
-                            'connection_type': 'private_line',
-                            'cost_factor': 3.0,
-                            'ai_optimization_potential': 0.94
-                        },
-                        {
-                            'name': 'San Jose to AWS FSx Windows (DX)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 6,
-                            'reliability': 0.9999,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 4.5,
-                            'ai_optimization_potential': 0.96
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Linux to Windows protocol conversion', 'Cross-site latency'],
-                        'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
-                        'risk_factors': ['Cross-platform compatibility', 'Multiple failure points'],
-                        'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['NAS internal bandwidth', 'DX connection sharing'],
+                    'optimization_opportunities': ['NFS performance tuning', 'Parallel file transfers'],
+                    'risk_factors': ['NAS hardware limitations', 'NFS connection stability'],
+                    'recommended_improvements': ['Optimize NFS mount options', 'Configure DataSync parallelism']
+                }
+            },
+            'prod_sa_windows_share_s3': {
+                'name': 'Prod: San Antonio Windows Share → San Jose → AWS Production VPC S3',
+                'destination_storage': 'S3',
+                'source': 'San Antonio Windows Share',
+                'destination': 'AWS US-West-2 Production VPC S3',
+                'environment': 'production',
+                'os_type': 'windows',
+                'storage_type': 'windows_share',
+                'migration_type': 'backup_restore',
+                'segments': [
+                    {
+                        'name': 'Windows Share to DataSync Agent',
+                        'bandwidth_mbps': 1000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'smb_share',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.93
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 12,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.94
+                    },
+                    {
+                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 8,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.0,
+                        'ai_optimization_potential': 0.96
                     }
-                },
-                
-                'prod_sa_linux_nas_fsx_lustre': {
-                    'name': 'Prod: San Antonio Linux NAS → San Jose → AWS FSx for Lustre',
-                    'destination_storage': 'FSx_Lustre',
-                    'source': 'San Antonio',
-                    'destination': 'AWS US-West-2 FSx for Lustre',
-                    'environment': 'production',
-                    'os_type': 'linux',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'San Antonio Linux NAS to Linux Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 1,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.97
-                        },
-                        {
-                            'name': 'San Antonio to San Jose (Private Line)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 12,
-                            'reliability': 0.9995,
-                            'connection_type': 'private_line',
-                            'cost_factor': 3.0,
-                            'ai_optimization_potential': 0.94
-                        },
-                        {
-                            'name': 'San Jose to AWS FSx Lustre (DX)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 4,
-                            'reliability': 0.9999,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 5.0,
-                            'ai_optimization_potential': 0.98
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Lustre client configuration', 'Cross-site coordination'],
-                        'optimization_opportunities': ['Lustre striping optimization', 'Parallel I/O tuning'],
-                        'risk_factors': ['Lustre complexity', 'Multiple failure points'],
-                        'recommended_improvements': ['Optimize Lustre striping patterns', 'Configure parallel data transfer']
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['SMB over WAN latency', 'Multi-hop complexity'],
+                    'optimization_opportunities': ['WAN optimization', 'Backup file pre-staging'],
+                    'risk_factors': ['Cross-site dependencies', 'SMB over WAN reliability'],
+                    'recommended_improvements': ['Implement WAN acceleration', 'Stage backups closer to transfer point']
+                }
+            },
+            'prod_sa_nas_drive_s3': {
+                'name': 'Prod: San Antonio NAS Drive → San Jose → AWS Production VPC S3',
+                'destination_storage': 'S3',
+                'source': 'San Antonio NAS Drive',
+                'destination': 'AWS US-West-2 Production VPC S3',
+                'environment': 'production',
+                'os_type': 'linux',
+                'storage_type': 'nas_drive',
+                'migration_type': 'backup_restore',
+                'segments': [
+                    {
+                        'name': 'NAS Drive to DataSync Agent',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1,
+                        'reliability': 0.999,
+                        'connection_type': 'nfs_share',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.97
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 12,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.94
+                    },
+                    {
+                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 8,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.0,
+                        'ai_optimization_potential': 0.96
                     }
-                },
-                
-                # Add nonprod Windows FSx paths for completeness
-                'nonprod_sj_windows_nas_fsx_windows': {
-                    'name': 'Non-Prod: San Jose Windows NAS → AWS FSx for Windows',
-                    'destination_storage': 'FSx_Windows',
-                    'source': 'San Jose',
-                    'destination': 'AWS US-West-2 FSx for Windows',
-                    'environment': 'non-production',
-                    'os_type': 'windows',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'Windows NAS to Windows Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 2,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.93
-                        },
-                        {
-                            'name': 'Windows Jump Server to AWS FSx Windows (DX)',
-                            'bandwidth_mbps': 2000,
-                            'latency_ms': 12,
-                            'reliability': 0.999,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 2.5,
-                            'ai_optimization_potential': 0.94
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Windows to Windows protocol optimization', 'SMB overhead'],
-                        'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
-                        'risk_factors': ['Cross-platform compatibility', 'SMB version negotiation'],
-                        'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Cross-site latency accumulation', 'NFS over WAN'],
+                    'optimization_opportunities': ['End-to-end optimization', 'NFS tuning'],
+                    'risk_factors': ['Multiple failure points', 'NFS over WAN complexity'],
+                    'recommended_improvements': ['Implement NFS over VPN', 'Add backup staging area']
+                }
+            },
+
+            # Direct Replication Paths (for direct_replication migration method)
+            'nonprod_sj_linux_nas_s3': {
+                'name': 'Non-Prod: San Jose Linux NAS → AWS S3 (Direct Replication)',
+                'destination_storage': 'S3',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 S3',
+                'environment': 'non-production',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'Linux NAS to Linux Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.95
+                    },
+                    {
+                        'name': 'Linux Jump Server to AWS S3 (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 15,
+                        'reliability': 0.998,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.0,
+                        'ai_optimization_potential': 0.92
                     }
-                },
-                
-                'nonprod_sj_windows_nas_fsx_lustre': {
-                    'name': 'Non-Prod: San Jose Windows NAS → AWS FSx for Lustre',
-                    'destination_storage': 'FSx_Lustre',
-                    'source': 'San Jose',
-                    'destination': 'AWS US-West-2 FSx for Lustre',
-                    'environment': 'non-production',
-                    'os_type': 'windows',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'Windows NAS to Windows Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 2,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.93
-                        },
-                        {
-                            'name': 'Windows Jump Server to AWS FSx Lustre (DX)',
-                            'bandwidth_mbps': 2000,
-                            'latency_ms': 8,
-                            'reliability': 0.9995,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 3.0,
-                            'ai_optimization_potential': 0.95
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Windows Lustre client setup', 'Protocol conversion overhead'],
-                        'optimization_opportunities': ['Lustre client optimization', 'Parallel I/O tuning'],
-                        'risk_factors': ['Windows Lustre compatibility', 'Client complexity'],
-                        'recommended_improvements': ['Optimize Windows Lustre client', 'Configure parallel data transfer']
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Linux NAS internal bandwidth', 'DX connection sharing'],
+                    'optimization_opportunities': ['NAS performance tuning', 'DX bandwidth upgrade'],
+                    'risk_factors': ['Single DX connection dependency', 'NAS hardware limitations'],
+                    'recommended_improvements': ['Implement NAS caching', 'Configure QoS on DX']
+                }
+            },
+            'nonprod_sj_linux_nas_fsx_windows': {
+                'name': 'Non-Prod: San Jose Linux NAS → AWS FSx for Windows',
+                'destination_storage': 'FSx_Windows',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 FSx for Windows',
+                'environment': 'non-production',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'Linux NAS to Linux Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.95
+                    },
+                    {
+                        'name': 'Linux Jump Server to AWS FSx Windows (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 12,
+                        'reliability': 0.999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.5,
+                        'ai_optimization_potential': 0.94
                     }
-                },
-                
-                # Production Windows FSx paths
-                'prod_sa_windows_nas_fsx_windows': {
-                    'name': 'Prod: San Antonio Windows NAS → San Jose → AWS FSx for Windows',
-                    'destination_storage': 'FSx_Windows',
-                    'source': 'San Antonio',
-                    'destination': 'AWS US-West-2 FSx for Windows',
-                    'environment': 'production',
-                    'os_type': 'windows',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'San Antonio Windows NAS to Windows Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 2,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.95
-                        },
-                        {
-                            'name': 'San Antonio to San Jose (Private Line)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 15,
-                            'reliability': 0.9995,
-                            'connection_type': 'private_line',
-                            'cost_factor': 3.0,
-                            'ai_optimization_potential': 0.92
-                        },
-                        {
-                            'name': 'San Jose to AWS FSx Windows (DX)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 6,
-                            'reliability': 0.9999,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 4.5,
-                            'ai_optimization_potential': 0.96
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Windows SMB over WAN', 'Multi-hop complexity'],
-                        'optimization_opportunities': ['WAN optimization', 'SMB3 multichannel'],
-                        'risk_factors': ['Cross-site Windows dependencies', 'SMB over WAN reliability'],
-                        'recommended_improvements': ['Implement WAN acceleration', 'Configure SMB3 multichannel']
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Linux to Windows protocol conversion', 'SMB overhead'],
+                    'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
+                    'risk_factors': ['Cross-platform compatibility', 'SMB version negotiation'],
+                    'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
+                }
+            },
+            'nonprod_sj_linux_nas_fsx_lustre': {
+                'name': 'Non-Prod: San Jose Linux NAS → AWS FSx for Lustre',
+                'destination_storage': 'FSx_Lustre',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 FSx for Lustre',
+                'environment': 'non-production',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'Linux NAS to Linux Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.95
+                    },
+                    {
+                        'name': 'Linux Jump Server to AWS FSx Lustre (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 8,
+                        'reliability': 0.9995,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.97
                     }
-                },
-                
-                'prod_sa_windows_nas_fsx_lustre': {
-                    'name': 'Prod: San Antonio Windows NAS → San Jose → AWS FSx for Lustre',
-                    'destination_storage': 'FSx_Lustre',
-                    'source': 'San Antonio',
-                    'destination': 'AWS US-West-2 FSx for Lustre',
-                    'environment': 'production',
-                    'os_type': 'windows',
-                    'storage_type': 'nas',
-                    'migration_type': 'direct_replication',
-                    'segments': [
-                        {
-                            'name': 'San Antonio Windows NAS to Windows Jump Server',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 2,
-                            'reliability': 0.999,
-                            'connection_type': 'internal_lan',
-                            'cost_factor': 0.0,
-                            'ai_optimization_potential': 0.95
-                        },
-                        {
-                            'name': 'San Antonio to San Jose (Private Line)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 15,
-                            'reliability': 0.9995,
-                            'connection_type': 'private_line',
-                            'cost_factor': 3.0,
-                            'ai_optimization_potential': 0.92
-                        },
-                        {
-                            'name': 'San Jose to AWS FSx Lustre (DX)',
-                            'bandwidth_mbps': 10000,
-                            'latency_ms': 4,
-                            'reliability': 0.9999,
-                            'connection_type': 'direct_connect',
-                            'cost_factor': 5.0,
-                            'ai_optimization_potential': 0.98
-                        }
-                    ],
-                    'ai_insights': {
-                        'performance_bottlenecks': ['Windows Lustre complexity', 'Cross-site latency'],
-                        'optimization_opportunities': ['Lustre optimization', 'End-to-end tuning'],
-                        'risk_factors': ['Windows Lustre support', 'Multiple failure points'],
-                        'recommended_improvements': ['Optimize Windows Lustre setup', 'Add redundant paths']
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Lustre client configuration', 'Parallel processing coordination'],
+                    'optimization_opportunities': ['Lustre striping optimization', 'Parallel I/O tuning'],
+                    'risk_factors': ['Lustre complexity', 'Client compatibility'],
+                    'recommended_improvements': ['Optimize Lustre striping patterns', 'Configure parallel data transfer']
+                }
+            },
+            'prod_sa_linux_nas_s3': {
+                'name': 'Prod: San Antonio Linux NAS → San Jose → AWS Production VPC S3',
+                'destination_storage': 'S3',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 Production VPC S3',
+                'environment': 'production',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'San Antonio Linux NAS to Linux Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.97
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 12,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.94
+                    },
+                    {
+                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 8,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.0,
+                        'ai_optimization_potential': 0.96
                     }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Cross-site latency accumulation', 'Multiple hop complexity'],
+                    'optimization_opportunities': ['End-to-end optimization', 'Compression algorithms'],
+                    'risk_factors': ['Multiple failure points', 'Complex troubleshooting'],
+                    'recommended_improvements': ['Implement WAN optimization', 'Add redundant paths']
+                }
+            },
+
+            # NEW: Windows Direct Replication Paths (these were missing!)
+            'nonprod_sj_windows_nas_s3': {
+                'name': 'Non-Prod: San Jose Windows NAS → AWS S3 (Direct Replication)',
+                'destination_storage': 'S3',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 S3',
+                'environment': 'non-production',
+                'os_type': 'windows',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'Windows NAS to Windows Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.93
+                    },
+                    {
+                        'name': 'Windows Jump Server to AWS S3 (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 18,
+                        'reliability': 0.998,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.0,
+                        'ai_optimization_potential': 0.90
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Windows protocol overhead', 'DX connection sharing'],
+                    'optimization_opportunities': ['Windows performance tuning', 'DX bandwidth upgrade'],
+                    'risk_factors': ['Single DX connection dependency', 'Windows update cycles'],
+                    'recommended_improvements': ['Implement Windows caching', 'Configure QoS on DX']
+                }
+            },
+            'nonprod_sj_windows_nas_fsx_windows': {
+                'name': 'Non-Prod: San Jose Windows NAS → AWS FSx for Windows',
+                'destination_storage': 'FSx_Windows',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 FSx for Windows',
+                'environment': 'non-production',
+                'os_type': 'windows',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'Windows NAS to Windows Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.93
+                    },
+                    {
+                        'name': 'Windows Jump Server to AWS FSx Windows (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 12,
+                        'reliability': 0.999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 2.5,
+                        'ai_optimization_potential': 0.94
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Windows to Windows protocol optimization', 'SMB overhead'],
+                    'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
+                    'risk_factors': ['Cross-platform compatibility', 'SMB version negotiation'],
+                    'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
+                }
+            },
+            'nonprod_sj_windows_nas_fsx_lustre': {
+                'name': 'Non-Prod: San Jose Windows NAS → AWS FSx for Lustre',
+                'destination_storage': 'FSx_Lustre',
+                'source': 'San Jose',
+                'destination': 'AWS US-West-2 FSx for Lustre',
+                'environment': 'non-production',
+                'os_type': 'windows',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'Windows NAS to Windows Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.93
+                    },
+                    {
+                        'name': 'Windows Jump Server to AWS FSx Lustre (DX)',
+                        'bandwidth_mbps': 2000,
+                        'latency_ms': 8,
+                        'reliability': 0.9995,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.95
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Windows Lustre client setup', 'Protocol conversion overhead'],
+                    'optimization_opportunities': ['Lustre client optimization', 'Parallel I/O tuning'],
+                    'risk_factors': ['Windows Lustre compatibility', 'Client complexity'],
+                    'recommended_improvements': ['Optimize Windows Lustre client', 'Configure parallel data transfer']
+                }
+            },
+            'prod_sa_windows_nas_s3': {
+                'name': 'Prod: San Antonio Windows NAS → San Jose → AWS Production VPC S3',
+                'destination_storage': 'S3',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 Production VPC S3',
+                'environment': 'production',
+                'os_type': 'windows',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'San Antonio Windows NAS to Windows Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.95
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 15,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.92
+                    },
+                    {
+                        'name': 'San Jose to AWS Production VPC S3 (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 10,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.0,
+                        'ai_optimization_potential': 0.94
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Cross-site Windows latency', 'Multiple hop complexity'],
+                    'optimization_opportunities': ['End-to-end Windows optimization', 'Compression algorithms'],
+                    'risk_factors': ['Multiple failure points', 'Windows authentication across sites'],
+                    'recommended_improvements': ['Implement WAN optimization', 'Add redundant paths']
+                }
+            },
+            'prod_sa_windows_nas_fsx_windows': {
+                'name': 'Prod: San Antonio Windows NAS → San Jose → AWS FSx for Windows',
+                'destination_storage': 'FSx_Windows',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 FSx for Windows',
+                'environment': 'production',
+                'os_type': 'windows',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'San Antonio Windows NAS to Windows Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.95
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 15,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.92
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Windows (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 6,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.5,
+                        'ai_optimization_potential': 0.96
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Windows SMB over WAN', 'Multi-hop complexity'],
+                    'optimization_opportunities': ['WAN optimization', 'SMB3 multichannel'],
+                    'risk_factors': ['Cross-site Windows dependencies', 'SMB over WAN reliability'],
+                    'recommended_improvements': ['Implement WAN acceleration', 'Configure SMB3 multichannel']
+                }
+            },
+            'prod_sa_windows_nas_fsx_lustre': {
+                'name': 'Prod: San Antonio Windows NAS → San Jose → AWS FSx for Lustre',
+                'destination_storage': 'FSx_Lustre',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 FSx for Lustre',
+                'environment': 'production',
+                'os_type': 'windows',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'San Antonio Windows NAS to Windows Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 2,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.95
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 15,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.92
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Lustre (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 4,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 5.0,
+                        'ai_optimization_potential': 0.98
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Windows Lustre complexity', 'Cross-site latency'],
+                    'optimization_opportunities': ['Lustre optimization', 'End-to-end tuning'],
+                    'risk_factors': ['Windows Lustre support', 'Multiple failure points'],
+                    'recommended_improvements': ['Optimize Windows Lustre setup', 'Add redundant paths']
+                }
+            },
+            'prod_sa_linux_nas_fsx_windows': {
+                'name': 'Prod: San Antonio Linux NAS → San Jose → AWS FSx for Windows',
+                'destination_storage': 'FSx_Windows',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 FSx for Windows',
+                'environment': 'production',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'San Antonio Linux NAS to Linux Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.97
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 12,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.94
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Windows (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 6,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 4.5,
+                        'ai_optimization_potential': 0.96
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Linux to Windows protocol conversion', 'Cross-site latency'],
+                    'optimization_opportunities': ['SMB3 protocol optimization', 'FSx throughput configuration'],
+                    'risk_factors': ['Cross-platform compatibility', 'Multiple failure points'],
+                    'recommended_improvements': ['Test SMB3.1.1 compatibility', 'Configure FSx performance mode']
+                }
+            },
+            'prod_sa_linux_nas_fsx_lustre': {
+                'name': 'Prod: San Antonio Linux NAS → San Jose → AWS FSx for Lustre',
+                'destination_storage': 'FSx_Lustre',
+                'source': 'San Antonio',
+                'destination': 'AWS US-West-2 FSx for Lustre',
+                'environment': 'production',
+                'os_type': 'linux',
+                'storage_type': 'nas',
+                'migration_type': 'direct_replication',
+                'segments': [
+                    {
+                        'name': 'San Antonio Linux NAS to Linux Jump Server',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 1,
+                        'reliability': 0.999,
+                        'connection_type': 'internal_lan',
+                        'cost_factor': 0.0,
+                        'ai_optimization_potential': 0.97
+                    },
+                    {
+                        'name': 'San Antonio to San Jose (Private Line)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 12,
+                        'reliability': 0.9995,
+                        'connection_type': 'private_line',
+                        'cost_factor': 3.0,
+                        'ai_optimization_potential': 0.94
+                    },
+                    {
+                        'name': 'San Jose to AWS FSx Lustre (DX)',
+                        'bandwidth_mbps': 10000,
+                        'latency_ms': 4,
+                        'reliability': 0.9999,
+                        'connection_type': 'direct_connect',
+                        'cost_factor': 5.0,
+                        'ai_optimization_potential': 0.98
+                    }
+                ],
+                'ai_insights': {
+                    'performance_bottlenecks': ['Lustre client configuration', 'Cross-site coordination'],
+                    'optimization_opportunities': ['Lustre striping optimization', 'Parallel I/O tuning'],
+                    'risk_factors': ['Lustre complexity', 'Multiple failure points'],
+                    'recommended_improvements': ['Optimize Lustre striping patterns', 'Configure parallel data transfer']
                 }
             }
-            
-            # Merge with existing network_paths
-            self.network_paths.update(additional_paths)
-            
-            return self.network_paths
-        
-        
+        }
 
     def calculate_ai_enhanced_path_performance(self, path_key: str, time_of_day: int = None) -> Dict:
         """AI-enhanced network path performance calculation"""
@@ -3120,7 +3095,7 @@ class EnhancedNetworkIntelligenceManager:
             segment_bandwidth = segment['bandwidth_mbps']
             segment_reliability = segment['reliability']
 
-# Time-of-day adjustments
+            # Time-of-day adjustments
             if segment['connection_type'] == 'internal_lan':
                 congestion_factor = 1.1 if 9 <= time_of_day <= 17 else 0.95
             elif segment['connection_type'] == 'private_line':
@@ -3128,7 +3103,7 @@ class EnhancedNetworkIntelligenceManager:
             elif segment['connection_type'] == 'direct_connect':
                 congestion_factor = 1.05 if 9 <= time_of_day <= 17 else 0.98
             elif segment['connection_type'] in ['smb_share', 'nfs_share']:
-# Backup storage specific adjustments
+                # Backup storage specific adjustments
                 congestion_factor = 1.3 if 9 <= time_of_day <= 17 else 1.0
             else:
                 congestion_factor = 1.0
@@ -3136,19 +3111,19 @@ class EnhancedNetworkIntelligenceManager:
             effective_bandwidth = segment_bandwidth / congestion_factor
             effective_latency = segment_latency * congestion_factor
 
-# OS-specific adjustments
+            # OS-specific adjustments
             if path['os_type'] == 'windows' and segment['connection_type'] != 'internal_lan':
                 effective_bandwidth *= 0.95
                 effective_latency *= 1.1
 
-# Backup storage protocol adjustments
+            # Backup storage protocol adjustments
             if path.get('migration_type') == 'backup_restore':
                 if path['storage_type'] == 'windows_share' and segment['connection_type'] == 'smb_share':
                     effective_bandwidth *= 0.85  # SMB overhead
                 elif path['storage_type'] == 'nas_drive' and segment['connection_type'] == 'nfs_share':
                     effective_bandwidth *= 0.92  # NFS is more efficient
 
-# Destination storage adjustments
+            # Destination storage adjustments
             if 'FSx' in path['destination_storage']:
                 if path['destination_storage'] == 'FSx_Windows':
                     effective_bandwidth *= 1.1
@@ -3165,13 +3140,13 @@ class EnhancedNetworkIntelligenceManager:
             total_cost_factor += segment['cost_factor']
 
             adjusted_segments.append({
-            **segment,
-            'effective_bandwidth_mbps': effective_bandwidth,
-            'effective_latency_ms': effective_latency,
-            'congestion_factor': congestion_factor
+                **segment,
+                'effective_bandwidth_mbps': effective_bandwidth,
+                'effective_latency_ms': effective_latency,
+                'congestion_factor': congestion_factor
             })
 
-# Calculate quality scores
+        # Calculate quality scores
         latency_score = max(0, 100 - (total_latency * 2))
         bandwidth_score = min(100, (min_bandwidth / 1000) * 20)
         reliability_score = total_reliability * 100
@@ -3179,7 +3154,7 @@ class EnhancedNetworkIntelligenceManager:
         base_network_quality = (latency_score * 0.25 + bandwidth_score * 0.45 + reliability_score * 0.30)
         ai_enhanced_quality = base_network_quality * ai_optimization_score
 
-# Storage bonus
+        # Storage bonus
         storage_bonus = 0
         if path['destination_storage'] == 'FSx_Windows':
             storage_bonus = 10
@@ -3189,22 +3164,22 @@ class EnhancedNetworkIntelligenceManager:
         ai_enhanced_quality = min(100, ai_enhanced_quality + storage_bonus)
 
         return {
-        'path_name': path['name'],
-        'destination_storage': path['destination_storage'],
-        'migration_type': path.get('migration_type', 'direct_replication'),
-        'total_latency_ms': total_latency,
-        'effective_bandwidth_mbps': min_bandwidth,
-        'total_reliability': total_reliability,
-        'network_quality_score': base_network_quality,
-        'ai_enhanced_quality_score': ai_enhanced_quality,
-        'ai_optimization_potential': (1 - ai_optimization_score) * 100,
-        'total_cost_factor': total_cost_factor,
-        'storage_performance_bonus': storage_bonus,
-        'segments': adjusted_segments,
-        'environment': path['environment'],
-        'os_type': path['os_type'],
-        'storage_type': path['storage_type'],
-        'ai_insights': path['ai_insights']
+            'path_name': path['name'],
+            'destination_storage': path['destination_storage'],
+            'migration_type': path.get('migration_type', 'direct_replication'),
+            'total_latency_ms': total_latency,
+            'effective_bandwidth_mbps': min_bandwidth,
+            'total_reliability': total_reliability,
+            'network_quality_score': base_network_quality,
+            'ai_enhanced_quality_score': ai_enhanced_quality,
+            'ai_optimization_potential': (1 - ai_optimization_score) * 100,
+            'total_cost_factor': total_cost_factor,
+            'storage_performance_bonus': storage_bonus,
+            'segments': adjusted_segments,
+            'environment': path['environment'],
+            'os_type': path['os_type'],
+            'storage_type': path['storage_type'],
+            'ai_insights': path['ai_insights']
         }
 
 class EnhancedAgentSizingManager:
