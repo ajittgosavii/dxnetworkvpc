@@ -1168,10 +1168,10 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                             key=f"download_executive_{unique_id}"
                         )
                         st.success("✅ Executive summary generated successfully!")
-                        else:
-                                st.error("❌ Failed to generate PDF report")
-                    except Exception as e:
-                        st.error(f"PDF Generation Error: {str(e)}")
+                    else:
+                        st.error("❌ Failed to generate PDF report")
+                except Exception as e:
+                    st.error(f"PDF Generation Error: {str(e)}")
     
     with col3:
         if st.button("🔧 Generate Technical Report", 
@@ -1190,10 +1190,10 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                             key=f"download_technical_{unique_id}"
                         )
                         st.success("✅ Technical report generated successfully!")
-                        else:
-                                st.error("❌ Failed to generate PDF report")
-                    except Exception as e:
-                        st.error(f"PDF Generation Error: {str(e)}")
+                    else:
+                        st.error("❌ Failed to generate PDF report")
+                except Exception as e:
+                    st.error(f"PDF Generation Error: {str(e)}")
 
 def safe_float(value, default=0.0):
     """Safely convert a value to float, returning default if None or invalid"""
