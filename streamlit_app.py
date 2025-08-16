@@ -3541,8 +3541,21 @@ def render_ai_insights_tab_enhanced(analysis: Dict, config: Dict):
     
     recommendations = ai_assessment.get('recommendations', [])
     if recommendations:
+        # Clean up recommendations formatting
         for i, rec in enumerate(recommendations, 1):
-            st.markdown(f"**{i}.** {rec}")
+            # Remove any existing numbering from the recommendation text
+            cleaned_rec = rec.strip()
+            if cleaned_rec.startswith(('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.')):
+                # Remove the number prefix if it exists
+                cleaned_rec = '. '.join(cleaned_rec.split('.')[1:]).strip()
+            
+            # Remove any trailing incomplete phrases
+            if cleaned_rec.endswith(('Based on current metrics, recommend:', 'Additional Recommendations')):
+                continue
+                
+            # Only show meaningful recommendations
+            if len(cleaned_rec) > 10:
+                st.markdown(f"**{i}.** {cleaned_rec}")
     else:
         st.info("No specific recommendations available.")
     
