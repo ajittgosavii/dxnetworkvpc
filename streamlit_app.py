@@ -143,67 +143,67 @@ class AWSMigrationPDFReportGenerator:
             
             # Build the report content
             story = []
-        # Build the report content
-        story = []
-        
-        # Cover page
-        story.extend(self._create_cover_page(analysis, config))
-        story.append(PageBreak())
-        
-        # Executive summary
-        story.extend(self._create_executive_summary(analysis, config))
-        story.append(PageBreak())
-        
-        # Table of contents
-        story.extend(self._create_table_of_contents())
-        story.append(PageBreak())
-        
-        # Migration overview
-        story.extend(self._create_migration_overview(analysis, config))
-        
-        # Cost analysis
-        story.extend(self._create_cost_analysis_section(analysis, config))
-        
-        # Performance analysis
-        story.extend(self._create_performance_analysis_section(analysis, config))
-        
-        # AWS sizing recommendations
-        story.extend(self._create_aws_sizing_section(analysis, config))
-        
-        # AI insights and recommendations
-        story.extend(self._create_ai_insights_section(analysis, config))
-        
-        # Risk assessment
-        story.extend(self._create_risk_assessment_section(analysis, config))
-        
-        # Implementation roadmap
-        story.extend(self._create_implementation_roadmap(analysis, config))
-        
-        # Appendices
-        story.extend(self._create_appendices(analysis, config))
-        
-        # Build the PDF
-        doc.build(story)
-        
-        # Return the PDF bytes
-        buffer.seek(0)
-        return buffer.read()
-    
-         # Get the PDF bytes
-        buffer.seek(0)
-        pdf_bytes = buffer.read()
-        
-        if len(pdf_bytes) == 0:
-            raise ValueError("Generated PDF is empty")
+            # Build the report content
+            story = []
             
-        return pdf_bytes
+            # Cover page
+            story.extend(self._create_cover_page(analysis, config))
+            story.append(PageBreak())
+            
+            # Executive summary
+            story.extend(self._create_executive_summary(analysis, config))
+            story.append(PageBreak())
+            
+            # Table of contents
+            story.extend(self._create_table_of_contents())
+            story.append(PageBreak())
+            
+            # Migration overview
+            story.extend(self._create_migration_overview(analysis, config))
+            
+            # Cost analysis
+            story.extend(self._create_cost_analysis_section(analysis, config))
+            
+            # Performance analysis
+            story.extend(self._create_performance_analysis_section(analysis, config))
+            
+            # AWS sizing recommendations
+            story.extend(self._create_aws_sizing_section(analysis, config))
+            
+            # AI insights and recommendations
+            story.extend(self._create_ai_insights_section(analysis, config))
+            
+            # Risk assessment
+            story.extend(self._create_risk_assessment_section(analysis, config))
+            
+            # Implementation roadmap
+            story.extend(self._create_implementation_roadmap(analysis, config))
+            
+            # Appendices
+            story.extend(self._create_appendices(analysis, config))
+            
+            # Build the PDF
+            doc.build(story)
+            
+            # Return the PDF bytes
+            buffer.seek(0)
+            return buffer.read()
         
-    except Exception as e:
-        raise Exception(f"PDF generation failed: {str(e)}")
-    finally:
-        if buffer:
-            buffer.close()
-    
+            # Get the PDF bytes
+            buffer.seek(0)
+            pdf_bytes = buffer.read()
+            
+            if len(pdf_bytes) == 0:
+                raise ValueError("Generated PDF is empty")
+                
+            return pdf_bytes
+            
+        except Exception as e:
+            raise Exception(f"PDF generation failed: {str(e)}")
+        finally:
+            if buffer:
+                buffer.close()
+        
     def test_pdf_generation():
         """Test basic PDF generation"""
         try:
