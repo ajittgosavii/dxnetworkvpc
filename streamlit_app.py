@@ -4117,9 +4117,6 @@ def render_login_page():
     with col2:
         st.markdown("### 🔑 Sign In")
         
-        # Simple login form for development
-        st.info("**Development Mode**: Use any email/password combination or admin@example.com / admin123")
-        
         with st.form("login_form"):
             email = st.text_input("📧 Email Address", placeholder="user@company.com")
             password = st.text_input("🔒 Password", type="password", placeholder="Enter your password")
@@ -4203,8 +4200,7 @@ def render_admin_panel():
         
         # List existing users (development placeholder)
         st.markdown("### Existing Users")
-        st.info("👤 admin@example.com (Admin)")
-        st.info("👤 Development mode - all users can login")
+        st.info("👤 User management system ready")
     
     with tab2:
         st.markdown("### System Settings")
