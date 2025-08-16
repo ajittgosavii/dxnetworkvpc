@@ -6962,7 +6962,7 @@ def render_comprehensive_cost_analysis_tab_with_pdf(analysis: Dict, config: Dict
         st.metric("🤖 Migration Agents", f"${agent_cost:,.0f}/mo",
                   delta=f"${cost_per_agent:,.0f} per agent")
 
-        render_comprehensive_cost_analysis_tab(analysis, config)
+        #render_comprehensive_cost_analysis_tab(analysis, config)
     
         # Add PDF export section
         render_pdf_export_section(analysis, config)
