@@ -7865,8 +7865,8 @@ def render_migration_dashboard_tab_with_pdf(analysis: Dict, config: Dict):
                     st.write(f"**Agent Cost Mismatch:**")
                     st.write(f"   Agent Analysis: ${disc['agent_analysis']:,.0f}")
                     st.write(f"   Cost Analysis: ${disc['cost_analysis']:,.0f}")
-            else:
-                st.success("✅ All cost calculations are consistent across tabs")
+    else:
+        st.success("✅ All cost calculations are consistent across tabs")
 
     # Executive Summary Dashboard with validated costs
     st.markdown("**🎯 Executive Migration Summary (Validated Costs):**")
@@ -7919,11 +7919,9 @@ def render_migration_dashboard_tab_with_pdf(analysis: Dict, config: Dict):
         confidence = analysis.get('ai_overall_assessment', {}).get('ai_confidence', 0.5)
         st.metric("🤖 AI Confidence", f"{confidence*100:.1f}%",
                  delta=f"Complexity: {complexity:.1f}/10")
-    
-        render_migration_dashboard_tab(analysis, config)
         
-        # Add PDF export section
-        render_pdf_export_section(analysis, config)
+    # Add PDF export section
+    render_pdf_export_section(analysis, config)
     
     # Cost Breakdown Section
     st.markdown("---")
@@ -7965,7 +7963,6 @@ def render_migration_dashboard_tab_with_pdf(analysis: Dict, config: Dict):
         render_always_on_analysis(analysis, config)
     elif is_sql_server_standalone():
         render_standalone_analysis(analysis, config)
-
 
 def render_always_on_analysis(analysis: Dict, config: Dict):
     """Render SQL Server Always On specific analysis"""
