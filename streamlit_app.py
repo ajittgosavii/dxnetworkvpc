@@ -129,16 +129,20 @@ class AWSMigrationPDFReportGenerator:
     
     def generate_comprehensive_report(self, analysis: Dict, config: Dict) -> bytes:
         """Generate comprehensive PDF report"""
-        buffer = io.BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=A4,
-            rightMargin=72,
-            leftMargin=72,
-            topMargin=72,
-            bottomMargin=72
-        )
-        
+        buffer = None
+        try:
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(
+                buffer,
+                pagesize=A4,
+                rightMargin=72,
+                leftMargin=72,
+                topMargin=72,
+                bottomMargin=72
+            )
+            
+            # Build the report content
+            story = []
         # Build the report content
         story = []
         
@@ -184,6 +188,57 @@ class AWSMigrationPDFReportGenerator:
         # Return the PDF bytes
         buffer.seek(0)
         return buffer.read()
+    
+         # Get the PDF bytes
+        buffer.seek(0)
+        pdf_bytes = buffer.read()
+        
+        if len(pdf_bytes) == 0:
+            raise ValueError("Generated PDF is empty")
+            
+        return pdf_bytes
+        
+    except Exception as e:
+        raise Exception(f"PDF generation failed: {str(e)}")
+    finally:
+        if buffer:
+            buffer.close()
+    
+    def test_pdf_generation():
+        """Test basic PDF generation"""
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.platypus import SimpleDocTemplate, Paragraph
+            from reportlab.lib.styles import getSampleStyleSheet
+            import io
+            
+            buffer = io.BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=letter)
+            styles = getSampleStyleSheet()
+            
+            story = []
+            story.append(Paragraph("Test PDF", styles['Title']))
+            story.append(Paragraph("This is a test PDF to verify ReportLab works.", styles['Normal']))
+            
+            doc.build(story)
+            buffer.seek(0)
+            
+            return buffer.read()
+        except Exception as e:
+            st.error(f"PDF test failed: {str(e)}")
+            return None
+
+    # Add this button to test PDF generation
+    if st.button("🧪 Test PDF Generation"):
+        test_pdf = test_pdf_generation()
+        if test_pdf:
+            st.download_button(
+                label="📥 Download Test PDF",
+                data=test_pdf,
+                file_name="test.pdf",
+                mime="application/pdf"
+            )
+            st.success("✅ PDF generation test passed!")
     
     def _create_cover_page(self, analysis: Dict, config: Dict) -> list:
         """Create professional cover page"""
@@ -1036,18 +1091,28 @@ class AWSMigrationPDFReportGenerator:
 def export_pdf_report(analysis: Dict, config: Dict, report_type: str = "comprehensive") -> bytes:
     """Export PDF report with specified type"""
     try:
+        # Add debugging
+        st.write("Debug: Starting PDF generation...")
+        
         pdf_generator = AWSMigrationPDFReportGenerator()
+        st.write("Debug: PDF generator initialized...")
         
         if report_type == "comprehensive":
             pdf_data = pdf_generator.generate_comprehensive_report(analysis, config)
         else:
-            # Could add other report types here (summary, technical, executive, etc.)
             pdf_data = pdf_generator.generate_comprehensive_report(analysis, config)
         
+        st.write(f"Debug: PDF generated, size: {len(pdf_data) if pdf_data else 0} bytes")
         return pdf_data
     
+    except ImportError as e:
+        st.error(f"Missing dependency: {str(e)}. Please install reportlab: pip install reportlab")
+        return None
     except Exception as e:
         st.error(f"Failed to generate PDF report: {str(e)}")
+        st.error(f"Error type: {type(e).__name__}")
+        import traceback
+        st.code(traceback.format_exc())
         return None
 
 def render_pdf_export_section(analysis: Dict, config: Dict):
@@ -1057,28 +1122,40 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
     
     col1, col2, col3 = st.columns(3)
     
-    # Generate unique keys using timestamp
+    # Generate unique keys using current time and tab info
     import time
-    unique_id = int(time.time() * 1000000)
+    import random
+    unique_id = f"{int(time.time() * 1000000)}_{random.randint(1000, 9999)}"
     
     with col1:
-        if st.button("📊 Generate Comprehensive Report", use_container_width=True, key=f"comprehensive_report_{unique_id}"):
+        if st.button("📊 Generate Comprehensive Report", 
+                    use_container_width=True, 
+                    key=f"comprehensive_report_{unique_id}"):
+            
             with st.spinner("Generating comprehensive PDF report..."):
-                pdf_data = export_pdf_report(analysis, config, "comprehensive")
-                if pdf_data:
-                    st.download_button(
-                        label="📥 Download Comprehensive Report",
-                        data=pdf_data,
-                        file_name=f"aws_migration_comprehensive_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key=f"download_comprehensive_{unique_id}"
-                    )
-                    st.success("✅ Comprehensive report generated successfully!")
+                try:
+                    pdf_data = export_pdf_report(analysis, config, "comprehensive")
+                    if pdf_data:
+                        st.download_button(
+                            label="📥 Download Comprehensive Report",
+                            data=pdf_data,
+                            file_name=f"aws_migration_comprehensive_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"download_comprehensive_{unique_id}"
+                        )
+                        st.success("✅ Comprehensive report generated successfully!")
+                    else:
+                        st.error("❌ Failed to generate PDF report")
+                except Exception as e:
+                    st.error(f"PDF Generation Error: {str(e)}")
     
     with col2:
-        if st.button("📋 Generate Executive Summary", use_container_width=True, key=f"executive_summary_{unique_id}"):
+        if st.button("📋 Generate Executive Summary", 
+                    use_container_width=True, 
+                    key=f"executive_summary_{unique_id}"):
             with st.spinner("Generating executive summary PDF..."):
+                try:
                 # You could create a separate executive summary generator
                 pdf_data = export_pdf_report(analysis, config, "comprehensive")
                 if pdf_data:
@@ -1091,10 +1168,17 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                         key=f"download_executive_{unique_id}"
                     )
                     st.success("✅ Executive summary generated successfully!")
+                    else:
+                            st.error("❌ Failed to generate PDF report")
+                except Exception as e:
+                    st.error(f"PDF Generation Error: {str(e)}")
     
     with col3:
-        if st.button("🔧 Generate Technical Report", use_container_width=True, key=f"technical_report_{unique_id}"):
+        if st.button("🔧 Generate Technical Report", 
+                     use_container_width=True, 
+                     key=f"technical_report_{unique_id}"):
             with st.spinner("Generating technical PDF report..."):
+                try:
                 pdf_data = export_pdf_report(analysis, config, "comprehensive")
                 if pdf_data:
                     st.download_button(
@@ -1106,6 +1190,10 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                         key=f"download_technical_{unique_id}"
                     )
                     st.success("✅ Technical report generated successfully!")
+                    else:
+                            st.error("❌ Failed to generate PDF report")
+                except Exception as e:
+                    st.error(f"PDF Generation Error: {str(e)}")
 
 def safe_float(value, default=0.0):
     """Safely convert a value to float, returning default if None or invalid"""
