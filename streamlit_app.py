@@ -1157,21 +1157,21 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
             with st.spinner("Generating executive summary PDF..."):
                 try:
                 # You could create a separate executive summary generator
-                pdf_data = export_pdf_report(analysis, config, "comprehensive")
-                if pdf_data:
-                    st.download_button(
-                        label="📥 Download Executive Summary",
-                        data=pdf_data,
-                        file_name=f"aws_migration_executive_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key=f"download_executive_{unique_id}"
-                    )
-                    st.success("✅ Executive summary generated successfully!")
-                    else:
-                            st.error("❌ Failed to generate PDF report")
-                except Exception as e:
-                    st.error(f"PDF Generation Error: {str(e)}")
+                    pdf_data = export_pdf_report(analysis, config, "comprehensive")
+                    if pdf_data:
+                        st.download_button(
+                            label="📥 Download Executive Summary",
+                            data=pdf_data,
+                            file_name=f"aws_migration_executive_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"download_executive_{unique_id}"
+                        )
+                        st.success("✅ Executive summary generated successfully!")
+                        else:
+                                st.error("❌ Failed to generate PDF report")
+                    except Exception as e:
+                        st.error(f"PDF Generation Error: {str(e)}")
     
     with col3:
         if st.button("🔧 Generate Technical Report", 
@@ -1179,21 +1179,21 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                      key=f"technical_report_{unique_id}"):
             with st.spinner("Generating technical PDF report..."):
                 try:
-                pdf_data = export_pdf_report(analysis, config, "comprehensive")
-                if pdf_data:
-                    st.download_button(
-                        label="📥 Download Technical Report",
-                        data=pdf_data,
-                        file_name=f"aws_migration_technical_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key=f"download_technical_{unique_id}"
-                    )
-                    st.success("✅ Technical report generated successfully!")
-                    else:
-                            st.error("❌ Failed to generate PDF report")
-                except Exception as e:
-                    st.error(f"PDF Generation Error: {str(e)}")
+                    pdf_data = export_pdf_report(analysis, config, "comprehensive")
+                    if pdf_data:
+                        st.download_button(
+                            label="📥 Download Technical Report",
+                            data=pdf_data,
+                            file_name=f"aws_migration_technical_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"download_technical_{unique_id}"
+                        )
+                        st.success("✅ Technical report generated successfully!")
+                        else:
+                                st.error("❌ Failed to generate PDF report")
+                    except Exception as e:
+                        st.error(f"PDF Generation Error: {str(e)}")
 
 def safe_float(value, default=0.0):
     """Safely convert a value to float, returning default if None or invalid"""
