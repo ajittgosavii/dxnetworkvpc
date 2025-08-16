@@ -1058,7 +1058,7 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("📊 Generate Comprehensive Report", use_container_width=True):
+        if st.button("📊 Generate Comprehensive Report", use_container_width=True, key=f"comprehensive_report_{tab_context}"):
             with st.spinner("Generating comprehensive PDF report..."):
                 pdf_data = export_pdf_report(analysis, config, "comprehensive")
                 if pdf_data:
@@ -1067,12 +1067,13 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                         data=pdf_data,
                         file_name=f"aws_migration_comprehensive_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                         mime="application/pdf",
-                        use_container_width=True
+                        use_container_width=True,
+                        key=f"download_comprehensive_{tab_context}"
                     )
                     st.success("✅ Comprehensive report generated successfully!")
     
     with col2:
-        if st.button("📋 Generate Executive Summary", use_container_width=True):
+        if st.button("📋 Generate Executive Summary", use_container_width=True, key=f"executive_summary_{tab_context}"):
             with st.spinner("Generating executive summary PDF..."):
                 # You could create a separate executive summary generator
                 pdf_data = export_pdf_report(analysis, config, "comprehensive")
@@ -1082,12 +1083,13 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                         data=pdf_data,
                         file_name=f"aws_migration_executive_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                         mime="application/pdf",
-                        use_container_width=True
+                        use_container_width=True,
+                        key=f"download_executive_{tab_context}"
                     )
                     st.success("✅ Executive summary generated successfully!")
     
     with col3:
-        if st.button("🔧 Generate Technical Report", use_container_width=True):
+        if st.button("🔧 Generate Technical Report", use_container_width=True, key=f"technical_report_{tab_context}"):
             with st.spinner("Generating technical PDF report..."):
                 pdf_data = export_pdf_report(analysis, config, "comprehensive")
                 if pdf_data:
@@ -1096,7 +1098,8 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                         data=pdf_data,
                         file_name=f"aws_migration_technical_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
                         mime="application/pdf",
-                        use_container_width=True
+                        use_container_width=True,
+                        key=f"download_technical_{tab_context}"
                     )
                     st.success("✅ Technical report generated successfully!")
 
