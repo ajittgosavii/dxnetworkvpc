@@ -28,6 +28,1077 @@ import threading
 import uuid
 import firebase_admin
 from firebase_admin import credentials, auth, firestore
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
+from reportlab.platypus.flowables import HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics.charts.piecharts import Pie
+from reportlab.graphics.charts.barcharts import VerticalBarChart
+from reportlab.graphics.charts.legends import Legend
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT, TA_JUSTIFY
+import io
+import base64
+from datetime import datetime
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.backends.backend_pdf import PdfPages
+import tempfile
+import os
+
+class AWSMigrationPDFReportGenerator:
+    """Professional PDF report generator for AWS Migration Analysis"""
+    
+    def __init__(self):
+        self.styles = getSampleStyleSheet()
+        self.setup_custom_styles()
+    
+    def setup_custom_styles(self):
+        """Setup custom paragraph styles for the report"""
+        # Title style
+        self.styles.add(ParagraphStyle(
+            name='CustomTitle',
+            parent=self.styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            textColor=colors.HexColor('#1e3a8a')
+        ))
+        
+        # Section header style
+        self.styles.add(ParagraphStyle(
+            name='SectionHeader',
+            parent=self.styles['Heading2'],
+            fontSize=16,
+            spaceAfter=12,
+            spaceBefore=20,
+            textColor=colors.HexColor('#1e40af'),
+            borderWidth=1,
+            borderColor=colors.HexColor('#1e40af'),
+            borderPadding=5
+        ))
+        
+        # Subsection header style
+        self.styles.add(ParagraphStyle(
+            name='SubsectionHeader',
+            parent=self.styles['Heading3'],
+            fontSize=14,
+            spaceAfter=8,
+            spaceBefore=12,
+            textColor=colors.HexColor('#374151')
+        ))
+        
+        # Key metric style
+        self.styles.add(ParagraphStyle(
+            name='KeyMetric',
+            parent=self.styles['Normal'],
+            fontSize=12,
+            textColor=colors.HexColor('#059669'),
+            fontName='Helvetica-Bold'
+        ))
+        
+        # Warning style
+        self.styles.add(ParagraphStyle(
+            name='Warning',
+            parent=self.styles['Normal'],
+            fontSize=11,
+            textColor=colors.HexColor('#dc2626'),
+            leftIndent=20,
+            rightIndent=20,
+            borderWidth=1,
+            borderColor=colors.HexColor('#fecaca'),
+            backColor=colors.HexColor('#fef2f2'),
+            borderPadding=8
+        ))
+        
+        # Info box style
+        self.styles.add(ParagraphStyle(
+            name='InfoBox',
+            parent=self.styles['Normal'],
+            fontSize=11,
+            textColor=colors.HexColor('#1f2937'),
+            leftIndent=20,
+            rightIndent=20,
+            borderWidth=1,
+            borderColor=colors.HexColor('#e5e7eb'),
+            backColor=colors.HexColor('#f9fafb'),
+            borderPadding=8
+        ))
+    
+    def generate_comprehensive_report(self, analysis: Dict, config: Dict) -> bytes:
+        """Generate comprehensive PDF report"""
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=72,
+            leftMargin=72,
+            topMargin=72,
+            bottomMargin=72
+        )
+        
+        # Build the report content
+        story = []
+        
+        # Cover page
+        story.extend(self._create_cover_page(analysis, config))
+        story.append(PageBreak())
+        
+        # Executive summary
+        story.extend(self._create_executive_summary(analysis, config))
+        story.append(PageBreak())
+        
+        # Table of contents
+        story.extend(self._create_table_of_contents())
+        story.append(PageBreak())
+        
+        # Migration overview
+        story.extend(self._create_migration_overview(analysis, config))
+        
+        # Cost analysis
+        story.extend(self._create_cost_analysis_section(analysis, config))
+        
+        # Performance analysis
+        story.extend(self._create_performance_analysis_section(analysis, config))
+        
+        # AWS sizing recommendations
+        story.extend(self._create_aws_sizing_section(analysis, config))
+        
+        # AI insights and recommendations
+        story.extend(self._create_ai_insights_section(analysis, config))
+        
+        # Risk assessment
+        story.extend(self._create_risk_assessment_section(analysis, config))
+        
+        # Implementation roadmap
+        story.extend(self._create_implementation_roadmap(analysis, config))
+        
+        # Appendices
+        story.extend(self._create_appendices(analysis, config))
+        
+        # Build the PDF
+        doc.build(story)
+        
+        # Return the PDF bytes
+        buffer.seek(0)
+        return buffer.read()
+    
+    def _create_cover_page(self, analysis: Dict, config: Dict) -> list:
+        """Create professional cover page"""
+        story = []
+        
+        # Title
+        story.append(Spacer(1, 2*inch))
+        story.append(Paragraph("AWS Enterprise Database Migration", self.styles['CustomTitle']))
+        story.append(Paragraph("Comprehensive Analysis Report", self.styles['CustomTitle']))
+        
+        story.append(Spacer(1, 1*inch))
+        
+        # Project details table
+        project_data = [
+            ['Project Details', ''],
+            ['Source Database:', f"{config.get('source_database_engine', 'Unknown').upper()}"],
+            ['Target Database:', f"{config.get('database_engine', 'Unknown').upper()}"],
+            ['Database Size:', f"{config.get('database_size_gb', 0):,} GB"],
+            ['Environment:', f"{config.get('environment', 'Unknown').title()}"],
+            ['Migration Method:', f"{config.get('migration_method', 'Unknown').replace('_', ' ').title()}"],
+            ['Target Platform:', f"{config.get('target_platform', 'Unknown').upper()}"],
+            ['Generated On:', datetime.now().strftime('%B %d, %Y at %I:%M %p')],
+            ['Report Version:', 'v3.0']
+        ]
+        
+        project_table = Table(project_data, colWidths=[2.5*inch, 3*inch])
+        project_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (1, 0), colors.HexColor('#1e3a8a')),
+            ('TEXTCOLOR', (0, 0), (1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc'))
+        ]))
+        
+        story.append(project_table)
+        story.append(Spacer(1, 1*inch))
+        
+        # Key findings preview
+        readiness_score = analysis.get('ai_overall_assessment', {}).get('migration_readiness_score', 0)
+        validated_costs = self._get_validated_costs(analysis, config)
+        
+        story.append(Paragraph("Executive Summary Highlights", self.styles['SectionHeader']))
+        
+        highlights = [
+            f"Migration Readiness Score: {readiness_score:.0f}/100",
+            f"Total Monthly Cost: ${validated_costs['total_monthly']:,.0f}",
+            f"Estimated Migration Time: {analysis.get('estimated_migration_time_hours', 0):.1f} hours",
+            f"Number of Agents: {config.get('number_of_agents', 1)}",
+            f"Primary Migration Tool: {analysis.get('agent_analysis', {}).get('primary_tool', 'Unknown').upper()}"
+        ]
+        
+        for highlight in highlights:
+            story.append(Paragraph(f"• {highlight}", self.styles['KeyMetric']))
+        
+        story.append(Spacer(1, 1*inch))
+        
+        # Disclaimer
+        disclaimer = """
+        <para align="center"><i>
+        This report contains proprietary and confidential information. 
+        Distribution should be limited to authorized personnel only.
+        </i></para>
+        """
+        story.append(Paragraph(disclaimer, self.styles['Normal']))
+        
+        return story
+    
+    def _create_executive_summary(self, analysis: Dict, config: Dict) -> list:
+        """Create executive summary section"""
+        story = []
+        
+        story.append(Paragraph("Executive Summary", self.styles['CustomTitle']))
+        story.append(Spacer(1, 20))
+        
+        # Migration overview
+        migration_method = config.get('migration_method', 'direct_replication')
+        source_db = config.get('source_database_engine', 'Unknown').upper()
+        target_db = config.get('database_engine', 'Unknown').upper()
+        db_size = config.get('database_size_gb', 0)
+        
+        overview_text = f"""
+        This comprehensive analysis evaluates the migration of a {db_size:,} GB {source_db} database 
+        to AWS {target_db} using the {migration_method.replace('_', ' ')} approach. 
+        The analysis incorporates AI-powered insights, real-time AWS pricing, and detailed 
+        performance modeling to provide actionable recommendations for a successful migration.
+        """
+        story.append(Paragraph(overview_text, self.styles['Normal']))
+        story.append(Spacer(1, 12))
+        
+        # Key metrics table
+        validated_costs = self._get_validated_costs(analysis, config)
+        readiness_score = analysis.get('ai_overall_assessment', {}).get('migration_readiness_score', 0)
+        
+        metrics_data = [
+            ['Key Metrics', 'Value', 'Assessment'],
+            ['Migration Readiness', f"{readiness_score:.0f}/100", self._get_readiness_assessment(readiness_score)],
+            ['Monthly Operating Cost', f"${validated_costs['total_monthly']:,.0f}", 'Post-migration'],
+            ['One-time Migration Cost', f"${validated_costs['total_one_time']:,.0f}", 'Implementation'],
+            ['3-Year Total Cost', f"${validated_costs['three_year_total']:,.0f}", 'Complete TCO'],
+            ['Migration Duration', f"{analysis.get('estimated_migration_time_hours', 0):.1f} hours", 'Estimated window'],
+            ['Migration Throughput', f"{analysis.get('migration_throughput_mbps', 0):,.0f} Mbps", 'Effective speed']
+        ]
+        
+        metrics_table = Table(metrics_data, colWidths=[2*inch, 1.5*inch, 2*inch])
+        metrics_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 11),
+            ('FONTSIZE', (0, 1), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+        ]))
+        
+        story.append(metrics_table)
+        story.append(Spacer(1, 20))
+        
+        # Key recommendations
+        story.append(Paragraph("Key Recommendations", self.styles['SubsectionHeader']))
+        
+        ai_recommendations = analysis.get('aws_sizing_recommendations', {}).get('ai_analysis', {})
+        recommendations = ai_recommendations.get('performance_recommendations', [
+            "Conduct comprehensive pre-migration testing",
+            "Implement proper monitoring and alerting",
+            "Plan for adequate migration window",
+            "Ensure backup and rollback procedures are tested"
+        ])
+        
+        for i, rec in enumerate(recommendations[:5], 1):
+            story.append(Paragraph(f"{i}. {rec}", self.styles['Normal']))
+        
+        return story
+    
+    def _create_table_of_contents(self) -> list:
+        """Create table of contents"""
+        story = []
+        
+        story.append(Paragraph("Table of Contents", self.styles['CustomTitle']))
+        story.append(Spacer(1, 20))
+        
+        toc_items = [
+            "1. Executive Summary",
+            "2. Migration Overview",
+            "3. Cost Analysis",
+            "4. Performance Analysis", 
+            "5. AWS Sizing Recommendations",
+            "6. AI Insights and Recommendations",
+            "7. Risk Assessment",
+            "8. Implementation Roadmap",
+            "Appendix A: Technical Specifications",
+            "Appendix B: Detailed Cost Breakdown",
+            "Appendix C: Network Analysis"
+        ]
+        
+        for item in toc_items:
+            story.append(Paragraph(item, self.styles['Normal']))
+            story.append(Spacer(1, 8))
+        
+        return story
+    
+    def _create_migration_overview(self, analysis: Dict, config: Dict) -> list:
+        """Create migration overview section"""
+        story = []
+        
+        story.append(Paragraph("1. Migration Overview", self.styles['SectionHeader']))
+        
+        # Current environment
+        story.append(Paragraph("Current Environment", self.styles['SubsectionHeader']))
+        
+        current_env_data = [
+            ['Component', 'Specification'],
+            ['Source Database Engine', config.get('source_database_engine', 'Unknown').upper()],
+            ['Database Size', f"{config.get('database_size_gb', 0):,} GB"],
+            ['Operating System', config.get('operating_system', 'Unknown').replace('_', ' ').title()],
+            ['Server Type', config.get('server_type', 'Unknown').title()],
+            ['CPU Cores', str(config.get('cpu_cores', 'Unknown'))],
+            ['RAM', f"{config.get('ram_gb', 'Unknown')} GB"],
+            ['Network Interface', config.get('nic_type', 'Unknown').replace('_', ' ').title()],
+            ['Environment', config.get('environment', 'Unknown').title()]
+        ]
+        
+        current_table = Table(current_env_data, colWidths=[2*inch, 3*inch])
+        current_table.setStyle(self._get_standard_table_style())
+        story.append(current_table)
+        story.append(Spacer(1, 15))
+        
+        # Target environment
+        story.append(Paragraph("Target AWS Environment", self.styles['SubsectionHeader']))
+        
+        target_platform = config.get('target_platform', 'rds')
+        aws_sizing = analysis.get('aws_sizing_recommendations', {})
+        
+        if target_platform == 'rds':
+            rds_rec = aws_sizing.get('rds_recommendations', {})
+            target_instance = rds_rec.get('primary_instance', 'Unknown')
+            monthly_cost = rds_rec.get('total_monthly_cost', 0)
+        else:
+            ec2_rec = aws_sizing.get('ec2_recommendations', {})
+            target_instance = ec2_rec.get('primary_instance', 'Unknown')
+            monthly_cost = ec2_rec.get('total_monthly_cost', 0)
+        
+        target_env_data = [
+            ['Component', 'Specification'],
+            ['Target Platform', target_platform.upper()],
+            ['Target Database Engine', config.get('database_engine', 'Unknown').upper()],
+            ['Recommended Instance', target_instance],
+            ['Destination Storage', config.get('destination_storage_type', 'S3')],
+            ['Migration Method', config.get('migration_method', 'Unknown').replace('_', ' ').title()],
+            ['Number of Agents', str(config.get('number_of_agents', 1))],
+            ['Estimated Monthly Cost', f"${monthly_cost:,.0f}"]
+        ]
+        
+        target_table = Table(target_env_data, colWidths=[2*inch, 3*inch])
+        target_table.setStyle(self._get_standard_table_style())
+        story.append(target_table)
+        story.append(Spacer(1, 15))
+        
+        # Migration approach
+        story.append(Paragraph("Migration Approach", self.styles['SubsectionHeader']))
+        
+        migration_method = config.get('migration_method', 'direct_replication')
+        primary_tool = analysis.get('agent_analysis', {}).get('primary_tool', 'Unknown')
+        
+        if migration_method == 'backup_restore':
+            backup_storage = config.get('backup_storage_type', 'nas_drive')
+            approach_text = f"""
+            The migration will use the backup/restore approach via AWS DataSync. Database backups 
+            will be created on {backup_storage.replace('_', ' ')} storage and transferred to AWS 
+            using {config.get('number_of_agents', 1)} DataSync agents. This approach minimizes 
+            impact on the production database during the transfer phase.
+            """
+        else:
+            approach_text = f"""
+            The migration will use direct replication via AWS {primary_tool.upper()}. This approach 
+            provides real-time synchronization between source and target databases, enabling 
+            minimal downtime migration with continuous data capture.
+            """
+        
+        story.append(Paragraph(approach_text, self.styles['Normal']))
+        story.append(Spacer(1, 15))
+        
+        return story
+    
+    def _create_cost_analysis_section(self, analysis: Dict, config: Dict) -> list:
+        """Create detailed cost analysis section"""
+        story = []
+        
+        story.append(Paragraph("2. Cost Analysis", self.styles['SectionHeader']))
+        
+        validated_costs = self._get_validated_costs(analysis, config)
+        
+        # Cost summary
+        story.append(Paragraph("Cost Summary", self.styles['SubsectionHeader']))
+        
+        cost_summary_text = f"""
+        The total cost of ownership for this migration includes both one-time implementation 
+        costs and ongoing operational expenses. The analysis uses {validated_costs['cost_source']} 
+        calculation methods {'with validation' if validated_costs['is_validated'] else 'with noted discrepancies'}.
+        """
+        story.append(Paragraph(cost_summary_text, self.styles['Normal']))
+        story.append(Spacer(1, 10))
+        
+        # Cost breakdown table
+        cost_data = [
+            ['Cost Category', 'Amount', 'Frequency', 'Notes'],
+            ['Monthly Operating Cost', f"${validated_costs['total_monthly']:,.0f}", 'Monthly', 'Ongoing AWS services'],
+            ['One-time Migration Cost', f"${validated_costs['total_one_time']:,.0f}", 'One-time', 'Setup and migration'],
+            ['Annual Total', f"${validated_costs['total_monthly'] * 12:,.0f}", 'Annual', 'Operating costs only'],
+            ['3-Year Total Cost', f"${validated_costs['three_year_total']:,.0f}", '3 Years', 'Complete TCO']
+        ]
+        
+        cost_table = Table(cost_data, colWidths=[2*inch, 1.5*inch, 1*inch, 1.5*inch])
+        cost_table.setStyle(self._get_standard_table_style())
+        story.append(cost_table)
+        story.append(Spacer(1, 15))
+        
+        # Monthly cost breakdown
+        story.append(Paragraph("Monthly Cost Breakdown", self.styles['SubsectionHeader']))
+        
+        breakdown = validated_costs.get('breakdown', {})
+        breakdown_data = [['Service Component', 'Monthly Cost', 'Percentage']]
+        
+        for component, cost in breakdown.items():
+            if cost > 0:
+                percentage = (cost / validated_costs['total_monthly']) * 100
+                breakdown_data.append([
+                    component.replace('_', ' ').title(),
+                    f"${cost:,.0f}",
+                    f"{percentage:.1f}%"
+                ])
+        
+        breakdown_table = Table(breakdown_data, colWidths=[2.5*inch, 1.5*inch, 1*inch])
+        breakdown_table.setStyle(self._get_standard_table_style())
+        story.append(breakdown_table)
+        story.append(Spacer(1, 15))
+        
+        # Cost optimization recommendations
+        story.append(Paragraph("Cost Optimization Opportunities", self.styles['SubsectionHeader']))
+        
+        cost_optimizations = [
+            "Consider Reserved Instances for 20-30% savings on compute costs",
+            "Implement auto-scaling policies to optimize resource utilization",
+            "Use Spot Instances for non-production workloads",
+            "Review and optimize storage lifecycle policies",
+            "Monitor actual usage vs provisioned capacity for right-sizing"
+        ]
+        
+        for optimization in cost_optimizations:
+            story.append(Paragraph(f"• {optimization}", self.styles['Normal']))
+        
+        story.append(Spacer(1, 20))
+        
+        return story
+    
+    def _create_performance_analysis_section(self, analysis: Dict, config: Dict) -> list:
+        """Create performance analysis section"""
+        story = []
+        
+        story.append(Paragraph("3. Performance Analysis", self.styles['SectionHeader']))
+        
+        # Current performance
+        story.append(Paragraph("Current Environment Performance", self.styles['SubsectionHeader']))
+        
+        onprem_performance = analysis.get('onprem_performance', {})
+        os_impact = onprem_performance.get('os_impact', {})
+        
+        perf_data = [
+            ['Metric', 'Value', 'Efficiency Rating'],
+            ['CPU Performance', f"{config.get('cpu_cores', 0)} cores @ {config.get('cpu_ghz', 0)} GHz", f"{os_impact.get('cpu_efficiency', 0)*100:.1f}%"],
+            ['Memory Performance', f"{config.get('ram_gb', 0)} GB RAM", f"{os_impact.get('memory_efficiency', 0)*100:.1f}%"],
+            ['I/O Performance', 'System Storage', f"{os_impact.get('io_efficiency', 0)*100:.1f}%"],
+            ['Network Performance', f"{config.get('nic_speed', 0)} Mbps", f"{os_impact.get('network_efficiency', 0)*100:.1f}%"],
+            ['Overall Efficiency', 'Combined Score', f"{os_impact.get('total_efficiency', 0)*100:.1f}%"]
+        ]
+        
+        perf_table = Table(perf_data, colWidths=[2*inch, 2*inch, 1.5*inch])
+        perf_table.setStyle(self._get_standard_table_style())
+        story.append(perf_table)
+        story.append(Spacer(1, 15))
+        
+        # Migration performance
+        story.append(Paragraph("Migration Performance Metrics", self.styles['SubsectionHeader']))
+        
+        migration_perf_data = [
+            ['Metric', 'Value', 'Assessment'],
+            ['Migration Throughput', f"{analysis.get('migration_throughput_mbps', 0):,.0f} Mbps", 'Effective transfer rate'],
+            ['Estimated Migration Time', f"{analysis.get('estimated_migration_time_hours', 0):.1f} hours", 'Total window'],
+            ['Number of Agents', str(config.get('number_of_agents', 1)), 'Parallel processing'],
+            ['Primary Tool', analysis.get('agent_analysis', {}).get('primary_tool', 'Unknown').upper(), 'Migration service'],
+            ['Bottleneck', analysis.get('agent_analysis', {}).get('bottleneck', 'None identified'), 'Limiting factor']
+        ]
+        
+        migration_perf_table = Table(migration_perf_data, colWidths=[2*inch, 2*inch, 1.5*inch])
+        migration_perf_table.setStyle(self._get_standard_table_style())
+        story.append(migration_perf_table)
+        story.append(Spacer(1, 15))
+        
+        # Performance recommendations
+        story.append(Paragraph("Performance Optimization Recommendations", self.styles['SubsectionHeader']))
+        
+        ai_analysis = analysis.get('aws_sizing_recommendations', {}).get('ai_analysis', {})
+        perf_recommendations = ai_analysis.get('performance_recommendations', [
+            "Optimize database queries and indexes before migration",
+            "Configure proper instance sizing based on current workload",
+            "Implement comprehensive monitoring and alerting",
+            "Test migration performance in non-production environment"
+        ])
+        
+        for rec in perf_recommendations:
+            story.append(Paragraph(f"• {rec}", self.styles['Normal']))
+        
+        story.append(Spacer(1, 20))
+        
+        return story
+    
+    def _create_aws_sizing_section(self, analysis: Dict, config: Dict) -> list:
+        """Create AWS sizing recommendations section"""
+        story = []
+        
+        story.append(Paragraph("4. AWS Sizing Recommendations", self.styles['SectionHeader']))
+        
+        aws_sizing = analysis.get('aws_sizing_recommendations', {})
+        deployment_rec = aws_sizing.get('deployment_recommendation', {})
+        
+        # Deployment recommendation
+        story.append(Paragraph("Recommended Deployment", self.styles['SubsectionHeader']))
+        
+        recommendation = deployment_rec.get('recommendation', 'unknown').upper()
+        confidence = deployment_rec.get('confidence', 0)
+        
+        deployment_text = f"""
+        Based on the analysis, {recommendation} is recommended with {confidence*100:.1f}% confidence. 
+        This recommendation considers database size, performance requirements, management complexity, 
+        and cost optimization factors.
+        """
+        story.append(Paragraph(deployment_text, self.styles['Normal']))
+        story.append(Spacer(1, 10))
+        
+        # Instance specifications
+        target_platform = config.get('target_platform', 'rds')
+        
+        if target_platform == 'rds':
+            story.append(Paragraph("RDS Configuration", self.styles['SubsectionHeader']))
+            rds_rec = aws_sizing.get('rds_recommendations', {})
+            
+            rds_data = [
+                ['Configuration Item', 'Recommendation'],
+                ['Primary Instance Type', rds_rec.get('primary_instance', 'Unknown')],
+                ['Storage Type', rds_rec.get('storage_type', 'gp3')],
+                ['Storage Size', f"{rds_rec.get('storage_size_gb', 0):,.0f} GB"],
+                ['Multi-AZ', 'Yes' if rds_rec.get('multi_az', False) else 'No'],
+                ['Backup Retention', f"{rds_rec.get('backup_retention_days', 7)} days"],
+                ['Monthly Instance Cost', f"${rds_rec.get('monthly_instance_cost', 0):,.0f}"],
+                ['Monthly Storage Cost', f"${rds_rec.get('monthly_storage_cost', 0):,.0f}"],
+                ['Total Monthly Cost', f"${rds_rec.get('total_monthly_cost', 0):,.0f}"]
+            ]
+        else:
+            story.append(Paragraph("EC2 Configuration", self.styles['SubsectionHeader']))
+            ec2_rec = aws_sizing.get('ec2_recommendations', {})
+            
+            rds_data = [
+                ['Configuration Item', 'Recommendation'],
+                ['Primary Instance Type', ec2_rec.get('primary_instance', 'Unknown')],
+                ['Storage Type', ec2_rec.get('storage_type', 'gp3')],
+                ['Storage Size', f"{ec2_rec.get('storage_size_gb', 0):,.0f} GB"],
+                ['EBS Optimized', 'Yes' if ec2_rec.get('ebs_optimized', False) else 'No'],
+                ['Enhanced Networking', 'Yes' if ec2_rec.get('enhanced_networking', False) else 'No'],
+                ['Monthly Instance Cost', f"${ec2_rec.get('monthly_instance_cost', 0):,.0f}"],
+                ['Monthly Storage Cost', f"${ec2_rec.get('monthly_storage_cost', 0):,.0f}"],
+                ['Total Monthly Cost', f"${ec2_rec.get('total_monthly_cost', 0):,.0f}"]
+            ]
+        
+        config_table = Table(rds_data, colWidths=[2.5*inch, 2.5*inch])
+        config_table.setStyle(self._get_standard_table_style())
+        story.append(config_table)
+        story.append(Spacer(1, 15))
+        
+        # Reader/Writer configuration
+        reader_writer = aws_sizing.get('reader_writer_config', {})
+        if reader_writer.get('total_instances', 1) > 1:
+            story.append(Paragraph("Read Replica Configuration", self.styles['SubsectionHeader']))
+            
+            replica_text = f"""
+            Recommended configuration includes {reader_writer.get('writers', 1)} writer instance(s) 
+            and {reader_writer.get('readers', 0)} read replica(s) for a total of 
+            {reader_writer.get('total_instances', 1)} instances. This configuration supports 
+            {reader_writer.get('recommended_read_split', 0):.1f}% read traffic distribution 
+            to read replicas.
+            """
+            story.append(Paragraph(replica_text, self.styles['Normal']))
+            story.append(Spacer(1, 10))
+        
+        story.append(Spacer(1, 20))
+        
+        return story
+    
+    def _create_ai_insights_section(self, analysis: Dict, config: Dict) -> list:
+        """Create AI insights and recommendations section"""
+        story = []
+        
+        story.append(Paragraph("5. AI Insights and Recommendations", self.styles['SectionHeader']))
+        
+        ai_analysis = analysis.get('aws_sizing_recommendations', {}).get('ai_analysis', {})
+        
+        # AI complexity assessment
+        story.append(Paragraph("Migration Complexity Analysis", self.styles['SubsectionHeader']))
+        
+        complexity_score = ai_analysis.get('ai_complexity_score', 6)
+        confidence_level = ai_analysis.get('confidence_level', 'medium')
+        
+        complexity_text = f"""
+        The AI analysis rates this migration at {complexity_score:.1f}/10 complexity with 
+        {confidence_level} confidence. This assessment considers factors such as database 
+        engine compatibility, data size, performance requirements, and infrastructure complexity.
+        """
+        story.append(Paragraph(complexity_text, self.styles['Normal']))
+        story.append(Spacer(1, 10))
+        
+        # Risk factors
+        story.append(Paragraph("Identified Risk Factors", self.styles['SubsectionHeader']))
+        
+        risk_factors = ai_analysis.get('risk_factors', [])
+        if risk_factors:
+            for risk in risk_factors[:5]:
+                story.append(Paragraph(f"• {risk}", self.styles['Normal']))
+        else:
+            story.append(Paragraph("No significant risk factors identified by AI analysis.", self.styles['Normal']))
+        
+        story.append(Spacer(1, 10))
+        
+        # Mitigation strategies
+        story.append(Paragraph("Recommended Mitigation Strategies", self.styles['SubsectionHeader']))
+        
+        mitigation_strategies = ai_analysis.get('mitigation_strategies', [])
+        if mitigation_strategies:
+            for strategy in mitigation_strategies[:5]:
+                story.append(Paragraph(f"• {strategy}", self.styles['Normal']))
+        else:
+            story.append(Paragraph("Standard migration best practices recommended.", self.styles['Normal']))
+        
+        story.append(Spacer(1, 10))
+        
+        # Performance recommendations
+        story.append(Paragraph("AI Performance Recommendations", self.styles['SubsectionHeader']))
+        
+        performance_recommendations = ai_analysis.get('performance_recommendations', [])
+        if performance_recommendations:
+            for rec in performance_recommendations[:5]:
+                story.append(Paragraph(f"• {rec}", self.styles['Normal']))
+        else:
+            story.append(Paragraph("Current configuration appears well-optimized.", self.styles['Normal']))
+        
+        story.append(Spacer(1, 20))
+        
+        return story
+    
+    def _create_risk_assessment_section(self, analysis: Dict, config: Dict) -> list:
+        """Create risk assessment section"""
+        story = []
+        
+        story.append(Paragraph("6. Risk Assessment", self.styles['SectionHeader']))
+        
+        ai_overall = analysis.get('ai_overall_assessment', {})
+        
+        # Overall risk level
+        risk_level = ai_overall.get('risk_level', 'Medium')
+        success_probability = ai_overall.get('success_probability', 85)
+        
+        risk_overview = f"""
+        The migration is assessed as {risk_level} risk with {success_probability:.0f}% 
+        probability of success. This assessment is based on technical complexity, 
+        organizational readiness, and identified risk factors.
+        """
+        story.append(Paragraph(risk_overview, self.styles['Normal']))
+        story.append(Spacer(1, 15))
+        
+        # Risk categories
+        story.append(Paragraph("Risk Categories", self.styles['SubsectionHeader']))
+        
+        risk_categories = [
+            ['Risk Category', 'Level', 'Mitigation Status'],
+            ['Technical Complexity', self._assess_technical_risk(config), 'Planned'],
+            ['Data Migration', self._assess_data_risk(config), 'Managed'],
+            ['Performance Impact', self._assess_performance_risk(analysis), 'Monitored'],
+            ['Downtime Risk', self._assess_downtime_risk(config), 'Controlled'],
+            ['Cost Overrun', 'Low', 'Budgeted'],
+            ['Timeline Risk', self._assess_timeline_risk(analysis), 'Scheduled']
+        ]
+        
+        risk_table = Table(risk_categories, colWidths=[2*inch, 1*inch, 1.5*inch])
+        risk_table.setStyle(self._get_standard_table_style())
+        story.append(risk_table)
+        story.append(Spacer(1, 15))
+        
+        # Risk mitigation plan
+        story.append(Paragraph("Risk Mitigation Plan", self.styles['SubsectionHeader']))
+        
+        mitigation_plan = [
+            "Comprehensive testing in non-production environment",
+            "Detailed rollback procedures documented and tested",
+            "Continuous monitoring during migration process",
+            "Backup and recovery procedures validated",
+            "Stakeholder communication plan established",
+            "Technical support resources identified and available"
+        ]
+        
+        for item in mitigation_plan:
+            story.append(Paragraph(f"• {item}", self.styles['Normal']))
+        
+        story.append(Spacer(1, 20))
+        
+        return story
+    
+    def _create_implementation_roadmap(self, analysis: Dict, config: Dict) -> list:
+        """Create implementation roadmap section"""
+        story = []
+        
+        story.append(Paragraph("7. Implementation Roadmap", self.styles['SectionHeader']))
+        
+        # Timeline
+        timeline_rec = analysis.get('ai_overall_assessment', {}).get('timeline_recommendation', {})
+        
+        story.append(Paragraph("Project Timeline", self.styles['SubsectionHeader']))
+        
+        timeline_data = [
+            ['Phase', 'Duration', 'Key Activities'],
+            ['Planning & Assessment', f"{timeline_rec.get('planning_phase_weeks', 2)} weeks", 'Detailed analysis, resource planning'],
+            ['Environment Setup', '1-2 weeks', 'AWS environment provisioning, agent setup'],
+            ['Testing & Validation', f"{timeline_rec.get('testing_phase_weeks', 3)} weeks", 'Non-production migration testing'],
+            ['Migration Execution', f"{timeline_rec.get('migration_window_hours', 24)} hours", 'Production data migration'],
+            ['Post-Migration', '1 week', 'Validation, optimization, documentation'],
+            ['Total Project Duration', f"{timeline_rec.get('total_project_weeks', 6)} weeks", 'End-to-end timeline']
+        ]
+        
+        timeline_table = Table(timeline_data, colWidths=[1.5*inch, 1*inch, 3*inch])
+        timeline_table.setStyle(self._get_standard_table_style())
+        story.append(timeline_table)
+        story.append(Spacer(1, 15))
+        
+        # Key milestones
+        story.append(Paragraph("Key Milestones", self.styles['SubsectionHeader']))
+        
+        milestones = [
+            "Migration plan approval and resource allocation",
+            "AWS environment setup and configuration complete",
+            "Non-production migration testing successful",
+            "Go/No-go decision for production migration",
+            "Production migration execution complete",
+            "Post-migration validation and sign-off"
+        ]
+        
+        for i, milestone in enumerate(milestones, 1):
+            story.append(Paragraph(f"{i}. {milestone}", self.styles['Normal']))
+        
+        story.append(Spacer(1, 15))
+        
+        # Success criteria
+        story.append(Paragraph("Success Criteria", self.styles['SubsectionHeader']))
+        
+        success_criteria = [
+            "All data migrated successfully with zero data loss",
+            "Application performance meets or exceeds baseline",
+            "Migration completed within planned downtime window",
+            "All post-migration validation tests pass",
+            "Stakeholder sign-off obtained",
+            "Documentation and knowledge transfer complete"
+        ]
+        
+        for criterion in success_criteria:
+            story.append(Paragraph(f"• {criterion}", self.styles['Normal']))
+        
+        story.append(Spacer(1, 20))
+        
+        return story
+    
+    def _create_appendices(self, analysis: Dict, config: Dict) -> list:
+        """Create appendices section"""
+        story = []
+        
+        # Appendix A: Technical Specifications
+        story.append(PageBreak())
+        story.append(Paragraph("Appendix A: Technical Specifications", self.styles['SectionHeader']))
+        
+        # Current database performance metrics
+        story.append(Paragraph("Current Database Performance Metrics", self.styles['SubsectionHeader']))
+        
+        db_metrics_data = [
+            ['Metric', 'Current Value', 'AWS Recommendation'],
+            ['Max Memory (GB)', str(config.get('current_db_max_memory_gb', 'Not specified')), 'Based on workload analysis'],
+            ['Max CPU Cores', str(config.get('current_db_max_cpu_cores', 'Not specified')), 'Right-sized for AWS'],
+            ['Max IOPS', f"{config.get('current_db_max_iops', 0):,}", 'EBS optimized storage'],
+            ['Max Throughput (MB/s)', str(config.get('current_db_max_throughput_mbps', 'Not specified')), 'Enhanced networking enabled']
+        ]
+        
+        db_metrics_table = Table(db_metrics_data, colWidths=[2*inch, 1.5*inch, 2*inch])
+        db_metrics_table.setStyle(self._get_standard_table_style())
+        story.append(db_metrics_table)
+        story.append(Spacer(1, 15))
+        
+        # Appendix B: Detailed Cost Breakdown
+        story.append(Paragraph("Appendix B: Detailed Cost Breakdown", self.styles['SubsectionHeader']))
+        
+        validated_costs = self._get_validated_costs(analysis, config)
+        detailed_costs = [
+            ['Service Component', 'Monthly Cost', 'Annual Cost', '3-Year Cost']
+        ]
+        
+        breakdown = validated_costs.get('breakdown', {})
+        for component, monthly_cost in breakdown.items():
+            if monthly_cost > 0:
+                annual_cost = monthly_cost * 12
+                three_year_cost = monthly_cost * 36
+                detailed_costs.append([
+                    component.replace('_', ' ').title(),
+                    f"${monthly_cost:,.0f}",
+                    f"${annual_cost:,.0f}",
+                    f"${three_year_cost:,.0f}"
+                ])
+        
+        # Add totals row
+        detailed_costs.append([
+            'TOTAL',
+            f"${validated_costs['total_monthly']:,.0f}",
+            f"${validated_costs['total_monthly'] * 12:,.0f}",
+            f"${validated_costs['total_monthly'] * 36:,.0f}"
+        ])
+        
+        detailed_cost_table = Table(detailed_costs, colWidths=[2*inch, 1.25*inch, 1.25*inch, 1.5*inch])
+        detailed_cost_table.setStyle(self._get_standard_table_style())
+        # Make totals row bold
+        detailed_cost_table.setStyle(TableStyle([
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e5e7eb'))
+        ]))
+        story.append(detailed_cost_table)
+        story.append(Spacer(1, 15))
+        
+        # Appendix C: Network Analysis
+        story.append(Paragraph("Appendix C: Network Analysis", self.styles['SubsectionHeader']))
+        
+        network_perf = analysis.get('network_performance', {})
+        
+        network_summary = f"""
+        Network Path: {network_perf.get('path_name', 'Standard migration path')}
+        
+        Network Quality Score: {network_perf.get('network_quality_score', 0):.1f}/100
+        AI Enhanced Score: {network_perf.get('ai_enhanced_quality_score', 0):.1f}/100
+        Effective Bandwidth: {network_perf.get('effective_bandwidth_mbps', 0):,.0f} Mbps
+        Total Latency: {network_perf.get('total_latency_ms', 0):.1f} ms
+        Overall Reliability: {network_perf.get('total_reliability', 0)*100:.3f}%
+        """
+        
+        story.append(Paragraph(network_summary, self.styles['Normal']))
+        story.append(Spacer(1, 10))
+        
+        # Report generation info
+        story.append(HRFlowable(width="100%", thickness=1, lineCap='round', color=colors.HexColor('#e5e7eb')))
+        story.append(Spacer(1, 10))
+        
+        report_info = f"""
+        Report generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')} by 
+        AWS Enterprise Database Migration Analyzer AI v3.0. 
+        
+        This report contains proprietary analysis and should be treated as confidential.
+        """
+        story.append(Paragraph(report_info, self.styles['Normal']))
+        
+        return story
+    
+    def _get_standard_table_style(self):
+        """Get standard table style"""
+        return TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3a8a')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            ('FONTSIZE', (0, 1), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f8fafc')),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+        ])
+    
+    def _get_validated_costs(self, analysis: Dict, config: Dict) -> Dict:
+        """Get validated costs using the same logic as the main application"""
+        comprehensive_costs = analysis.get('comprehensive_costs', {})
+        basic_costs = analysis.get('cost_analysis', {})
+        
+        if comprehensive_costs.get('cost_source') == 'unified_calculation':
+            return {
+                'total_monthly': comprehensive_costs['total_monthly'],
+                'total_one_time': comprehensive_costs.get('total_one_time', 0),
+                'three_year_total': comprehensive_costs['three_year_total'],
+                'breakdown': comprehensive_costs.get('monthly_breakdown', {}),
+                'cost_source': 'unified',
+                'is_validated': True
+            }
+        elif comprehensive_costs.get('total_monthly', 0) > 0:
+            return {
+                'total_monthly': comprehensive_costs['total_monthly'],
+                'total_one_time': comprehensive_costs.get('total_one_time', 0),
+                'three_year_total': comprehensive_costs.get('three_year_total', 0),
+                'breakdown': comprehensive_costs.get('monthly_breakdown', {}),
+                'cost_source': 'comprehensive',
+                'is_validated': False
+            }
+        else:
+            return {
+                'total_monthly': basic_costs.get('total_monthly_cost', 1000),
+                'total_one_time': basic_costs.get('one_time_migration_cost', 5000),
+                'three_year_total': (basic_costs.get('total_monthly_cost', 1000) * 36) + basic_costs.get('one_time_migration_cost', 5000),
+                'breakdown': {
+                    'compute': basic_costs.get('aws_compute_cost', 600),
+                    'storage': basic_costs.get('aws_storage_cost', 200),
+                    'agents': basic_costs.get('agent_cost', 150),
+                    'network': basic_costs.get('network_cost', 50)
+                },
+                'cost_source': 'basic',
+                'is_validated': False
+            }
+    
+    def _get_readiness_assessment(self, score: float) -> str:
+        """Get readiness assessment text"""
+        if score >= 80:
+            return "Excellent"
+        elif score >= 70:
+            return "Good"
+        elif score >= 60:
+            return "Fair"
+        else:
+            return "Needs Improvement"
+    
+    def _assess_technical_risk(self, config: Dict) -> str:
+        """Assess technical risk level"""
+        if config.get('source_database_engine') != config.get('database_engine'):
+            return "Medium"
+        elif config.get('database_size_gb', 0) > 10000:
+            return "Medium"
+        else:
+            return "Low"
+    
+    def _assess_data_risk(self, config: Dict) -> str:
+        """Assess data migration risk"""
+        size = config.get('database_size_gb', 0)
+        if size > 10000:
+            return "Medium"
+        elif size > 5000:
+            return "Medium"
+        else:
+            return "Low"
+    
+    def _assess_performance_risk(self, analysis: Dict) -> str:
+        """Assess performance risk"""
+        perf_score = analysis.get('onprem_performance', {}).get('performance_score', 70)
+        if perf_score < 60:
+            return "High"
+        elif perf_score < 80:
+            return "Medium"
+        else:
+            return "Low"
+    
+    def _assess_downtime_risk(self, config: Dict) -> str:
+        """Assess downtime risk"""
+        tolerance = config.get('downtime_tolerance_minutes', 60)
+        if tolerance < 30:
+            return "High"
+        elif tolerance < 120:
+            return "Medium"
+        else:
+            return "Low"
+    
+    def _assess_timeline_risk(self, analysis: Dict) -> str:
+        """Assess timeline risk"""
+        migration_time = analysis.get('estimated_migration_time_hours', 24)
+        if migration_time > 48:
+            return "High"
+        elif migration_time > 24:
+            return "Medium"
+        else:
+            return "Low"
+
+def export_pdf_report(analysis: Dict, config: Dict, report_type: str = "comprehensive") -> bytes:
+    """Export PDF report with specified type"""
+    try:
+        pdf_generator = AWSMigrationPDFReportGenerator()
+        
+        if report_type == "comprehensive":
+            pdf_data = pdf_generator.generate_comprehensive_report(analysis, config)
+        else:
+            # Could add other report types here (summary, technical, executive, etc.)
+            pdf_data = pdf_generator.generate_comprehensive_report(analysis, config)
+        
+        return pdf_data
+    
+    except Exception as e:
+        st.error(f"Failed to generate PDF report: {str(e)}")
+        return None
+
+def render_pdf_export_section(analysis: Dict, config: Dict):
+    """Render PDF export section for any tab"""
+    st.markdown("---")
+    st.markdown("**📄 PDF Report Generation**")
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📊 Generate Comprehensive Report", use_container_width=True):
+            with st.spinner("Generating comprehensive PDF report..."):
+                pdf_data = export_pdf_report(analysis, config, "comprehensive")
+                if pdf_data:
+                    st.download_button(
+                        label="📥 Download Comprehensive Report",
+                        data=pdf_data,
+                        file_name=f"aws_migration_comprehensive_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ Comprehensive report generated successfully!")
+    
+    with col2:
+        if st.button("📋 Generate Executive Summary", use_container_width=True):
+            with st.spinner("Generating executive summary PDF..."):
+                # You could create a separate executive summary generator
+                pdf_data = export_pdf_report(analysis, config, "comprehensive")
+                if pdf_data:
+                    st.download_button(
+                        label="📥 Download Executive Summary",
+                        data=pdf_data,
+                        file_name=f"aws_migration_executive_summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ Executive summary generated successfully!")
+    
+    with col3:
+        if st.button("🔧 Generate Technical Report", use_container_width=True):
+            with st.spinner("Generating technical PDF report..."):
+                pdf_data = export_pdf_report(analysis, config, "comprehensive")
+                if pdf_data:
+                    st.download_button(
+                        label="📥 Download Technical Report",
+                        data=pdf_data,
+                        file_name=f"aws_migration_technical_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ Technical report generated successfully!")
 
 def safe_float(value, default=0.0):
     """Safely convert a value to float, returning default if None or invalid"""
@@ -5800,8 +6871,8 @@ def render_network_intelligence_tab(analysis: Dict, config: Dict):
     else:
         st.info("Network appears optimally configured for current requirements")
 
-def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
-    """Enhanced comprehensive AWS cost analysis tab with validation"""
+def render_comprehensive_cost_analysis_tab_with_pdf(analysis: Dict, config: Dict):
+    """Enhanced cost analysis with PDF export"""
     st.subheader("💰 Complete AWS Cost Analysis - All Costs Consolidated & Validated")
 
     # Initialize cost validator
@@ -5884,6 +6955,11 @@ def render_comprehensive_cost_analysis_tab(analysis: Dict, config: Dict):
         st.metric("🤖 Migration Agents", f"${agent_cost:,.0f}/mo",
                   delta=f"${cost_per_agent:,.0f} per agent")
 
+        render_comprehensive_cost_analysis_tab(analysis, config)
+    
+        # Add PDF export section
+        render_pdf_export_section(analysis, config)
+        
     # === VALIDATED COST BREAKDOWN ===
     st.markdown("---")
     st.markdown("**🔧 Validated AWS Services Cost Breakdown**")
@@ -6768,8 +7844,8 @@ def render_aws_sizing_tab(analysis: Dict, config: Dict):
             st.write("• Manual maintenance scheduling")
             st.write("• Custom alerting configuration")
 
-def render_migration_dashboard_tab(analysis: Dict, config: Dict):
-    """Render comprehensive migration dashboard with validated costs"""
+def render_migration_dashboard_tab_with_pdf(analysis: Dict, config: Dict):
+    """Enhanced migration dashboard with PDF export"""
     st.subheader("📊 Enhanced Migration Performance Dashboard")
 
     # Initialize cost validator
@@ -6843,7 +7919,12 @@ def render_migration_dashboard_tab(analysis: Dict, config: Dict):
         confidence = analysis.get('ai_overall_assessment', {}).get('ai_confidence', 0.5)
         st.metric("🤖 AI Confidence", f"{confidence*100:.1f}%",
                  delta=f"Complexity: {complexity:.1f}/10")
-
+    
+        render_migration_dashboard_tab(analysis, config)
+        
+        # Add PDF export section
+        render_pdf_export_section(analysis, config)
+    
     # Cost Breakdown Section
     st.markdown("---")
     st.markdown("**💰 Validated Cost Breakdown:**")
@@ -9866,6 +10947,23 @@ def main():
         analysis = st.session_state['analysis']
         config = st.session_state['config']
         
+        # Add PDF export to the main interface
+        with st.sidebar:
+            st.markdown("---")
+            st.markdown("### 📄 Quick Report Export")
+            
+            if st.button("📊 Generate Full PDF Report", use_container_width=True):
+                with st.spinner("Generating comprehensive PDF report..."):
+                    pdf_data = export_pdf_report(analysis, config)
+                    if pdf_data:
+                        st.download_button(
+                            label="📥 Download Report",
+                            data=pdf_data,
+                            file_name=f"aws_migration_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+        
         tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
             "📊 Migration Dashboard",
             "🧠 AI Insights", 
@@ -9878,16 +10976,18 @@ def main():
         ])
         
         with tab1:
-            render_migration_dashboard_tab(analysis, config)
+            render_migration_dashboard_tab_with_pdf(analysis, config)
         
         with tab2:
             render_ai_insights_tab_enhanced(analysis, config)
+            render_pdf_export_section(analysis, config)
         
         with tab3:
             render_network_intelligence_tab(analysis, config)
+            render_pdf_export_section(analysis, config)
         
         with tab4:
-            render_comprehensive_cost_analysis_tab(analysis, config)
+            render_comprehensive_cost_analysis_tab_with_pdf(analysis, config)
         
         with tab5:
             render_os_performance_tab(analysis, config)
