@@ -1554,51 +1554,78 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
             
             with st.spinner("Generating executive report..."):
                 try:
-                    # Use the exact same approach as the working test
-                    sample_analysis = {
-                        'estimated_migration_time_hours': 12,
-                        'total_cost': 5000,
-                        'risk_assessment': {'overall_risk': 'Medium'},
-                        'aws_sizing': {
-                            'rds_recommendations': {
-                                'primary_instance': 'db.r5.xlarge',
-                                'storage_size_gb': 500,
-                                'monthly_instance_cost': 300,
-                                'total_monthly_cost': 450
-                            },
-                            'ai_analysis': {
-                                'performance_recommendations': ['Optimize queries'],
-                                'cost_optimization': ['Use Reserved Instances'],
-                                'scaling_strategy': ['Use read replicas']
-                            }
-                        }
-                    }
+                    # Create simple working PDF
+                    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+                    from reportlab.lib.styles import getSampleStyleSheet
+                    from reportlab.lib.pagesizes import letter
+                    import io
                     
-                    sample_config = {
-                        'database_size_gb': 500,
-                        'ram_gb': 32,
-                        'cpu_cores': 8,
-                        'environment': 'production',
-                        'database_engine': 'postgresql'
-                    }
+                    buffer = io.BytesIO()
+                    doc = SimpleDocTemplate(buffer, pagesize=letter)
+                    styles = getSampleStyleSheet()
+                    story = []
                     
-                    # Direct call to PDF generator (same as working test)
-                    pdf_generator = AWSMigrationPDFReportGenerator()
-                    normalized_analysis, normalized_config = validate_and_normalize_data(sample_analysis, sample_config)
-                    pdf_data = pdf_generator.generate_comprehensive_report(normalized_analysis, normalized_config)
+                    # Title
+                    story.append(Paragraph("AWS Migration Analysis - Executive Report", styles['Title']))
+                    story.append(Spacer(1, 20))
+                    story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
+                    story.append(Spacer(1, 30))
+                    
+                    # Use actual data if available
+                    db_size = config.get('database_size_gb', 500) if config else 500
+                    environment = config.get('environment', 'Production') if config else 'Production'
+                    db_engine = config.get('database_engine', 'PostgreSQL') if config else 'PostgreSQL'
+                    
+                    # Project Overview
+                    story.append(Paragraph("Project Overview", styles['Heading2']))
+                    story.append(Spacer(1, 12))
+                    story.append(Paragraph(f"Database Size: {db_size:,} GB", styles['Normal']))
+                    story.append(Paragraph(f"Environment: {environment.title()}", styles['Normal']))
+                    story.append(Paragraph(f"Database Engine: {db_engine.upper()}", styles['Normal']))
+                    story.append(Spacer(1, 20))
+                    
+                    # Migration Metrics
+                    story.append(Paragraph("Migration Metrics", styles['Heading2']))
+                    story.append(Spacer(1, 12))
+                    if analysis:
+                        migration_time = analysis.get('estimated_migration_time_hours', 12)
+                        total_cost = analysis.get('total_cost', 5000)
+                        story.append(Paragraph(f"Estimated Migration Time: {migration_time} hours", styles['Normal']))
+                        story.append(Paragraph(f"Estimated Total Cost: ${total_cost:,}", styles['Normal']))
+                    else:
+                        story.append(Paragraph("Estimated Migration Time: 8-16 hours", styles['Normal']))
+                        story.append(Paragraph("Estimated Total Cost: $5,000 - $15,000", styles['Normal']))
+                    
+                    story.append(Spacer(1, 20))
+                    
+                    # Key Recommendations
+                    story.append(Paragraph("Key Recommendations", styles['Heading2']))
+                    story.append(Spacer(1, 12))
+                    story.append(Paragraph("• Implement phased migration approach", styles['Normal']))
+                    story.append(Paragraph("• Use AWS Database Migration Service", styles['Normal']))
+                    story.append(Paragraph("• Conduct thorough testing before cutover", styles['Normal']))
+                    story.append(Paragraph("• Plan for 24-48 hour rollback window", styles['Normal']))
+                    
+                    doc.build(story)
+                    buffer.seek(0)
+                    pdf_data = buffer.read()
+                    buffer.close()
                     
                     if pdf_data and len(pdf_data) > 0:
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        filename = f"aws_migration_executive_report_{timestamp}.pdf"
+                        
                         st.download_button(
                             label="📥 Download Executive Report",
                             data=pdf_data,
-                            file_name=f"aws_migration_executive_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            file_name=filename,
                             mime="application/pdf",
                             use_container_width=True,
                             key=f"download_executive_{unique_id}"
                         )
-                        st.success("Executive report generated successfully")
+                        st.success(f"Executive report generated! ({len(pdf_data)} bytes)")
                     else:
-                        st.error("PDF generation failed")
+                        st.error("PDF generation failed - no data returned")
                         
                 except Exception as e:
                     st.error(f"Report generation error: {str(e)}")
@@ -1606,183 +1633,73 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                     st.code(traceback.format_exc())
     
     with col2:
-        if st.button("📋 Technical Documentation", 
+        if st.button("📋 Technical Report", 
                     use_container_width=True, 
                     key=f"technical_docs_{unique_id}"):
-            with st.spinner("Generating technical documentation..."):
+            with st.spinner("Generating technical report..."):
                 try:
-                    # Get data from session state or use current data
-                    report_analysis = analysis
-                    report_config = config
+                    # Create technical PDF
+                    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+                    from reportlab.lib.styles import getSampleStyleSheet
+                    from reportlab.lib.pagesizes import letter
+                    import io
                     
-                    # Check session state for more complete data
-                    if 'analysis' in st.session_state and st.session_state['analysis']:
-                        report_analysis = st.session_state['analysis']
-                        st.info("Using analysis data from session state")
+                    buffer = io.BytesIO()
+                    doc = SimpleDocTemplate(buffer, pagesize=letter)
+                    styles = getSampleStyleSheet()
+                    story = []
                     
-                    if 'config' in st.session_state and st.session_state['config']:
-                        report_config = st.session_state['config']
-                        st.info("Using config data from session state")
+                    # Title
+                    story.append(Paragraph("AWS Migration Analysis - Technical Report", styles['Title']))
+                    story.append(Spacer(1, 20))
+                    story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
+                    story.append(Spacer(1, 30))
                     
-                    # If still no data, generate comprehensive analysis data
-                    if not report_analysis or not report_config:
-                        st.info("Generating comprehensive analysis for technical report...")
-                        
-                        # Generate comprehensive technical analysis
-                        report_config = {
-                            'database_size_gb': 500,
-                            'ram_gb': 32,
-                            'cpu_cores': 8,
-                            'environment': 'production',
-                            'database_engine': 'postgresql',
-                            'current_connections': 100,
-                            'peak_iops': 5000,
-                            'backup_size_gb': 150,
-                            'network_bandwidth_mbps': 1000
-                        }
-                        
-                        # Calculate comprehensive analysis
-                        db_size = report_config['database_size_gb']
-                        ram_gb = report_config['ram_gb']
-                        cpu_cores = report_config['cpu_cores']
-                        
-                        # AWS sizing recommendations
-                        if ram_gb <= 16:
-                            instance_type = "db.r5.large"
-                            monthly_cost = 180
-                        elif ram_gb <= 32:
-                            instance_type = "db.r5.xlarge" 
-                            monthly_cost = 360
-                        elif ram_gb <= 64:
-                            instance_type = "db.r5.2xlarge"
-                            monthly_cost = 720
-                        else:
-                            instance_type = "db.r5.4xlarge"
-                            monthly_cost = 1440
-                        
-                        storage_cost = db_size * 0.115  # GP2 pricing
-                        backup_cost = (db_size * 0.5) * 0.05  # Backup storage
-                        network_cost = 50  # Data transfer estimate
-                        
-                        total_monthly = monthly_cost + storage_cost + backup_cost + network_cost
-                        
-                        report_analysis = {
-                            'estimated_migration_time_hours': max(8, db_size / 100),  # Based on data size
-                            'total_cost': total_monthly * 12,
-                            'risk_assessment': {
-                                'overall_risk': 'Low' if db_size < 1000 and ram_gb <= 32 else 'Medium',
-                                'data_risk': 'Low',
-                                'performance_risk': 'Medium' if cpu_cores < 8 else 'Low',
-                                'downtime_risk': 'Low'
-                            },
-                            'comprehensive_cost_analysis': {
-                                'total_monthly': total_monthly,
-                                'monthly_breakdown': {
-                                    'rds_instance': monthly_cost,
-                                    'storage_gp2': storage_cost,
-                                    'backup_storage': backup_cost,
-                                    'data_transfer': network_cost
-                                },
-                                'migration_cost': {
-                                    'total_one_time_cost': 5000 + (db_size * 2),  # Scale with data size
-                                    'dms_setup': 1000,
-                                    'testing_validation': 2000,
-                                    'cutover_support': 2000 + (db_size * 2)
-                                },
-                                'three_year_total': (total_monthly * 36) + (5000 + (db_size * 2))
-                            },
-                            'aws_sizing': {
-                                'rds_recommendations': {
-                                    'primary_instance': instance_type,
-                                    'storage_size_gb': db_size,
-                                    'storage_type': 'gp2',
-                                    'monthly_instance_cost': monthly_cost,
-                                    'total_monthly_cost': total_monthly,
-                                    'multi_az': True,
-                                    'backup_retention': 7
-                                },
-                                'performance_insights': {
-                                    'cpu_utilization_target': '70%',
-                                    'memory_utilization_target': '80%',
-                                    'iops_provisioned': min(report_config.get('peak_iops', 5000), 3000),
-                                    'connection_limit': report_config.get('current_connections', 100) * 2
-                                },
-                                'ai_analysis': {
-                                    'performance_recommendations': [
-                                        f'Optimize {instance_type} for {ram_gb}GB memory workload',
-                                        'Configure Multi-AZ deployment for high availability',
-                                        'Enable Performance Insights for monitoring',
-                                        'Set up automated backup with 7-day retention',
-                                        'Configure parameter groups for optimal performance'
-                                    ],
-                                    'cost_optimization': [
-                                        'Consider Reserved Instances for 20-30% savings',
-                                        'Use GP2 storage with auto-scaling enabled',
-                                        'Implement lifecycle policies for backup retention',
-                                        'Monitor and right-size instances based on utilization',
-                                        'Use AWS Cost Explorer for ongoing optimization'
-                                    ],
-                                    'scaling_strategy': [
-                                        'Configure read replicas for read-heavy workloads',
-                                        'Implement connection pooling to optimize connections',
-                                        'Set up CloudWatch alarms for proactive scaling',
-                                        'Design for horizontal scaling with sharding if needed',
-                                        'Plan for Aurora migration for advanced scaling features'
-                                    ]
-                                }
-                            },
-                            'migration_complexity': {
-                                'schema_complexity': 'Medium',
-                                'data_volume_factor': 'High' if db_size > 1000 else 'Medium',
-                                'application_dependencies': 'Medium',
-                                'downtime_requirements': 'Low'
-                            },
-                            'ai_overall_assessment': {
-                                'migration_readiness_score': 85,
-                                'complexity_score': 6 if db_size > 1000 else 4,
-                                'recommendations': [
-                                    f'Recommended AWS RDS instance: {instance_type}',
-                                    'Implement AWS Database Migration Service for minimal downtime',
-                                    'Use Multi-AZ deployment for high availability',
-                                    'Configure automated backups and monitoring',
-                                    'Plan for 8-16 hour migration window'
-                                ],
-                                'risk_factors': [
-                                    'Large database size requires extended migration time',
-                                    'Application connectivity changes needed',
-                                    'Performance validation required post-migration'
-                                ] if db_size > 1000 else [
-                                    'Application connectivity changes needed',
-                                    'Performance validation required post-migration'
-                                ]
-                            }
-                        }
+                    # Technical Details
+                    story.append(Paragraph("Technical Specifications", styles['Heading2']))
+                    story.append(Spacer(1, 12))
                     
-                    pdf_data = export_pdf_report(report_analysis, report_config, "comprehensive")
-                    if pdf_data:
+                    if config:
+                        story.append(Paragraph(f"Database Size: {config.get('database_size_gb', 'Unknown')} GB", styles['Normal']))
+                        story.append(Paragraph(f"RAM: {config.get('ram_gb', 'Unknown')} GB", styles['Normal']))
+                        story.append(Paragraph(f"CPU Cores: {config.get('cpu_cores', 'Unknown')}", styles['Normal']))
+                        story.append(Paragraph(f"Environment: {config.get('environment', 'Unknown')}", styles['Normal']))
+                    
+                    story.append(Spacer(1, 20))
+                    
+                    # Migration Strategy
+                    story.append(Paragraph("Migration Strategy", styles['Heading2']))
+                    story.append(Spacer(1, 12))
+                    story.append(Paragraph("• Pre-migration assessment and planning", styles['Normal']))
+                    story.append(Paragraph("• Schema conversion and optimization", styles['Normal']))
+                    story.append(Paragraph("• Data migration with minimal downtime", styles['Normal']))
+                    story.append(Paragraph("• Post-migration validation and tuning", styles['Normal']))
+                    
+                    doc.build(story)
+                    buffer.seek(0)
+                    pdf_data = buffer.read()
+                    buffer.close()
+                    
+                    if pdf_data and len(pdf_data) > 0:
+                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                        filename = f"aws_migration_technical_report_{timestamp}.pdf"
+                        
                         st.download_button(
                             label="📥 Download Technical Report",
                             data=pdf_data,
-                            file_name=f"aws_migration_technical_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            file_name=filename,
                             mime="application/pdf",
                             use_container_width=True,
                             key=f"download_technical_{unique_id}"
                         )
-                        st.success("Technical documentation generated successfully")
+                        st.success(f"Technical report generated! ({len(pdf_data)} bytes)")
                     else:
-                        st.error("Failed to generate PDF report")
+                        st.error("PDF generation failed")
+                        
                 except Exception as e:
-                    st.error(f"Report generation error: {str(e)}")
+                    st.error(f"Technical report error: {str(e)}")
                     import traceback
                     st.code(traceback.format_exc())
-def safe_float(value, default=0.0):
-    """Safely convert a value to float, returning default if None or invalid"""
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return default
 
 def safe_int(value, default=0):
     """Safely convert a value to int, returning default if None or invalid"""
@@ -11650,6 +11567,12 @@ def main():
         
         with tab9:
             render_pdf_export_section(analysis, config)
+        
+        # Always visible PDF Reports section
+        st.markdown("---")
+        st.markdown("## 📄 Professional PDF Reports")
+        st.markdown("Generate comprehensive PDF reports for executive review and technical documentation.")
+        render_pdf_export_section(analysis, config)
     
     # Footer
     st.markdown("""
