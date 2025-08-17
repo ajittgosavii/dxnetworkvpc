@@ -11566,13 +11566,9 @@ def main():
             render_agent_scaling_optimizer_tab(analysis, config)
         
         with tab9:
+            st.markdown("## 📄 Professional PDF Reports")
+            st.markdown("Generate comprehensive PDF reports for executive review and technical documentation.")
             render_pdf_export_section(analysis, config)
-        
-        # Always visible PDF Reports section
-        st.markdown("---")
-        st.markdown("## 📄 Professional PDF Reports")
-        st.markdown("Generate comprehensive PDF reports for executive review and technical documentation.")
-        render_pdf_export_section(analysis, config)
     
     # Footer
     st.markdown("""
