@@ -1630,6 +1630,15 @@ def safe_int(value, default=0):
     except (ValueError, TypeError):
         return default
 
+def safe_float(value, default=0.0):
+    """Safely convert a value to float, returning default if None or invalid"""
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except (ValueError, TypeError):
+        return default
+
 def safe_subtract(a, b, default_a=0, default_b=0):
     """Safely subtract two values, handling None cases"""
     safe_a = safe_float(a, default_a)
