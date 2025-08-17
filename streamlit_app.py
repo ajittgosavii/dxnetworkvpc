@@ -1548,84 +1548,36 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
     unique_id = f"{int(time.time() * 1000000)}_{random.randint(1000, 9999)}"
     
     with col1:
-        if st.button("📊 Executive Report", 
-                    use_container_width=True, 
-                    key=f"executive_report_{unique_id}"):
-            
+        # Executive Report Button
+        exec_clicked = st.button("📊 Executive Report", 
+                                use_container_width=True, 
+                                key=f"executive_report_{unique_id}")
+        
+        # Always show download button if in session state
+        if f"exec_pdf_{unique_id}" in st.session_state:
+            st.download_button(
+                label="📥 Download Executive Report",
+                data=st.session_state[f"exec_pdf_{unique_id}"],
+                file_name=f"aws_migration_executive_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"download_executive_{unique_id}"
+            )
+            st.success("Executive report ready for download!")
+        
+        # Generate PDF when button clicked
+        if exec_clicked:
             with st.spinner("Generating executive report..."):
                 try:
-                    # Create simple working PDF
-                    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-                    from reportlab.lib.styles import getSampleStyleSheet
-                    from reportlab.lib.pagesizes import letter
-                    import io
-                    
-                    buffer = io.BytesIO()
-                    doc = SimpleDocTemplate(buffer, pagesize=letter)
-                    styles = getSampleStyleSheet()
-                    story = []
-                    
-                    # Title
-                    story.append(Paragraph("AWS Migration Analysis - Executive Report", styles['Title']))
-                    story.append(Spacer(1, 20))
-                    story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
-                    story.append(Spacer(1, 30))
-                    
-                    # Use actual data if available
-                    db_size = config.get('database_size_gb', 500) if config else 500
-                    environment = config.get('environment', 'Production') if config else 'Production'
-                    db_engine = config.get('database_engine', 'PostgreSQL') if config else 'PostgreSQL'
-                    
-                    # Project Overview
-                    story.append(Paragraph("Project Overview", styles['Heading2']))
-                    story.append(Spacer(1, 12))
-                    story.append(Paragraph(f"Database Size: {db_size:,} GB", styles['Normal']))
-                    story.append(Paragraph(f"Environment: {environment.title()}", styles['Normal']))
-                    story.append(Paragraph(f"Database Engine: {db_engine.upper()}", styles['Normal']))
-                    story.append(Spacer(1, 20))
-                    
-                    # Migration Metrics
-                    story.append(Paragraph("Migration Metrics", styles['Heading2']))
-                    story.append(Spacer(1, 12))
-                    if analysis:
-                        migration_time = analysis.get('estimated_migration_time_hours', 12)
-                        total_cost = analysis.get('total_cost', 5000)
-                        story.append(Paragraph(f"Estimated Migration Time: {migration_time} hours", styles['Normal']))
-                        story.append(Paragraph(f"Estimated Total Cost: ${total_cost:,}", styles['Normal']))
-                    else:
-                        story.append(Paragraph("Estimated Migration Time: 8-16 hours", styles['Normal']))
-                        story.append(Paragraph("Estimated Total Cost: $5,000 - $15,000", styles['Normal']))
-                    
-                    story.append(Spacer(1, 20))
-                    
-                    # Key Recommendations
-                    story.append(Paragraph("Key Recommendations", styles['Heading2']))
-                    story.append(Spacer(1, 12))
-                    story.append(Paragraph("• Implement phased migration approach", styles['Normal']))
-                    story.append(Paragraph("• Use AWS Database Migration Service", styles['Normal']))
-                    story.append(Paragraph("• Conduct thorough testing before cutover", styles['Normal']))
-                    story.append(Paragraph("• Plan for 24-48 hour rollback window", styles['Normal']))
-                    
-                    doc.build(story)
-                    buffer.seek(0)
-                    pdf_data = buffer.read()
-                    buffer.close()
+                    from simple_pdf_test import create_simple_pdf
+                    pdf_data = create_simple_pdf()
                     
                     if pdf_data and len(pdf_data) > 0:
-                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                        filename = f"aws_migration_executive_report_{timestamp}.pdf"
-                        
-                        st.download_button(
-                            label="📥 Download Executive Report",
-                            data=pdf_data,
-                            file_name=filename,
-                            mime="application/pdf",
-                            use_container_width=True,
-                            key=f"download_executive_{unique_id}"
-                        )
-                        st.success(f"Executive report generated! ({len(pdf_data)} bytes)")
+                        # Store in session state
+                        st.session_state[f"exec_pdf_{unique_id}"] = pdf_data
+                        st.rerun()
                     else:
-                        st.error("PDF generation failed - no data returned")
+                        st.error("PDF generation failed")
                         
                 except Exception as e:
                     st.error(f"Report generation error: {str(e)}")
@@ -1633,66 +1585,34 @@ def render_pdf_export_section(analysis: Dict, config: Dict):
                     st.code(traceback.format_exc())
     
     with col2:
-        if st.button("📋 Technical Report", 
-                    use_container_width=True, 
-                    key=f"technical_docs_{unique_id}"):
+        # Technical Report Button
+        tech_clicked = st.button("📋 Technical Report", 
+                                use_container_width=True, 
+                                key=f"technical_docs_{unique_id}")
+        
+        # Always show download button if in session state
+        if f"tech_pdf_{unique_id}" in st.session_state:
+            st.download_button(
+                label="📥 Download Technical Report",
+                data=st.session_state[f"tech_pdf_{unique_id}"],
+                file_name=f"aws_migration_technical_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+                key=f"download_technical_{unique_id}"
+            )
+            st.success("Technical report ready for download!")
+        
+        # Generate PDF when button clicked
+        if tech_clicked:
             with st.spinner("Generating technical report..."):
                 try:
-                    # Create technical PDF
-                    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-                    from reportlab.lib.styles import getSampleStyleSheet
-                    from reportlab.lib.pagesizes import letter
-                    import io
-                    
-                    buffer = io.BytesIO()
-                    doc = SimpleDocTemplate(buffer, pagesize=letter)
-                    styles = getSampleStyleSheet()
-                    story = []
-                    
-                    # Title
-                    story.append(Paragraph("AWS Migration Analysis - Technical Report", styles['Title']))
-                    story.append(Spacer(1, 20))
-                    story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y at %I:%M %p')}", styles['Normal']))
-                    story.append(Spacer(1, 30))
-                    
-                    # Technical Details
-                    story.append(Paragraph("Technical Specifications", styles['Heading2']))
-                    story.append(Spacer(1, 12))
-                    
-                    if config:
-                        story.append(Paragraph(f"Database Size: {config.get('database_size_gb', 'Unknown')} GB", styles['Normal']))
-                        story.append(Paragraph(f"RAM: {config.get('ram_gb', 'Unknown')} GB", styles['Normal']))
-                        story.append(Paragraph(f"CPU Cores: {config.get('cpu_cores', 'Unknown')}", styles['Normal']))
-                        story.append(Paragraph(f"Environment: {config.get('environment', 'Unknown')}", styles['Normal']))
-                    
-                    story.append(Spacer(1, 20))
-                    
-                    # Migration Strategy
-                    story.append(Paragraph("Migration Strategy", styles['Heading2']))
-                    story.append(Spacer(1, 12))
-                    story.append(Paragraph("• Pre-migration assessment and planning", styles['Normal']))
-                    story.append(Paragraph("• Schema conversion and optimization", styles['Normal']))
-                    story.append(Paragraph("• Data migration with minimal downtime", styles['Normal']))
-                    story.append(Paragraph("• Post-migration validation and tuning", styles['Normal']))
-                    
-                    doc.build(story)
-                    buffer.seek(0)
-                    pdf_data = buffer.read()
-                    buffer.close()
+                    from simple_pdf_test import create_simple_pdf
+                    pdf_data = create_simple_pdf()
                     
                     if pdf_data and len(pdf_data) > 0:
-                        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-                        filename = f"aws_migration_technical_report_{timestamp}.pdf"
-                        
-                        st.download_button(
-                            label="📥 Download Technical Report",
-                            data=pdf_data,
-                            file_name=filename,
-                            mime="application/pdf",
-                            use_container_width=True,
-                            key=f"download_technical_{unique_id}"
-                        )
-                        st.success(f"Technical report generated! ({len(pdf_data)} bytes)")
+                        # Store in session state
+                        st.session_state[f"tech_pdf_{unique_id}"] = pdf_data
+                        st.rerun()
                     else:
                         st.error("PDF generation failed")
                         
