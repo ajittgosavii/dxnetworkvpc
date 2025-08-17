@@ -1961,15 +1961,15 @@ class FirebaseAuthManager:
                     self.db = firestore.client()
                     logger.info("Firebase initialized successfully")
                 else:
-                    logger.error("Firebase configuration not found in secrets")
-                    st.error("Firebase configuration not found. Please check your secrets configuration.")
+                    logger.info("Firebase configuration not found in secrets - running in demo mode")
+                    self.db = None  # Run without Firebase
             else:
                 # Firebase already initialized
                 self.db = firestore.client()
                 
         except Exception as e:
-            logger.error(f"Firebase initialization failed: {e}")
-            st.error(f"Firebase initialization failed: {str(e)}")
+            logger.info(f"Firebase initialization failed: {e} - running in demo mode")
+            self.db = None  # Run without Firebase
     
     def create_user(self, email: str, password: str, display_name: str, role: str = "user") -> Dict:
         """Create a new user with email/password"""
@@ -11612,7 +11612,7 @@ def main():
         analysis = st.session_state['analysis']
         config = st.session_state['config']
         
-        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
             "📊 Migration Dashboard",
             "🧠 AI Insights", 
             "🌐 Network Intelligence",
@@ -11620,7 +11620,8 @@ def main():
             "💻 OS Performance",
             "🎯 AWS Sizing",
             "🗄️ FSx Comparisons",
-            "🤖 Agent Scaling Optimizer"
+            "🤖 Agent Scaling Optimizer",
+            "📄 PDF Reports"
         ])
         
         with tab1:
@@ -11646,6 +11647,9 @@ def main():
         
         with tab8:
             render_agent_scaling_optimizer_tab(analysis, config)
+        
+        with tab9:
+            render_pdf_export_section(analysis, config)
     
     # Footer
     st.markdown("""
