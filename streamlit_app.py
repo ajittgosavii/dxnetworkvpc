@@ -4406,26 +4406,26 @@ class CostValidationManager:
         }
 
     def _validate_basic_costs(self, basic_costs: Dict, analysis: Dict, config: Dict) -> float:
-    """Validate and correct basic costs to remove double-counting"""
-    
-    # Safe conversion of all values
-    aws_compute = safe_float(basic_costs.get('aws_compute_cost', 0))
-    aws_storage = safe_float(basic_costs.get('aws_storage_cost', 0))
+        """Validate and correct basic costs to remove double-counting"""
+        
+        # Safe conversion of all values
+        aws_compute = safe_float(basic_costs.get('aws_compute_cost', 0))
+        aws_storage = safe_float(basic_costs.get('aws_storage_cost', 0))
 
-    # Get agent cost from authoritative source
-    agent_analysis = analysis.get('agent_analysis', {})
-    if agent_analysis.get('monthly_cost', 0) and agent_analysis['monthly_cost'] > 0:
-        validated_agent_cost = safe_float(agent_analysis['monthly_cost'])
-    else:
-        validated_agent_cost = safe_float(basic_costs.get('agent_cost', 0))
+        # Get agent cost from authoritative source
+        agent_analysis = analysis.get('agent_analysis', {})
+        if agent_analysis.get('monthly_cost', 0) and agent_analysis['monthly_cost'] > 0:
+            validated_agent_cost = safe_float(agent_analysis['monthly_cost'])
+        else:
+            validated_agent_cost = safe_float(basic_costs.get('agent_cost', 0))
 
-    # Add other costs without double counting - all safe
-    network_cost = safe_float(basic_costs.get('network_cost', 500))  # Default network cost
-    other_cost = safe_float(basic_costs.get('management_cost', 200))  # Management overhead
+        # Add other costs without double counting - all safe
+        network_cost = safe_float(basic_costs.get('network_cost', 500))  # Default network cost
+        other_cost = safe_float(basic_costs.get('management_cost', 200))  # Management overhead
 
-    # Safe arithmetic
-    validated_total = aws_compute + aws_storage + validated_agent_cost + network_cost + other_cost
-    return max(0, validated_total)  # Ensure non-negative
+        # Safe arithmetic
+        validated_total = aws_compute + aws_storage + validated_agent_cost + network_cost + other_cost
+        return max(0, validated_total)  # Ensure non-negative
 
     def _create_breakdown_from_basic(self, basic_costs: Dict, analysis: Dict, config: Dict) -> Dict:
         """Create standardized breakdown from basic costs"""
