@@ -5652,6 +5652,8 @@ class EnhancedAgentSizingManager:
 
     def _calculate_scaling_efficiency(self, number_of_agents: int) -> float:
         """Calculate scaling efficiency - diminishing returns with more agents"""
+        number_of_agents = max(1, number_of_agents or 1)
+        
         if number_of_agents == 1:
             return 1.0
         elif number_of_agents <= 3:
