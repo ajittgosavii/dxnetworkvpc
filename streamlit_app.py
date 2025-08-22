@@ -4523,43 +4523,43 @@ class CostValidationManager:
             return dx_monthly + data_transfer
 
     def _validate_cost_consistency_v2(self, comprehensive_costs: Dict, basic_costs: Dict, analysis: Dict, config: Dict) -> Dict:
-    """Validate cost consistency between different calculation methods"""
-    discrepancies = []
+        """Validate cost consistency between different calculation methods"""
+        discrepancies = []
 
-    # Check comprehensive vs basic costs - SAFE COMPARISON
-    comp_total = safe_float(comprehensive_costs.get('total_monthly', 0))
-    basic_total = safe_float(basic_costs.get('total_monthly_cost', 0))
+        # Check comprehensive vs basic costs - SAFE COMPARISON
+        comp_total = safe_float(comprehensive_costs.get('total_monthly', 0))
+        basic_total = safe_float(basic_costs.get('total_monthly_cost', 0))
 
-    if comp_total > 0 and basic_total > 0:
-        max_total = max(comp_total, basic_total)
-        if max_total > 0:  # Avoid division by zero
-            diff_pct = abs(comp_total - basic_total) / max_total * 100
-            if diff_pct > 15:  # 15% tolerance
+        if comp_total > 0 and basic_total > 0:
+            max_total = max(comp_total, basic_total)
+            if max_total > 0:  # Avoid division by zero
+                diff_pct = abs(comp_total - basic_total) / max_total * 100
+                if diff_pct > 15:  # 15% tolerance
+                    discrepancies.append({
+                        'type': 'total_cost_mismatch',
+                        'difference_percent': diff_pct,
+                        'comprehensive': comp_total,
+                        'basic': basic_total
+                    })
+
+        # Check agent cost consistency - SAFE COMPARISON
+        agent_cost_1 = safe_float(analysis.get('agent_analysis', {}).get('monthly_cost', 0))
+        agent_cost_2 = safe_float(basic_costs.get('agent_cost', 0))
+
+        if agent_cost_1 > 0 and agent_cost_2 > 0:
+            min_cost = min(agent_cost_1, agent_cost_2)
+            if min_cost > 0 and abs(agent_cost_1 - agent_cost_2) > min_cost * 0.1:  # 10% tolerance
                 discrepancies.append({
-                    'type': 'total_cost_mismatch',
-                    'difference_percent': diff_pct,
-                    'comprehensive': comp_total,
-                    'basic': basic_total
+                    'type': 'agent_cost_mismatch',
+                    'agent_analysis': agent_cost_1,
+                    'cost_analysis': agent_cost_2
                 })
 
-    # Check agent cost consistency - SAFE COMPARISON
-    agent_cost_1 = safe_float(analysis.get('agent_analysis', {}).get('monthly_cost', 0))
-    agent_cost_2 = safe_float(basic_costs.get('agent_cost', 0))
-
-    if agent_cost_1 > 0 and agent_cost_2 > 0:
-        min_cost = min(agent_cost_1, agent_cost_2)
-        if min_cost > 0 and abs(agent_cost_1 - agent_cost_2) > min_cost * 0.1:  # 10% tolerance
-            discrepancies.append({
-                'type': 'agent_cost_mismatch',
-                'agent_analysis': agent_cost_1,
-                'cost_analysis': agent_cost_2
-            })
-
-    return {
-        'is_consistent': len(discrepancies) == 0,
-        'discrepancies': discrepancies,
-        'discrepancy_count': len(discrepancies)
-    }
+        return {
+            'is_consistent': len(discrepancies) == 0,
+            'discrepancies': discrepancies,
+            'discrepancy_count': len(discrepancies)
+        }
 
     def _calculate_fallback_costs(self, config: Dict, aws_sizing: Dict, agent_analysis: Dict) -> tuple:
         """Calculate fallback costs when other methods unavailable"""
