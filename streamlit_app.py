@@ -4346,13 +4346,13 @@ class CostValidationManager:
         pass
     
     def safe_float(value, default=0.0):
-    """Safely convert value to float, handling None and invalid types"""
-    if value is None:
-        return float(default)
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return float(default)
+        """Safely convert value to float, handling None and invalid types"""
+        if value is None:
+            return float(default)
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return float(default)
 
     def safe_int(value, default=0):
         """Safely convert value to int, handling None and invalid types"""
