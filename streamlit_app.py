@@ -4344,25 +4344,7 @@ class CostValidationManager:
 
     def __init__(self):
         pass
-    
-    def safe_float(value, default=0.0):
-        """Safely convert value to float, handling None and invalid types"""
-        if value is None:
-            return float(default)
-        try:
-            return float(value)
-        except (ValueError, TypeError):
-            return float(default)
 
-    def safe_int(value, default=0):
-        """Safely convert value to int, handling None and invalid types"""
-        if value is None:
-            return int(default)
-        try:
-            return int(value)
-        except (ValueError, TypeError):
-            return int(default)
-    
     def get_validated_costs(self, analysis: Dict, config: Dict) -> Dict:
         """Get validated and standardized costs with unified approach"""
         comprehensive_costs = analysis.get('comprehensive_costs', {})
@@ -4407,25 +4389,22 @@ class CostValidationManager:
 
     def _validate_basic_costs(self, basic_costs: Dict, analysis: Dict, config: Dict) -> float:
         """Validate and correct basic costs to remove double-counting"""
-        
-        # Safe conversion of all values
-        aws_compute = safe_float(basic_costs.get('aws_compute_cost', 0))
-        aws_storage = safe_float(basic_costs.get('aws_storage_cost', 0))
+        aws_compute = basic_costs.get('aws_compute_cost', 0)
+        aws_storage = basic_costs.get('aws_storage_cost', 0)
 
         # Get agent cost from authoritative source
         agent_analysis = analysis.get('agent_analysis', {})
-        if agent_analysis.get('monthly_cost', 0) and agent_analysis['monthly_cost'] > 0:
-            validated_agent_cost = safe_float(agent_analysis['monthly_cost'])
+        if agent_analysis.get('monthly_cost', 0) > 0:
+            validated_agent_cost = agent_analysis['monthly_cost']
         else:
-            validated_agent_cost = safe_float(basic_costs.get('agent_cost', 0))
+            validated_agent_cost = basic_costs.get('agent_cost', 0)
 
-        # Add other costs without double counting - all safe
-        network_cost = safe_float(basic_costs.get('network_cost', 500))  # Default network cost
-        other_cost = safe_float(basic_costs.get('management_cost', 200))  # Management overhead
+        # Add other costs without double counting
+        network_cost = basic_costs.get('network_cost', 500)  # Default network cost
+        other_cost = basic_costs.get('management_cost', 200)  # Management overhead
 
-        # Safe arithmetic
         validated_total = aws_compute + aws_storage + validated_agent_cost + network_cost + other_cost
-        return max(0, validated_total)  # Ensure non-negative
+        return validated_total
 
     def _create_breakdown_from_basic(self, basic_costs: Dict, analysis: Dict, config: Dict) -> Dict:
         """Create standardized breakdown from basic costs"""
@@ -4443,38 +4422,37 @@ class CostValidationManager:
 
     def _create_standardized_breakdown(self, analysis: Dict, config: Dict, cost_source: str, total_monthly: float) -> Dict:
         """Create standardized cost breakdown"""
-        
+
         agent_analysis = analysis.get('agent_analysis', {})
         aws_sizing = analysis.get('aws_sizing_recommendations', {})
 
         # Agent costs (single source of truth)
-        agent_cost = safe_float(agent_analysis.get('monthly_cost', 0))
+        agent_cost = agent_analysis.get('monthly_cost', 0)
 
-        # Compute costs - with safe handling
+        # Compute costs
         if config.get('target_platform') == 'rds':
-            rds_recommendations = aws_sizing.get('rds_recommendations', {})
-            compute_cost = safe_float(rds_recommendations.get('total_monthly_cost', 0))
-            # Subtract storage cost to avoid double counting - SAFE SUBTRACTION
-            storage_cost = safe_float(rds_recommendations.get('monthly_storage_cost', 0))
-            compute_cost = max(0, compute_cost - storage_cost)  # Ensure non-negative
+            compute_cost = aws_sizing.get('rds_recommendations', {}).get('total_monthly_cost', 0)
+            # Subtract storage cost to avoid double counting
+            storage_cost = aws_sizing.get('rds_recommendations', {}).get('monthly_storage_cost', 0)
+            compute_cost -= storage_cost
         else:
-            ec2_recommendations = aws_sizing.get('ec2_recommendations', {})
-            compute_cost = safe_float(ec2_recommendations.get('total_monthly_cost', 0))
-            storage_cost = safe_float(ec2_recommendations.get('monthly_storage_cost', 0))
-            compute_cost = max(0, compute_cost - storage_cost)  # Ensure non-negative
+            compute_cost = aws_sizing.get('ec2_recommendations', {}).get('total_monthly_cost', 0)
+            storage_cost = aws_sizing.get('ec2_recommendations', {}).get('monthly_storage_cost', 0)
+            compute_cost -= storage_cost
 
-        # Storage costs breakdown - all safe
-        primary_storage = safe_float(storage_cost)
-        destination_storage = safe_float(self._calculate_destination_storage_cost(config))
-        backup_storage = safe_float(self._calculate_backup_storage_cost(config))
+        # Storage costs breakdown
+        primary_storage = storage_cost
+        destination_storage = self._calculate_destination_storage_cost(config)
+        backup_storage = self._calculate_backup_storage_cost(config)
 
-        # Network costs - safe
-        network_cost = safe_float(self._calculate_standardized_network_cost(config))
+        # Network costs
+        network_cost = self._calculate_standardized_network_cost(config)
 
-        # Other costs - SAFE ARITHMETIC
-        total_accounted = (agent_cost + compute_cost + primary_storage + 
-                        destination_storage + backup_storage + network_cost)
-        remaining_cost = max(0, safe_float(total_monthly) - total_accounted)
+        # Other costs
+        remaining_cost = max(0, total_monthly - (
+            agent_cost + compute_cost + primary_storage +
+            destination_storage + backup_storage + network_cost
+        ))
 
         return {
             'agents': agent_cost,
@@ -4485,6 +4463,7 @@ class CostValidationManager:
             'network': network_cost,
             'other': remaining_cost
         }
+
     def _calculate_destination_storage_cost(self, config: Dict) -> float:
         """Calculate destination storage cost"""
         database_size_gb = config.get('database_size_gb', 0)
@@ -4497,12 +4476,7 @@ class CostValidationManager:
     def _calculate_backup_storage_cost(self, config: Dict) -> float:
         """Calculate backup storage cost"""
         if config.get('migration_method') != 'backup_restore':
-            return 0.0
-
-        database_size_gb = safe_float(config.get('database_size_gb', 0))
-        backup_size_multiplier = safe_float(config.get('backup_size_multiplier', 0.7))
-        backup_size = database_size_gb * backup_size_multiplier
-        return backup_size * 0.023  # S3 Standard pricing
+            return 0
 
         backup_size = config.get('database_size_gb', 0) * config.get('backup_size_multiplier', 0.7)
         return backup_size * 0.023  # S3 Standard pricing
@@ -4510,7 +4484,7 @@ class CostValidationManager:
     def _calculate_standardized_network_cost(self, config: Dict) -> float:
         """Calculate standardized network cost"""
         environment = config.get('environment', 'non-production')
-        database_size = safe_float(config.get('database_size_gb', 0))
+        database_size = config.get('database_size_gb', 0)
 
         if environment == 'production':
             dx_monthly = 2.25 * 24 * 30  # 10Gbps DX
@@ -4526,29 +4500,26 @@ class CostValidationManager:
         """Validate cost consistency between different calculation methods"""
         discrepancies = []
 
-        # Check comprehensive vs basic costs - SAFE COMPARISON
-        comp_total = safe_float(comprehensive_costs.get('total_monthly', 0))
-        basic_total = safe_float(basic_costs.get('total_monthly_cost', 0))
+        # Check comprehensive vs basic costs
+        comp_total = comprehensive_costs.get('total_monthly', 0)
+        basic_total = basic_costs.get('total_monthly_cost', 0)
 
         if comp_total > 0 and basic_total > 0:
-            max_total = max(comp_total, basic_total)
-            if max_total > 0:  # Avoid division by zero
-                diff_pct = abs(comp_total - basic_total) / max_total * 100
-                if diff_pct > 15:  # 15% tolerance
-                    discrepancies.append({
-                        'type': 'total_cost_mismatch',
-                        'difference_percent': diff_pct,
-                        'comprehensive': comp_total,
-                        'basic': basic_total
-                    })
+            diff_pct = abs(comp_total - basic_total) / max(comp_total, basic_total) * 100
+            if diff_pct > 15:  # 15% tolerance
+                discrepancies.append({
+                    'type': 'total_cost_mismatch',
+                    'difference_percent': diff_pct,
+                    'comprehensive': comp_total,
+                    'basic': basic_total
+                })
 
-        # Check agent cost consistency - SAFE COMPARISON
-        agent_cost_1 = safe_float(analysis.get('agent_analysis', {}).get('monthly_cost', 0))
-        agent_cost_2 = safe_float(basic_costs.get('agent_cost', 0))
+        # Check agent cost consistency
+        agent_cost_1 = analysis.get('agent_analysis', {}).get('monthly_cost', 0)
+        agent_cost_2 = basic_costs.get('agent_cost', 0)
 
         if agent_cost_1 > 0 and agent_cost_2 > 0:
-            min_cost = min(agent_cost_1, agent_cost_2)
-            if min_cost > 0 and abs(agent_cost_1 - agent_cost_2) > min_cost * 0.1:  # 10% tolerance
+            if abs(agent_cost_1 - agent_cost_2) > min(agent_cost_1, agent_cost_2) * 0.1:  # 10% tolerance
                 discrepancies.append({
                     'type': 'agent_cost_mismatch',
                     'agent_analysis': agent_cost_1,
@@ -6777,14 +6748,12 @@ class EnhancedMigrationAnalyzer:
             'roi_months': 12
         }
 
-    def _calculate_destination_storage_cost(self, config: Dict) -> float:
+    def _calculate_destination_storage_cost(self, config: Dict, destination_storage: str) -> float:
         """Calculate destination storage cost"""
-        database_size_gb = safe_float(config.get('database_size_gb', 0))
-        destination_storage = config.get('destination_storage_type', 'S3')
-
+        database_size_gb = config['database_size_gb']
         storage_costs = {'S3': 0.023, 'FSx_Windows': 0.13, 'FSx_Lustre': 0.14}
-        cost_per_gb = storage_costs.get(destination_storage, 0.023)
-        return database_size_gb * 1.2 * cost_per_gb
+        base_cost_per_gb = storage_costs.get(destination_storage, 0.023)
+        return database_size_gb * 1.5 * base_cost_per_gb
 
     async def _generate_fsx_destination_comparisons(self, config: Dict) -> Dict:
         """Generate FSx destination comparisons"""
